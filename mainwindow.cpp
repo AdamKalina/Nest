@@ -22,7 +22,9 @@ void Patient::add_record(Record record){
         last_record = record.record_start;
     };
 
-    no++; // increment the number of recordings
+    no = records_map.size();
+
+    //no++; // increment the number of recordings
 };
 
 string MainWindow::convert_time_for_sorting(const time_t * timer){
@@ -36,10 +38,16 @@ string MainWindow::convert_time_for_sorting(const time_t * timer){
 }
 
 
-void MainWindow::click_test(QTreeWidgetItem* Item){
+void MainWindow::double_click_record(QTreeWidgetItem* Item){
 
     QVariant path = Item->data(4,0);
     // TO DO - continue only when record is clicked (not patient)
+    if (externalProgram.isEmpty()){
+        QMessageBox msgBox;
+        msgBox.setText("EEG reader is not set");
+        msgBox.exec();
+    }
+
     if (path.isValid()){
         //qDebug() << Item->data(4,0);
         QStringList arguments;
@@ -49,23 +57,64 @@ void MainWindow::click_test(QTreeWidgetItem* Item){
     }
 }
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+void MainWindow::AddFolderDialog(){
+
+    stat_dir = QFileDialog::getExistingDirectory(this, tr("Open Directory"), "D:/Dropbox/Scripts/Cpp/");
+    if(stat_dir.isEmpty()){
+        return;
+    }
+    qDebug() << stat_dir;
+    loadData();
+};
+
+
+void MainWindow::chooseExternalProgram(){
+
+    externalProgram = QFileDialog::getOpenFileName(this, tr("Choose EEG reader"), "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/", tr("BrainLab reader (*.exe)"));
+
+    if(externalProgram.isEmpty()){
+        return;
+    }
+};
+
+void MainWindow::filter_text_changed(const QString & text){
+    qDebug() << text;
+}
+
+
+void MainWindow::writeSettings()
 {
+    //QSettings settings("PuffinSoft", "EEGle Nest");
+    QSettings settings("settings.ini",QSettings::IniFormat);
+    settings.setValue("external_program", externalProgram);
+    settings.setValue("stat_dir",stat_dir);
 
-    // TO DO - move this to separate class
-    // implement for multiple folders
+}
+
+void MainWindow::readSettings()
+{
+    QSettings settings("settings.ini",QSettings::IniFormat);
+    stat_dir = settings.value("stat_dir").toString();
+    externalProgram = settings.value("external_program").toString();
+
+}
+
+void MainWindow::loadData(){
+    // TO DO
+    // implement for multiple folders - problematic since settings can not store QStringList - adding one folder at once will be needed
     // store the mymap on HDD or use SQLite
-    // add only new files
+    // add only new files - probably best secured by MyMap
     // display files being recorded and make them unable to open
-    //QDir directory("D:/Dropbox/Scripts/Cpp/data_test");
-    //QFileInfoList sigs = directory.entryInfoList(QStringList() << "*.sig" << "*.SIG",QDir::Files);
 
+    if(stat_dir.isEmpty()){ // if there is no path to data set it will ask for it righ away
+        AddFolderDialog();
+    }
 
     int ii = 0;
 
-    // QDirIterot - go through files recursively
-    QDirIterator QDit(QString("D:/Dropbox/Scripts/Cpp/data_test"), QStringList() << "*.sig" << "*.SIG", QDir::Files, QDirIterator::Subdirectories);
+    // QDirIterator - go through files recursively
+
+    QDirIterator QDit(this->stat_dir, QStringList() << "*.sig" << "*.SIG", QDir::Files, QDirIterator::Subdirectories);
     while (QDit.hasNext()){
 
         string path= QDit.next().toLocal8Bit().data();
@@ -79,12 +128,12 @@ MainWindow::MainWindow(QWidget *parent)
 
         std::map<string, Patient>::iterator it;
         it = mymap.find(record.id);
-        if (it != mymap.end()){
+        if (it != mymap.end()){ // if the patient already exists, add record to it
             //mymap.erase (it);
             //cout << it->first << " already exists" << endl;
             it->second.add_record(record);
         }
-        else{
+        else{ // if the patient does not exist, create him
             Patient patient;
             patient.set_values(record);
             // insert into map
@@ -93,6 +142,26 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
     qDebug() << "no of files being processed: " << ii;
+    buildTreeWidget();
+}
+
+void MainWindow::buildTreeWidget(){
+
+    //set the layout
+    // TO DO - make it more generic, even for error message
+    QWidget *centralWidget = new QWidget(this);
+    setCentralWidget(centralWidget);
+
+    QVBoxLayout *layout = new QVBoxLayout(centralWidget);
+    // is it possible to stretch the main window to fit the tree? Probably not https://www.qtcentre.org/threads/53948-resize-to-content-of-a-QTreeWidget
+
+
+    QLineEdit *filter = new QLineEdit(centralWidget);
+    filter->setPlaceholderText("filter");
+    filter->setClearButtonEnabled(1);
+    //connect(filter, &QLineEdit::textChanged, this, SLOT(filter_text_changed));
+    connect(filter, SIGNAL(textChanged(QString)), this, SLOT(filter_text_changed(QString)));
+    layout->addWidget(filter);
 
     // TO DO
     // formatting - make it look nicer
@@ -100,14 +169,26 @@ MainWindow::MainWindow(QWidget *parent)
     // https://doc.qt.io/qt-5/qsortfilterproxymodel.html#details
     // make separate constructors for items
 
-    QBrush *ligh_grey_brush = new QBrush(QColor(240,240,240));
+    //QBrush *ligh_grey_brush = new QBrush(QColor(240,240,240));
+    QBrush ligh_grey_brush(QColor(240,240,240));
+
+    // define filter
+    //MyItemModel *sourceModel = new MyItemModel(this);
+    //QSortFilterProxyModel *proxyModel = new QSortFilterProxyModel(this);
+
+    //proxyModel->setSourceModel(sourceModel);
+    //treeView->setModel(proxyModel);
+
 
     // define the main TreeWidget
     QTreeWidget *treeWidget = new QTreeWidget();
-    setCentralWidget(treeWidget);
+    layout->addWidget(treeWidget);
+    //setCentralWidget(treeWidget);
     treeWidget->setColumnCount(4);
     treeWidget->setSortingEnabled(1);
-    treeWidget->sortByColumn(0,Qt::DescendingOrder);
+    treeWidget->sortByColumn(2,Qt::DescendingOrder); //newest files first
+    //treeWidget->setModel(sourceModel);
+
 
     // Header of main TreeWidget
     QStringList labels;
@@ -128,10 +209,10 @@ MainWindow::MainWindow(QWidget *parent)
         QTreeWidgetItem *patientItem = new QTreeWidgetItem(static_cast<QTreeWidget *>(nullptr), patientItemLabel);
 
         // TO DO - set this at once
-        patientItem ->setBackground(0,*ligh_grey_brush);
-        patientItem ->setBackground(1,*ligh_grey_brush);
-        patientItem ->setBackground(2,*ligh_grey_brush);
-        patientItem ->setBackground(3,*ligh_grey_brush);
+        patientItem ->setBackground(0,ligh_grey_brush);
+        patientItem ->setBackground(1,ligh_grey_brush);
+        patientItem ->setBackground(2,ligh_grey_brush);
+        patientItem ->setBackground(3,ligh_grey_brush);
 
         // iterate over records
         std::map<string, Record>::iterator to = it->second.records_map.begin();
@@ -156,62 +237,55 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
     treeWidget->insertTopLevelItems(0, items);
-    //connect(treeWidget, SIGNAL(itemClicked(QTreeWidgetItem*,int)), this, SLOT(click_test(QTreeWidgetItem*)));
-    connect(treeWidget, SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)), this, SLOT(click_test(QTreeWidgetItem*)));
+    connect(treeWidget, SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)), this, SLOT(double_click_record(QTreeWidgetItem*)));
     treeWidget->setColumnHidden(4,1); //hide file path
     treeWidget->show();
+};
+
+void MainWindow::showNoFileWarning(){
+    QFont warning( "Arial", 10, QFont::Bold);
+    QLabel *label = new QLabel(this);
+    label->setFont(warning);
+    label->setMargin(5);
+    QString noFiles = QString::fromLocal8Bit("Žádné soubory k naètení, vyberte složku, ve které se nacházejí *.sig sobory pomocí 'Data --> Add Folder'");
+    label->setText(noFiles);
+    label->setAlignment(Qt::AlignCenter);
+    setCentralWidget(label);
+};
+
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+{
+
+
+    // ======== Main Menu ========
+    menubar = menuBar();
+
+    // ======== File menu ========
+    filemenu = new QMenu(this);
+    filemenu->setTitle("&Data");
+    filemenu->addAction("Add Folder", this, SLOT(AddFolderDialog()));
+    filemenu->addAction("Add Reader", this, SLOT(chooseExternalProgram()));
+    // TO DO
+    // add dynamic folder + refresh button
+    // delete setting
+    menubar->addMenu(filemenu);
+
+    readSettings(); // read setting from .ini file
+    loadData(); //load data and update mymap
+
+
+    if (mymap.size() == 0){
+        showNoFileWarning(); // show warning that where are no filed to load
+    }
+    else{
+        buildTreeWidget(); // do the thing
+    }
 
 }
 
 MainWindow::~MainWindow()
 {
-
+    writeSettings(); //save setting in .ini file
 }
-
-//void MainWindow::paintEvent(QPaintEvent *event)
-//{
-
-//    //Drawing Texts
-//    int x = 20;
-//    int y = 30;
-//    int inc = 30;
-//    int i = 1;
-//    //QTextCodec *codec = QTextCodec::codecForName("Windows-1250");
-
-//    QPainter mytext(this);
-//    mytext.setFont(QFont("Times", 16, QFont::Bold));
-//    mytext.drawText(QPoint(x,y), "My map contains");
-
-
-//    mytext.setFont(QFont("Times", 16, QFont::Normal));
-//    std::map<string, Patient>::iterator it = mymap.begin();
-//    for (it=mymap.begin(); it!=mymap.end(); ++it){
-
-//        mytext.drawText(QPoint(x,y+i*inc), it->first.data());
-
-//        //QString q = QString::fromLocal8Bit(it->second.name.c_str());
-
-//        mytext.drawText(QPoint(x+200,y+i*inc), QString::fromLocal8Bit(it->second.name.c_str()));
-//        QString no = QString::number(it->second.no);
-//        mytext.drawText(QPoint(x+550,y+i*inc), QString("no of records: %1").arg(no));
-//        i++;
-
-//        std::map<string, Record>::iterator to = it->second.records_map.begin();
-//        for (it->second.records_map.begin();to!=it->second.records_map.end(); ++to){
-//            mytext.drawText(QPoint(x+200,y+i*inc), QString::fromStdString(to->first));
-//            mytext.drawText(QPoint(x+550,y+i*inc), QString::fromLocal8Bit(to->second.class_code.c_str()));
-//            mytext.drawText(QPoint(x+700,y+i*inc), QString("recorded on: %1").arg(ctime(&to->second.record_start)));
-//            i++;
-//        }
-//    };
-
-
-//    // Giving Style To Texts
-//    //QTextDocument document;
-//    //QRect rect(0,0,250,250 );
-//    //mytext.translate(100,50);
-
-//    //document.setHtml("<b>Hello</b><font color='red' size='30'>Qt5 C++ </font>");
-//    //document.drawContents(&mytext, rect);
-//}
 
