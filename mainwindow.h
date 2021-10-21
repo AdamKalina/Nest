@@ -19,9 +19,13 @@
 #include <QLabel>
 #include <QMenuBar>
 #include <QFileDialog>
+#include <QDateTime>
 #include <QMessageBox>
 #include <QLineEdit>
+#include <QDate>
+#include <QTime>
 #include <QSortFilterProxyModel>
+#include <QStandardItemModel>
 #include "read_signal_file.h"
 #include <stdio.h>
 #include <string.h>
@@ -56,11 +60,12 @@ public:
     void readSettings();
     void writeSettings();
     void loadData();
-    void buildTreeWidget();
+    void buildTreeView();
     void showNoFileWarning();
 
+
 public slots:
-    void double_click_record(QTreeWidgetItem* Item);
+    void double_click_tree(QModelIndex index);
     void AddFolderDialog();
     void chooseExternalProgram();
     void filter_text_changed(const QString & text);
@@ -70,6 +75,7 @@ private:
     QMenu   *filemenu;
     QBrush *ligh_grey_brush;
     QTreeWidget *treeWidget;
+    QStandardItemModel *model;
 
 };
 #endif // MAINWINDOW_H

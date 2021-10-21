@@ -32,6 +32,7 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         read_signal_file.cpp
+        resources.qrc
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

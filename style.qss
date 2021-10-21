@@ -1,0 +1,13 @@
+QLineEdit
+{
+font-size: 12pt;
+}
+
+QTreeView{
+ text-align: center;
+ font-size: 12pt;
+}
+
+QTreeView::item{
+ margin: 15px;
+}
