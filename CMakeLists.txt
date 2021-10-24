@@ -32,6 +32,7 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         read_signal_file.cpp
+        leaffilterproxymodel.cpp
         resources.qrc
 )
 

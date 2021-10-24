@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QColor>
 #include <QDir>
 #include <QDebug>
 #include <QPainter>
@@ -26,9 +27,13 @@
 #include <QTime>
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
+#include <QSizePolicy>
+#include <QElapsedTimer>
 #include "read_signal_file.h"
+#include "leaffilterproxymodel.h"
 #include <stdio.h>
 #include <string.h>
+
 
 class Patient{
 public:
@@ -37,7 +42,6 @@ public:
     string sex;
     int no; // no of records
     time_t last_record; // date of last EEG
-    //vector<Record> records;
     std::map<string, Record> records_map;
     void set_values(Record);
     void add_record(Record);
@@ -54,11 +58,13 @@ public:
     std::map<string, Patient> mymap;
     string convert_time_for_sorting(const time_t * timer);
     QString externalProgram;// = "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
-    //QString externalProgram;
     QString stat_dir;// = "D:/Dropbox/Scripts/Cpp/no_data_test"; //static directory
     QString dyn_dir; //dynamic directory
+    QStringList static_dirs;
+    QStringList dynamic_dirs;
     void readSettings();
     void writeSettings();
+    void initLoadData();
     void loadData();
     void buildTreeView();
     void showNoFileWarning();
@@ -74,8 +80,11 @@ private:
     QMenuBar *menubar;
     QMenu   *filemenu;
     QBrush *ligh_grey_brush;
-    QTreeWidget *treeWidget;
+    QTreeView *treeView;
     QStandardItemModel *model;
+    LeafFilterProxyModel *proxyModel;
+    QAbstractItemModel *sourceModel;
+    QLineEdit *filter;
 
 };
 #endif // MAINWINDOW_H

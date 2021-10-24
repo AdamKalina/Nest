@@ -202,7 +202,7 @@ Record read_signal_file(string file_path){
 
     //cout << record.file_name << endl;
 
-    // removes "/"
+    // removes "/" in ID (rodné èíslo)
     record.id.erase(std::remove(record.id.begin(), record.id.end(), '/'), record.id.end());
 
    return record;

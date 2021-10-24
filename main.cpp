@@ -9,12 +9,8 @@ int main(int argc, char *argv[])
     MainWindow w;
 
     w.setWindowTitle("EEGle Nest");
-    w.setMinimumHeight(820);
-    w.setMinimumWidth(875); // 1200
-
-    //qDebug() << w.sizeHint();
-
-    //w.adjustSize();
+    //w.setMinimumHeight(820);
+    //w.setMinimumWidth(875); // 1200
 
     //Set Stylesheet
         QFile qss(":style.qss");

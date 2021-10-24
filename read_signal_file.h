@@ -197,6 +197,7 @@ struct Record{
     string protocol;
     string file_name;
     string file_path;
+    int recording_flag;
 };
 
 time_t decode_date_time(long date, long time);
