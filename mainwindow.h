@@ -58,23 +58,30 @@ public:
     std::map<string, Patient> mymap;
     string convert_time_for_sorting(const time_t * timer);
     QString externalProgram;// = "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
-    QString stat_dir;// = "D:/Dropbox/Scripts/Cpp/no_data_test"; //static directory
-    QString dyn_dir; //dynamic directory
+    //QString stat_dir;// = "D:/Dropbox/Scripts/Cpp/no_data_test"; //static directory
+    //QString dyn_dir; //dynamic directory
+    QString new_dir;
     QStringList static_dirs;
     QStringList dynamic_dirs;
     void readSettings();
     void writeSettings();
     void initLoadData();
-    void loadData();
+    void loadData(QString path2load);
     void buildTreeView();
+    void updatePatientTreeModel();
     void showNoFileWarning();
+    void AddFolderDialog(QString folder_type);
+    void buildFilterLine();
+    long no_files_loaded = 0;
 
 
 public slots:
     void double_click_tree(QModelIndex index);
-    void AddFolderDialog();
+    void AddDynamicFolderDialog();
+    void AddStaticFolderDialog();
     void chooseExternalProgram();
     void filter_text_changed(const QString & text);
+    void refreshDynamic();
 
 private:
     QMenuBar *menubar;
@@ -85,6 +92,8 @@ private:
     LeafFilterProxyModel *proxyModel;
     QAbstractItemModel *sourceModel;
     QLineEdit *filter;
+    QWidget *centralWidget;
+    QVBoxLayout *layout;
 
 };
 #endif // MAINWINDOW_H
