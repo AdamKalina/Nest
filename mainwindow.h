@@ -31,6 +31,7 @@
 #include <QElapsedTimer>
 #include <QDataStream>
 #include <QFile>
+#include <QShortcut>
 #include "read_signal_file.h"
 #include "qpatient.h"
 #include "leaffilterproxymodel.h"
@@ -52,6 +53,7 @@ public:
     //QString stat_dir;// = "D:/Dropbox/Scripts/Cpp/no_data_test"; //static directory
     //QString dyn_dir; //dynamic directory
     QString new_dir;
+    QString QMapFile;
     QStringList static_dirs;
     QStringList dynamic_dirs;
     void readSettings();
@@ -64,7 +66,7 @@ public:
     void AddFolderDialog(QString folder_type);
     void buildFilterLine();
     void saveQMap();
-    void loadQMap();
+    int loadQMap();
     void saveMap();
     long no_files_loaded = 0;
 
@@ -76,6 +78,7 @@ public slots:
     void chooseExternalProgram();
     void filter_text_changed(const QString & text);
     void refreshDynamic();
+    void refreshStatic();
 
 private:
     QMenuBar *menubar;
@@ -90,6 +93,7 @@ private:
     QLineEdit *filter;
     QWidget *centralWidget;
     QVBoxLayout *layout;
+    QShortcut *refreshKey;
 
 
 };

@@ -31,6 +31,8 @@ void QPatient::set_values(Record record){
     sex = record.sex;
     no = 1;
     last_record = record.record_start;
+    this->add_record(record);
+    //Qrecords_map.insert(Qrecord.file_name,Qrecord);
 }
 
 void QPatient::add_record(Record record){
@@ -49,6 +51,7 @@ void QPatient::add_record(Record record){
     Qrecord.file_path = QString::fromLocal8Bit(record.file_path.c_str());
     Qrecord.recording_flag = record.recording_flag;
     Qrecord.video_flag = record.video_flag;
+    Qrecord.num_pages = record.num_pages;
 
     Qrecords_map.insert(Qrecord.file_name,Qrecord);
 
@@ -62,27 +65,27 @@ void QPatient::add_record(Record record){
 
 QDataStream & operator<<(QDataStream & out, const QPatient & Qpatient)
 {
-    out << Qpatient.id << (qint32)Qpatient.last_record << Qpatient.name << Qpatient.sex << Qpatient.Qrecords_map;
+    out << Qpatient.id << (qint32)Qpatient.last_record << Qpatient.name << Qpatient.sex << (qint8)Qpatient.no << Qpatient.Qrecords_map;
     return out;
 }
 
 QDataStream & operator<<(QDataStream & out, const QRecord & Qrecord)
 {
-    out << Qrecord.check_flag << Qrecord.class_code << Qrecord.file_name << Qrecord.file_path << Qrecord.file_size << Qrecord.id << Qrecord.name << Qrecord.protocol << Qrecord.record_start << Qrecord.recording_flag << Qrecord.sex << Qrecord.video_flag;
+    out << Qrecord.check_flag << Qrecord.class_code << Qrecord.file_name << Qrecord.file_path << Qrecord.file_size << Qrecord.id << Qrecord.name << Qrecord.protocol << Qrecord.record_start << Qrecord.recording_flag << Qrecord.sex << Qrecord.video_flag << (qint8)Qrecord.num_pages;
     return out;
 }
 
 
 QDataStream & operator>>(QDataStream & in, QPatient & Qpatient)
 {
-    in >> Qpatient.id >> (qint32&)Qpatient.last_record >> Qpatient.name >> Qpatient.sex >> Qpatient.Qrecords_map;
-    qDebug() << Qpatient.name;
+    in >> Qpatient.id >> (qint32&)Qpatient.last_record >> Qpatient.name >> Qpatient.sex >> (qint8&)Qpatient.no >> Qpatient.Qrecords_map;
+    //qDebug() << Qpatient.name;
     return in;
 }
 
 QDataStream & operator>>(QDataStream & in, QRecord & Qrecord)
 {
-    in >> Qrecord.check_flag >> Qrecord.class_code >> Qrecord.file_name >> Qrecord.file_path >> Qrecord.file_size >> Qrecord.id >> Qrecord.name >> Qrecord.protocol >> Qrecord.record_start >> Qrecord.recording_flag >> Qrecord.sex >> Qrecord.video_flag;
-    qDebug() << Qrecord.file_path;
+    in >> Qrecord.check_flag >> Qrecord.class_code >> Qrecord.file_name >> Qrecord.file_path >> Qrecord.file_size >> Qrecord.id >> Qrecord.name >> Qrecord.protocol >> Qrecord.record_start >> Qrecord.recording_flag >> Qrecord.sex >> Qrecord.video_flag >> (qint8&)Qrecord.num_pages;
+    //qDebug() << Qrecord.file_path;
     return in;
 }

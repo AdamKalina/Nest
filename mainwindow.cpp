@@ -99,10 +99,13 @@ void MainWindow::initLoadData(){
         AddFolderDialog("static");
     }
     else{
-        loadQMap();
-        for (int j = 0; j < static_dirs.size(); ++j) {
-            loadData(static_dirs.at(j));
+        if (!loadQMap()){
+            // only when there is no QMap loaded it goes through the static folders
+            for (int j = 0; j < static_dirs.size(); ++j) {
+                loadData(static_dirs.at(j));
+            }
         }
+        // now go through dynamic folders
         for (int j = 0; j < dynamic_dirs.size(); j++ ) {
             loadData(dynamic_dirs.at(j));
         }
@@ -160,6 +163,7 @@ void addPatient2model(QAbstractItemModel *model, string ID, Patient patient){
 
         ind++;
     }
+    delete dvicon;
 }
 
 
@@ -184,13 +188,15 @@ void addQPatient2model(QAbstractItemModel *model, QString ID, QPatient Qpatient)
 
     QIcon *dvicon = new QIcon(":/images/DV_icon.png"); // or reuse it somehow? or use QPainter?
 
+    QTime n(0, 0, 0);
+
     QMap<QString, QRecord>::iterator to = Qpatient.Qrecords_map.begin();
     for (Qpatient.Qrecords_map.begin();to!=Qpatient.Qrecords_map.end(); ++to){
         model->insertRows(ind, 1, parent); // adds a child to the previous item
         model->setData(model->index(ind, 0, parent), to.key(), Qt::DisplayRole);
         model->setData(model->index(ind, 1, parent), to.value().class_code, Qt::DisplayRole);
         model->setData(model->index(ind, 2, parent), QDateTime::fromSecsSinceEpoch(to.value().record_start), Qt::DisplayRole);
-        //model->setData(model->index(0, 3, parent), "", Qt::DisplayRole);
+        model->setData(model->index(ind, 3, parent), n.addSecs(to.value().num_pages*10).toString("hh:mm:ss"), Qt::DisplayRole);
         model->setData(model->index(ind, 4, parent), to.value().file_path, Qt::DisplayRole);
         model->setData(model->index(ind, 5, parent), to.value().recording_flag, Qt::DisplayRole);
 
@@ -231,7 +237,7 @@ QAbstractItemModel *createPatientTreeModel(QObject *parent, std::map<string, Pat
     std::map<string, Patient>::iterator it = mymap.begin();
     for (it=mymap.begin(); it!=mymap.end(); ++it){
         //qDebug() << QString::fromLocal8Bit(it->first.c_str());
-        addPatient2model(model,it->first, it->second);
+        //addPatient2model(model,it->first, it->second);
     }
 
     // iterate over patients using QMap
@@ -296,7 +302,7 @@ void MainWindow::updatePatientTreeModel(){
     // iterate over patients again using QMap
     QMap<QString, QPatient>::iterator qit = patientMap.begin();
     for (qit=patientMap.begin();qit!=patientMap.end();++qit){
-        addQPatient2model(model,qit.key(), qit.value());
+        addQPatient2model(sourceModel,qit.key(), qit.value());
     }
 
 }
@@ -347,7 +353,7 @@ void MainWindow::AddFolderDialog(QString folder_type){
 
     // add the folder only when it is not in the list already
 
-    QStringList *dirs;
+    QStringList *dirs = NULL;
 
     if (folder_type == "static"){
         dirs = &static_dirs;
@@ -384,6 +390,28 @@ void MainWindow::refreshDynamic(){
     }
     updatePatientTreeModel();
     //buildTreeView(); // or rebuilt it somehow? What is more time consuming? Building model and treeview or mymap?
+}
+
+void MainWindow::refreshStatic(){
+
+    QMessageBox msgBox;
+    msgBox.setText("Refreshing static folder might take some time");
+    msgBox.setInformativeText("Do you really want to do it now?");
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+    msgBox.setDefaultButton(QMessageBox::Cancel);
+    int ret = msgBox.exec();
+
+    if(ret == QMessageBox::Cancel){
+        return;
+    }
+    else{
+        if(!static_dirs.isEmpty()){
+            for (int j = 0; j < static_dirs.size(); j++ ) {
+                loadData(static_dirs.at(j));
+            }
+        }
+        updatePatientTreeModel();
+    }
 }
 
 // ======== NO FILE WARNING ========
@@ -429,6 +457,7 @@ MainWindow::MainWindow(QWidget *parent)
     filemenu->addAction(tr("Add Static Folder"), this, SLOT(AddStaticFolderDialog()));
     filemenu->addAction(tr("Add Dynamic Folder"), this, SLOT(AddDynamicFolderDialog()));
     filemenu->addAction(tr("Refresh Dynamic"), this, SLOT(refreshDynamic()));
+    filemenu->addAction(tr("Refresh Static"), this, SLOT(refreshStatic()));
 
     // ======== Settings ========
     setmenu = new QMenu(this);
@@ -447,6 +476,11 @@ MainWindow::MainWindow(QWidget *parent)
     menubar->addMenu(setmenu);
     menubar->addMenu(helpmenu);
 
+    // ====== SHORTCUTS ======
+
+    refreshKey = new QShortcut(QKeySequence::Refresh, this);
+    connect(refreshKey,  SIGNAL(activated()), this, SLOT(refreshDynamic()));
+
     // ====== LAYOUT =====
 
     //set the layout
@@ -459,10 +493,10 @@ MainWindow::MainWindow(QWidget *parent)
     // ====== APPLICATION CYCLE ======
     readSettings(); // read setting from .ini file
     buildFilterLine(); // build filter line - do it first if you want it on the top
-    initLoadData(); //load data and update mymap
+    initLoadData(); //load data and update patientMap
 
-    if (mymap.size() == 0){
-        showNoFileWarning(); // show warning that where are no filed to load
+    if (patientMap.size() == 0){
+        showNoFileWarning(); // show warning that there are no files to load
     }
 
 }
@@ -474,6 +508,7 @@ void MainWindow::writeSettings()
     //QSettings settings("PuffinSoft", "EEGle Nest");
     QSettings settings("settings.ini",QSettings::IniFormat);
     settings.setValue("external_program", externalProgram);
+    settings.setValue("path2QMap",QMapFile);
 
     settings.beginWriteArray("static_dirs");
     for (int i = 0; i < static_dirs.size(); ++i) {
@@ -495,6 +530,7 @@ void MainWindow::readSettings()
 {
     QSettings settings("settings.ini",QSettings::IniFormat);
     externalProgram = settings.value("external_program").toString();
+    QMapFile = settings.value("path2QMap").toString();
 
     // check for duplicates here? Or will suffice in "Add folder dialog"
 
@@ -523,58 +559,53 @@ void MainWindow::readSettings()
 }
 
 // ======== WRITE and READ QMap ========
-void MainWindow::saveMap(){
-    QFile data("output.txt");
-
-    if (data.open(QFile::WriteOnly | QFile::Truncate)) {
-        QTextStream out(&data);
-        out.setCodec("UTF-16LE");
-        out.setLocale(QLocale::Czech);
-        std::map<string, Patient>::iterator it = mymap.begin();
-        for (it=mymap.begin(); it!=mymap.end(); ++it){
-            //qDebug() << QString::fromLocal8Bit(it->first.c_str());
-            out << it->first.c_str() << "\t" << it->second.last_record << "\t" << it->second.name.c_str() << "\t" << it->second.no << "\t" << it->second.sex.c_str() << Qt::endl;
-            std::map<string, Record>::iterator to = it->second.records_map.begin();
-            for (it->second.records_map.begin();to!=it->second.records_map.end(); ++to){
-                out << to->first.c_str() << Qt::endl;
-            }
-        }
-    }
-}
 
 void MainWindow::saveQMap(){
-    QString filename = "patientMap.txt";
-    QFile myFile(filename);
+    QMapFile = "patientMap.dat";
+    QFile myFile(QMapFile);
     if (!myFile.open(QIODevice::WriteOnly))
     {
-        qDebug() << "Could not write to file: " << filename << "Error string:" << myFile.errorString();
+        qDebug() << "Could not write to file: " << QMapFile << "Error string:" << myFile.errorString();
         return;
     }
 
     QDataStream out(&myFile);
     out.setVersion(QDataStream::Qt_5_3);
+    out << (quint32)0xD0AD; // = 53421 = digit sum = 6
     out << patientMap;
 }
 
 
-void MainWindow::loadQMap(){
-    QString filename = "patientMap.txt";
-    QFile myFile(filename);
+int MainWindow::loadQMap(){
+    //QString filename = "patientMap.dat";
+    QFile myFile(QMapFile);
     if (!myFile.exists()){
-        qDebug() << "Could not read file: " << filename << "Error string:" << myFile.errorString();
-        return;
+        qDebug() << "Could not read file: " << QMapFile << "Error string:" << myFile.errorString();
+        return 0;
     }
     myFile.open(QIODevice::ReadOnly);
     QDataStream in(&myFile);
 
     in.setVersion(QDataStream::Qt_5_3);
+
+    // Read and check the header
+    quint32 magic;
+    in >> magic;
+    //qDebug() << magic;
+    if (magic != 0xD0AD){
+        qDebug() << "Wrong data format";
+        return 0;
+    }
+
+
+
     in >> patientMap;
+    return 1;
 }
 
 MainWindow::~MainWindow()
 {
-    writeSettings(); //save setting in .ini file
-    //saveMap();
     saveQMap();
+    writeSettings(); //save setting in .ini file
 }
 

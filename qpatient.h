@@ -33,6 +33,7 @@ struct QRecord{
     QString file_path;
     int recording_flag;
     int video_flag;
+    int num_pages;
 };
 
 class QPatient{

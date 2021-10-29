@@ -153,6 +153,85 @@ Measurement read_measurement(fstream &file, long offset, long size)
     return measurement;
 }
 
+RecorderMontageInfo read_recorder_info(fstream &file, long offset, long size)
+{
+    RecorderMontageInfo recorder_info;
+    file.seekg(offset);
+    file.read(recorder_info.name, sizeof(recorder_info.name));
+    file.read(reinterpret_cast<char *>(&recorder_info.nRecChannels), sizeof(recorder_info.nRecChannels));
+    file.read(reinterpret_cast<char *>(&recorder_info.invertedACChannels), sizeof(recorder_info.invertedACChannels));
+    file.read(reinterpret_cast<char *>(&recorder_info.maximumVoltage), sizeof(recorder_info.maximumVoltage));
+    file.read(reinterpret_cast<char *>(&recorder_info.normalVoltage), sizeof(recorder_info.normalVoltage));
+    file.read(reinterpret_cast<char *>(&recorder_info.calibrationSignal), sizeof(recorder_info.calibrationSignal));
+    file.read(reinterpret_cast<char *>(&recorder_info.calibrationScale), sizeof(recorder_info.calibrationScale));
+    file.read(reinterpret_cast<char *>(&recorder_info.videoControl), sizeof(recorder_info.videoControl));
+    file.read(reinterpret_cast<char *>(&recorder_info.nSensitivities), sizeof(recorder_info.nSensitivities));
+    file.read(reinterpret_cast<char *>(&recorder_info.nLowFilters), sizeof(recorder_info.nLowFilters));
+    file.read(reinterpret_cast<char *>(&recorder_info.nHighFilters), sizeof(recorder_info.nHighFilters));
+
+    float z;
+    recorder_info.sensitivity = readChannel(z, file, 20);
+    recorder_info.lowFilter = readChannel(z, file, 20);
+    recorder_info.highFilter = readChannel(z, file, 20);
+
+    // <33s2bhH
+    unsigned char b;
+    file.read(reinterpret_cast<char *>(&recorder_info.montageName), sizeof(recorder_info.montageName)); // 33s
+    file.read(reinterpret_cast<char *>(&b), sizeof(b)); // b
+    recorder_info.numberOfChannelsUsed = b;
+    file.read(reinterpret_cast<char *>(&b), sizeof(b)); //b
+    recorder_info.globalSens = b;
+    file.read(reinterpret_cast<char *>(&recorder_info.epochLengthInSamples), sizeof(recorder_info.epochLengthInSamples)); //h
+    file.read(reinterpret_cast<char *>(&recorder_info.highestRate), sizeof(recorder_info.highestRate)); //H
+
+    // channels
+    int nch = 32;
+    short h;
+    unsigned short H;
+    char uch[5];
+    char st[9];
+    char stth[13];
+
+    vector<unsigned short> sampling_rate = readChannel(H, file, nch);
+    vector<string> signal_type = readChannelChar(st, file, nch);
+    vector<string> signal_sub_type = readChannelChar(st, file, nch);
+    vector<string> channel_desc = readChannelChar(stth, file, nch);
+    vector<unsigned short> sensitivity_index = readChannel(H, file, nch);
+    vector<unsigned short> low_filter_index = readChannel(H, file, nch);
+    vector<unsigned short> high_filter_index = readChannel(H, file, nch);
+    vector<unsigned short> delay = readChannel(H, file, nch);
+    vector<string> unit = readChannelChar(uch, file, nch);
+    vector<short> artefact_level = readChannel(h, file, nch);
+    vector<short> cal_type = readChannel(h, file, nch);
+    vector<float> cal_factor = readChannel(z, file, nch);
+    vector<float> cal_offset = readChannel(z, file, nch);
+    vector<unsigned short> save_buffer_size = readChannel(H, file, nch);
+
+
+    for (int i = 0; i < nch; i++)
+    {
+        Channel channel;
+        channel.sampling_rate = sampling_rate[i];
+        channel.signal_type = signal_type[i];
+        channel.signal_sub_type = signal_sub_type[i];
+        channel.channel_desc = channel_desc[i];
+        channel.sensitivity_index = sensitivity_index[i];
+        channel.low_filter_index = low_filter_index[i];
+        channel.high_filter_index = high_filter_index[i];
+        channel.delay = delay[i];
+        channel.unit = unit[i];
+        channel.cal_type = cal_type[i];
+        channel.cal_factor = cal_factor[i];
+        channel.cal_offset = cal_offset[i];
+        channel.artefact_level = artefact_level[i];
+        channel.save_buffer_size = save_buffer_size[i];
+        recorder_info.channels.push_back(channel);
+    }
+    //cout << "end of read_recorder_info: ";
+    //whereAmI(file);
+    return recorder_info;
+}
+
 Record read_signal_file(string file_path){
 
     // GET THE FILE SIZE
@@ -177,8 +256,6 @@ Record read_signal_file(string file_path){
         return record;
     }
 
-
-
     // Signal header
     signal.header = read_signal_header(file);
 
@@ -195,7 +272,12 @@ Record read_signal_file(string file_path){
     //whereAmI(file); // should be 80
     // Measurement
     signal.measurement = read_measurement(file, signal.data_table.measurement_info.offset, signal.data_table.measurement_info.size);
+
+    //Recorder info
+    signal.recorder_info = read_recorder_info(file, signal.data_table.recorder_montage_info.offset, signal.data_table.recorder_montage_info.size);
+
     file.close();
+
 
 
     // or make special constructor for this?
@@ -203,6 +285,8 @@ Record read_signal_file(string file_path){
     record.file_size = file_size;
     record.record_start = decode_date_time(signal.measurement.start_date, signal.measurement.start_hour);
     record.id = signal.measurement.id;
+    // removes "/" in ID (rodné èíslo)
+    record.id.erase(std::remove(record.id.begin(), record.id.end(), '/'), record.id.end());
     record.name = signal.measurement.name;
     record.sex = signal.measurement.sex;
     record.protocol = signal.measurement.protocol;
@@ -211,11 +295,7 @@ Record read_signal_file(string file_path){
     string file_name = file_path.substr(file_path.find_last_of("/\\") + 1);
     std::string::size_type const p(file_name.find_last_of('.'));
     record.file_name = file_name.substr(0, p);
-
-    //cout << record.file_name << endl;
-
-    // removes "/" in ID (rodné èíslo)
-    record.id.erase(std::remove(record.id.begin(), record.id.end(), '/'), record.id.end());
+    record.num_pages = (file_size - signal.data_table.signal_info.offset) / signal.data_table.signal_info.size;
 
     return record;
 }

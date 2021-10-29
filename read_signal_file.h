@@ -201,6 +201,7 @@ struct Record{
     string file_path;
     int recording_flag;
     int video_flag;
+    int num_pages;
 };
 
 time_t decode_date_time(long date, long time);
