@@ -189,6 +189,8 @@ struct SignalFile
 };
 
 struct Record{
+    int check_flag = 0; // 1 = valid BrainLab file, 0 if not
+    double file_size;
     string id;
     string name;
     time_t record_start;
@@ -198,6 +200,7 @@ struct Record{
     string file_name;
     string file_path;
     int recording_flag;
+    int video_flag;
 };
 
 time_t decode_date_time(long date, long time);

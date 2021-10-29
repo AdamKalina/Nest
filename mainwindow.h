@@ -29,23 +29,13 @@
 #include <QStandardItemModel>
 #include <QSizePolicy>
 #include <QElapsedTimer>
+#include <QDataStream>
+#include <QFile>
 #include "read_signal_file.h"
+#include "qpatient.h"
 #include "leaffilterproxymodel.h"
 #include <stdio.h>
 #include <string.h>
-
-
-class Patient{
-public:
-    string id;
-    string name;
-    string sex;
-    int no; // no of records
-    time_t last_record; // date of last EEG
-    std::map<string, Record> records_map;
-    void set_values(Record);
-    void add_record(Record);
-};
 
 class MainWindow : public QMainWindow
 {
@@ -56,6 +46,7 @@ public:
     ~MainWindow();
     //virtual void paintEvent(QPaintEvent *event);
     std::map<string, Patient> mymap;
+    QMap<QString, QPatient> patientMap;
     string convert_time_for_sorting(const time_t * timer);
     QString externalProgram;// = "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
     //QString stat_dir;// = "D:/Dropbox/Scripts/Cpp/no_data_test"; //static directory
@@ -72,6 +63,9 @@ public:
     void showNoFileWarning();
     void AddFolderDialog(QString folder_type);
     void buildFilterLine();
+    void saveQMap();
+    void loadQMap();
+    void saveMap();
     long no_files_loaded = 0;
 
 
@@ -86,6 +80,8 @@ public slots:
 private:
     QMenuBar *menubar;
     QMenu   *filemenu;
+    QMenu *setmenu;
+    QMenu *helpmenu;
     QBrush *ligh_grey_brush;
     QTreeView *treeView;
     QStandardItemModel *model;
@@ -94,6 +90,7 @@ private:
     QLineEdit *filter;
     QWidget *centralWidget;
     QVBoxLayout *layout;
+
 
 };
 #endif // MAINWINDOW_H

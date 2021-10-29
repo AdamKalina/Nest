@@ -1,5 +1,6 @@
 <RCC>
     <qresource>
         <file>style.qss</file>
+		<file>images/DV_icon.png</file>
     </qresource>
 </RCC>

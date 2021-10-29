@@ -88,7 +88,7 @@ void whereAmI(fstream &file)
 {
     int testing = 1;
     if(testing){
-       cout << "Position in file: " << file.tellg() << endl;
+        cout << "Position in file: " << file.tellg() << endl;
     }
 }
 
@@ -108,14 +108,14 @@ DataTable read_data_table(fstream &file)
     long y;
     vector<long> dt = readChannel(y, file, 17);
     data_table.measurement_info = Block{dt[0], dt[1], NULL};
-    data_table.recorder_montage_info = Block{dt[2], dt[3]};
-    data_table.events_info = Block{dt[4], dt[5]};
-    data_table.notes_info = Block{dt[6], dt[7]};
-    data_table.impedance_info = Block{dt[8], dt[9]};
-    data_table.display_montages_info = Block{dt[10], dt[11]};
-    data_table.stimulator_info = Block{dt[12], dt[13]};
-    data_table.signal_info = Block{dt[14], dt[15], dt[16]};
-    return data_table;
+data_table.recorder_montage_info = Block{dt[2], dt[3]};
+data_table.events_info = Block{dt[4], dt[5]};
+data_table.notes_info = Block{dt[6], dt[7]};
+data_table.impedance_info = Block{dt[8], dt[9]};
+data_table.display_montages_info = Block{dt[10], dt[11]};
+data_table.stimulator_info = Block{dt[12], dt[13]};
+data_table.signal_info = Block{dt[14], dt[15], dt[16]};
+return data_table;
 }
 
 Measurement read_measurement(fstream &file, long offset, long size)
@@ -163,6 +163,10 @@ Record read_signal_file(string file_path){
     const auto file_size = (end - begin);
     //cout << "File size: " << file_size << " bytes" << endl;
 
+    // Signal struct
+    SignalFile signal;
+    Record record;
+
     // READ THE FILE
     streampos fileSize;
     fstream file(file_path, ios::in | ios::out | ios::binary);
@@ -170,14 +174,20 @@ Record read_signal_file(string file_path){
     if (file.fail())
     {
         cout << "ERROR: Cannot open the file..." << endl;
-        exit(0);
+        return record;
     }
 
-    // Signal struct
-    SignalFile signal;
+
 
     // Signal header
     signal.header = read_signal_header(file);
+
+    // check if it is BrainLab *.SIG file
+    if (signal.header.program_id != 1096045395){
+        //cout << file_path << " is not valid BrainLab file, skipping" << endl;
+        return record;
+    }
+
 
     // Data table
     signal.data_table = read_data_table(file);
@@ -187,8 +197,10 @@ Record read_signal_file(string file_path){
     signal.measurement = read_measurement(file, signal.data_table.measurement_info.offset, signal.data_table.measurement_info.size);
     file.close();
 
-    Record record;
+
     // or make special constructor for this?
+    record.check_flag = 1;
+    record.file_size = file_size;
     record.record_start = decode_date_time(signal.measurement.start_date, signal.measurement.start_hour);
     record.id = signal.measurement.id;
     record.name = signal.measurement.name;
@@ -205,5 +217,5 @@ Record read_signal_file(string file_path){
     // removes "/" in ID (rodné èíslo)
     record.id.erase(std::remove(record.id.begin(), record.id.end(), '/'), record.id.end());
 
-   return record;
+    return record;
 }
