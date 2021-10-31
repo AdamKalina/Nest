@@ -57,6 +57,8 @@ public:
     QStringList static_dirs;
     QStringList dynamic_dirs;
     int sourceModelLoaded = 0;
+    QString defaultDataFolder;
+    QString defaultReaderFolder;
     void readSettings();
     void writeSettings();
     void initLoadData();
@@ -80,6 +82,8 @@ public slots:
     void filter_text_changed(const QString & text);
     void refreshDynamic();
     void refreshStatic();
+    void notYetReady();
+    void show_about_dialog();
 
 private:
     QMenuBar *menubar;

@@ -105,7 +105,7 @@ SignalHeader read_signal_header(fstream &file)
 DataTable read_data_table(fstream &file)
 {
     DataTable data_table;
-    long y;
+    long y = 0;
     vector<long> dt = readChannel(y, file, 17);
     data_table.measurement_info = Block{dt[0], dt[1], NULL};
 data_table.recorder_montage_info = Block{dt[2], dt[3]};
@@ -169,7 +169,7 @@ RecorderMontageInfo read_recorder_info(fstream &file, long offset, long size)
     file.read(reinterpret_cast<char *>(&recorder_info.nLowFilters), sizeof(recorder_info.nLowFilters));
     file.read(reinterpret_cast<char *>(&recorder_info.nHighFilters), sizeof(recorder_info.nHighFilters));
 
-    float z;
+    float z = 0;
     recorder_info.sensitivity = readChannel(z, file, 20);
     recorder_info.lowFilter = readChannel(z, file, 20);
     recorder_info.highFilter = readChannel(z, file, 20);
@@ -186,8 +186,8 @@ RecorderMontageInfo read_recorder_info(fstream &file, long offset, long size)
 
     // channels
     int nch = 32;
-    short h;
-    unsigned short H;
+    short h = 0;
+    unsigned short H = 0;
     char uch[5];
     char st[9];
     char stth[13];

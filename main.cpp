@@ -6,9 +6,11 @@ int main(int argc, char *argv[])
 {
     setlocale(LC_ALL, "czech");
     QApplication a(argc, argv);
+    QApplication::setWindowIcon(QIcon(":/images/nest_icon.png"));
     MainWindow w;
 
-    w.setWindowTitle("EEGle Nest");
+    w.setWindowTitle("EEGLE Nest");
+    //w.setWindowIcon(QIcon(":/images/nest_icon.png")); // this sets the icon just for the MainWindow
     //w.setMinimumHeight(820);
     //w.setMinimumWidth(875); // 1200
 

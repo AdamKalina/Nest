@@ -106,7 +106,7 @@ void MainWindow::initLoadData(){
     }
     else{
         if (!loadQMap()){
-            // only when there is no QMap loaded it goes through the static folders
+            // only when there is no QMap to load it goes through the static folders
             for (int j = 0; j < static_dirs.size(); ++j) {
                 loadData(static_dirs.at(j));
             }
@@ -131,7 +131,14 @@ void addPatient2model(QAbstractItemModel *model, string ID, Patient patient){
 
     model->setData(model->index(0, 0), QString::fromStdString(ID));
     model->setData(model->index(0, 1), QString::fromLocal8Bit(patient.name.c_str()));
+
+
+#if QT_VERSION >= 0x050800
     model->setData(model->index(0, 2), QDateTime::fromSecsSinceEpoch(patient.last_record));
+#else
+    model->setData(model->index(0, 2), QDateTime::fromTime_t(patient.last_record));
+#endif
+
     model->setData(model->index(0, 3), patient.no, Qt::DisplayRole);
     model->setData(model->index(0, 3), Qt::AlignCenter, Qt::TextAlignmentRole);
     //QDateTime last_record = QDateTime::fromSecsSinceEpoch(patient.last_record); // This function was introduced in Qt 5.8., before that use QDateTime::fromTime_t
@@ -150,7 +157,13 @@ void addPatient2model(QAbstractItemModel *model, string ID, Patient patient){
         model->insertRows(ind, 1, parent); // adds a child to the previous item
         model->setData(model->index(ind, 0, parent), QString::fromStdString(to->first), Qt::DisplayRole);
         model->setData(model->index(ind, 1, parent), QString::fromLocal8Bit(to->second.class_code.c_str()), Qt::DisplayRole);
+
+#if QT_VERSION >= 0x050800
         model->setData(model->index(ind, 2, parent), QDateTime::fromSecsSinceEpoch(to->second.record_start), Qt::DisplayRole);
+#else
+        model->setData(model->index(ind, 2, parent), QDateTime::fromTime_t(to->second.record_start), Qt::DisplayRole);
+#endif
+
         //model->setData(model->index(0, 3, parent), "", Qt::DisplayRole);
         model->setData(model->index(ind, 4, parent), QString::fromLocal8Bit(to->second.file_path.c_str()), Qt::DisplayRole);
         model->setData(model->index(ind, 5, parent), to->second.recording_flag, Qt::DisplayRole);
@@ -181,7 +194,15 @@ void addQPatient2model(QAbstractItemModel *model, QString ID, QPatient Qpatient)
 
     model->setData(model->index(0, 0), ID);
     model->setData(model->index(0, 1), Qpatient.name);
+
+
+#if QT_VERSION >= 0x050800
     model->setData(model->index(0, 2), QDateTime::fromSecsSinceEpoch(Qpatient.last_record));
+#else
+    model->setData(model->index(0, 2), QDateTime::fromTime_t(Qpatient.last_record));
+#endif
+
+
     model->setData(model->index(0, 3), Qpatient.no, Qt::DisplayRole);
     model->setData(model->index(0, 3), Qt::AlignCenter, Qt::TextAlignmentRole);
     //QDateTime last_record = QDateTime::fromSecsSinceEpoch(patient.last_record); // This function was introduced in Qt 5.8., before that use QDateTime::fromTime_t
@@ -202,7 +223,13 @@ void addQPatient2model(QAbstractItemModel *model, QString ID, QPatient Qpatient)
         model->insertRows(ind, 1, parent); // adds a child to the previous item
         model->setData(model->index(ind, 0, parent), to.key(), Qt::DisplayRole);
         model->setData(model->index(ind, 1, parent), to.value().class_code, Qt::DisplayRole);
+
+#if QT_VERSION >= 0x050800
         model->setData(model->index(ind, 2, parent), QDateTime::fromSecsSinceEpoch(to.value().record_start), Qt::DisplayRole);
+#else
+        model->setData(model->index(ind, 2, parent), QDateTime::fromTime_t(to.value().record_start), Qt::DisplayRole);
+#endif
+
         model->setData(model->index(ind, 3, parent), n.addSecs(to.value().num_pages*10).toString("hh:mm:ss"), Qt::DisplayRole);
         model->setData(model->index(ind, 4, parent), to.value().file_path, Qt::DisplayRole);
         model->setData(model->index(ind, 5, parent), to.value().recording_flag, Qt::DisplayRole);
@@ -240,12 +267,12 @@ QAbstractItemModel *createPatientTreeModel(QObject *parent, std::map<string, Pat
 
     //QIcon *DVicon = new QIcon(":/images/DV_icon.png");
 
-    // iterate over patients
-    std::map<string, Patient>::iterator it = mymap.begin();
-    for (it=mymap.begin(); it!=mymap.end(); ++it){
-        //qDebug() << QString::fromLocal8Bit(it->first.c_str());
-        //addPatient2model(model,it->first, it->second);
-    }
+    // iterate over patients - using std::map
+    //std::map<string, Patient>::iterator it = mymap.begin();
+    //for (it=mymap.begin(); it!=mymap.end(); ++it){
+    //qDebug() << QString::fromLocal8Bit(it->first.c_str());
+    //addPatient2model(model,it->first, it->second);
+    //}
 
     // iterate over patients using QMap
     QMap<QString, QPatient>::iterator qit = patientMap.begin();
@@ -270,7 +297,11 @@ void MainWindow::buildTreeView(){
     proxyModel = new LeafFilterProxyModel(this); // use this custom FilterProxyModel
 
     proxyModel->setSourceModel(sourceModel);
-    proxyModel->setRecursiveFilteringEnabled(1); // This property was introduced in Qt 5.10.
+
+#if QT_VERSION >= 0x051000
+    proxyModel->setRecursiveFilteringEnabled(1); // This property was introduced in Qt 5.10. - Luckily LeafFilterProxyModel probably takes care of that
+#else
+#endif
     proxyModel->setFilterKeyColumn(-1); // filter through all columns
     proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
 
@@ -287,6 +318,8 @@ void MainWindow::buildTreeView(){
     treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
     treeView->setAlternatingRowColors(1);
     treeView->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+    treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
+    //treeView->expand(proxyModel->index(1,0)); // expands the second patient
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(double_click_tree(QModelIndex)));
 
     layout->addWidget(treeView);
@@ -313,25 +346,45 @@ void MainWindow::updatePatientTreeModel(){
         addQPatient2model(sourceModel,qit.key(), qit.value());
     }
 
+    treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
+
 }
 
 void MainWindow::double_click_tree(QModelIndex index){
     //qDebug() << index.data(); // data pod kurzorem
+#if QT_VERSION >= 0x051100
     QVariant path = index.siblingAtColumn(4).data();
     QVariant recording_flag = index.siblingAtColumn(5).data();
+#else
+    QVariant path = index.sibling(0,4).data();
+    QVariant recording_flag = index.sibling(0,5).data();
+#endif
+
     //qDebug() << path;
     //qDebug() << recording_flag;
 
     if (externalProgram.isEmpty()){
         QMessageBox msgBox;
-        msgBox.setText("EEG reader is not set");
-        msgBox.exec();
+        msgBox.setIcon(QMessageBox::Question);
+        msgBox.setText(tr("EEG reader is not set"));
+        msgBox.setInformativeText(tr("Do you want to set it now?"));
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::Yes);
+        int ret = msgBox.exec();
+
+        if (ret == QMessageBox::Yes){
+            chooseExternalProgram();
+        }
+        else{
+            return;
+        }
     }
 
     if (path.isValid()){ // in patient (where there is no path set) is not valid
         if (recording_flag.toBool()){
             QMessageBox msgBox;
-            msgBox.setText("This is file is still being recorded, you will not able to review new data until you open it again.");
+            msgBox.setIcon(QMessageBox::Warning);
+            msgBox.setText(tr("This is file is still being recorded, you will not able to review new data until you open it again."));
             msgBox.exec();
         }
         QStringList arguments;
@@ -353,7 +406,7 @@ void MainWindow::AddDynamicFolderDialog(){
 
 void MainWindow::AddFolderDialog(QString folder_type){
 
-    new_dir = QFileDialog::getExistingDirectory(this, tr("Choose directory"), "D:/Dropbox/Scripts/Cpp/");
+    new_dir = QFileDialog::getExistingDirectory(this, tr("Choose directory"), defaultDataFolder);
     if(new_dir.isEmpty()){
         return;
     }
@@ -361,13 +414,12 @@ void MainWindow::AddFolderDialog(QString folder_type){
 
     // add the folder only when it is not in the list already
 
-    QStringList *dirs = NULL;
+    QStringList *dirs = nullptr;
+
 
     if (folder_type == "static"){
         dirs = &static_dirs;
-    }
-
-    if(folder_type == "dynamic"){
+    }else{
         dirs = &dynamic_dirs;
     }
 
@@ -378,18 +430,22 @@ void MainWindow::AddFolderDialog(QString folder_type){
     if(sourceModelLoaded){
         updatePatientTreeModel();
     }
-
-    //buildTreeView();
+    else{
+        buildTreeView();
+    }
 };
 
 
 
 void MainWindow::chooseExternalProgram(){
 
-    externalProgram = QFileDialog::getOpenFileName(this, tr("Choose EEG reader"), "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/", tr("BrainLab reader (*.exe)"));
+    QString temp = QFileDialog::getOpenFileName(this, tr("Choose EEG reader"), defaultReaderFolder, tr("BrainLab reader (*.exe)"));
 
-    if(externalProgram.isEmpty()){
+    if(temp.isEmpty()){
         return;
+    }
+    else{
+        externalProgram = temp;
     }
 };
 
@@ -406,8 +462,8 @@ void MainWindow::refreshDynamic(){
 void MainWindow::refreshStatic(){
 
     QMessageBox msgBox;
-    msgBox.setText("Refreshing static folder might take some time");
-    msgBox.setInformativeText("Do you really want to do it now?");
+    msgBox.setText(tr("Refreshing static folder might take some time"));
+    msgBox.setInformativeText(tr("Do you really want to do it now?"));
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
     msgBox.setDefaultButton(QMessageBox::Cancel);
     int ret = msgBox.exec();
@@ -423,6 +479,24 @@ void MainWindow::refreshStatic(){
         }
         updatePatientTreeModel();
     }
+}
+
+void MainWindow::show_about_dialog()
+{
+    qDebug() << QString("Compiled with Qt Version %1").arg(QT_VERSION_STR);
+
+    QMessageBox messagewindow;
+    messagewindow.setIcon(QMessageBox::NoIcon);
+    messagewindow.setText("About this program");
+    QString aboutQString = QString("EEGle Nest is a BrainLab record database using convertSIGtoEDF from Frederik-D-Weber to read BrainLab EEG files header.\n"
+    "\n"
+    "Built using Qt Creator 4.14.1 and Qt %1 (MSVC 2019, 64 bit)"
+    "\n"
+    "\n"
+    "by Adam Kalina, Department of Neurology, Second Faculty of Medicine, Charles University and Motol University Hospital, 2021, during COVID-19").arg(QT_VERSION_STR);
+    messagewindow.setInformativeText(aboutQString);
+    messagewindow.setStyleSheet("QLabel{min-width: 700px;}");
+    messagewindow.exec();
 }
 
 // ======== NO FILE WARNING ========
@@ -454,6 +528,14 @@ void MainWindow::filter_text_changed(const QString & text){
     proxyModel->setFilterFixedString(text);
 }
 
+void MainWindow::notYetReady(){
+    QMessageBox msgBox;
+    msgBox.setText(tr("I am Sorry, this feature is not yet ready"));
+    msgBox.setIcon(QMessageBox::Information);
+    msgBox.exec();
+}
+
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -474,13 +556,13 @@ MainWindow::MainWindow(QWidget *parent)
     setmenu = new QMenu(this);
     setmenu->setTitle(tr("&Settings"));
     setmenu->addAction(tr("Add Reader"), this, SLOT(chooseExternalProgram()));
-    setmenu->addAction(tr("Folder list"));
+    setmenu->addAction(tr("Folder list"), this, SLOT(notYetReady()));
 
     // ======== Help & About ========
     helpmenu = new QMenu(this);
     helpmenu->setTitle(tr("&Help"));
-    helpmenu->addAction(tr("About"));
-    helpmenu->addAction(tr("Manual"));
+    helpmenu->addAction(tr("About"),this, SLOT(show_about_dialog()));
+    helpmenu->addAction(tr("Manual"),this, SLOT(notYetReady()));
 
 
     menubar->addMenu(filemenu);
@@ -520,6 +602,8 @@ void MainWindow::writeSettings()
     QSettings settings("settings.ini",QSettings::IniFormat);
     settings.setValue("external_program", externalProgram);
     settings.setValue("path2QMap",QMapFile);
+    settings.setValue("defaultDataFolder","D:/Dropbox/Scripts/Cpp/");
+    settings.setValue("defaultReaderFolder","D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/");
 
     settings.beginWriteArray("static_dirs");
     for (int i = 0; i < static_dirs.size(); ++i) {
@@ -542,6 +626,8 @@ void MainWindow::readSettings()
     QSettings settings("settings.ini",QSettings::IniFormat);
     externalProgram = settings.value("external_program").toString();
     QMapFile = settings.value("path2QMap").toString();
+    defaultDataFolder = settings.value("defaultDataFolder").toString();
+    defaultReaderFolder = settings.value("defaultReaderFolder").toString();
 
     // check for duplicates here? Or will suffice in "Add folder dialog"
 
