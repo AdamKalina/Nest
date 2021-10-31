@@ -51,6 +51,7 @@ void MainWindow::loadData(QString path2load){
         // this function returns only the data needed - maybe rename it
         Record record = read_signal_file(path);
 
+        // if something is wrong with this file, skip it
         if (record.check_flag == 0){
             continue;
         }
@@ -63,18 +64,23 @@ void MainWindow::loadData(QString path2load){
         record.recording_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".LOG"); // bool to int
         record.video_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".M01"); // bool to int
 
-        // trying to implement QMap
+        // using QMap
         QMap<QString, QPatient>::iterator qit = patientMap.find(QString::fromLocal8Bit(record.id.c_str()));
         if (qit != patientMap.end()) {
+            // if QPatient already exists, add record to it
+            // QMap = If there is already an item with the key key, that item's value is replaced with value
+            // so it will rewrite data from dynamic folders
+            // TO DO - check for duplicates here?
             qit->add_record(record);
         }
         else{
+            // if QPatient does not exist, create it
             QPatient Qpatient;
             Qpatient.set_values(record);
             patientMap.insert(Qpatient.id, Qpatient);
         }
 
-        // clasic mapp
+        // clasic map
         std::map<string, Patient>::iterator it;
         it = mymap.find(record.id);
         if (it != mymap.end()){ // if the patient already exists, add record to it
@@ -105,6 +111,7 @@ void MainWindow::initLoadData(){
                 loadData(static_dirs.at(j));
             }
         }
+        qDebug() << "after static folders";
         // now go through dynamic folders
         for (int j = 0; j < dynamic_dirs.size(); j++ ) {
             loadData(dynamic_dirs.at(j));
@@ -257,6 +264,7 @@ void MainWindow::buildTreeView(){
 
     qDebug() << "creating source model";
     sourceModel = createPatientTreeModel(this, mymap, patientMap); // create sourceModel
+    sourceModelLoaded = 1;
 
     //proxyModel = new QSortFilterProxyModel(this);
     proxyModel = new LeafFilterProxyModel(this); // use this custom FilterProxyModel
@@ -367,7 +375,10 @@ void MainWindow::AddFolderDialog(QString folder_type){
         *dirs << new_dir;
     }
     loadData(new_dir);
-    updatePatientTreeModel();
+    if(sourceModelLoaded){
+        updatePatientTreeModel();
+    }
+
     //buildTreeView();
 };
 

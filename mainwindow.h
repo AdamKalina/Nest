@@ -56,6 +56,7 @@ public:
     QString QMapFile;
     QStringList static_dirs;
     QStringList dynamic_dirs;
+    int sourceModelLoaded = 0;
     void readSettings();
     void writeSettings();
     void initLoadData();

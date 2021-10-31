@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(Nest_GUI LANGUAGES CXX)
+project(Nest LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -38,19 +38,19 @@ set(PROJECT_SOURCES
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(Nest_GUI
+    qt_add_executable(Nest
         ${PROJECT_SOURCES}
     )
 else()
     if(ANDROID)
-        add_library(Nest_GUI SHARED
+        add_library(Nest SHARED
             ${PROJECT_SOURCES}
         )
     else()
-        add_executable(Nest_GUI
+        add_executable(Nest
             ${PROJECT_SOURCES}
         )
     endif()
 endif()
 
-target_link_libraries(Nest_GUI PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(Nest PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
