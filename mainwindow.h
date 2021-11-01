@@ -45,8 +45,6 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    //virtual void paintEvent(QPaintEvent *event);
-    std::map<string, Patient> mymap;
     QMap<QString, QPatient> patientMap;
     string convert_time_for_sorting(const time_t * timer);
     QString externalProgram;// = "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
@@ -59,10 +57,13 @@ public:
     int sourceModelLoaded = 0;
     QString defaultDataFolder;
     QString defaultReaderFolder;
+    QDateTime lastUpdateTime;
     void readSettings();
     void writeSettings();
     void initLoadData();
     void loadData(QString path2load);
+    void loadNewDataOnly(QString path2load);
+    void updateLastCheckTime();
     void buildTreeView();
     void updatePatientTreeModel();
     void showNoFileWarning();
@@ -81,6 +82,7 @@ public slots:
     void chooseExternalProgram();
     void filter_text_changed(const QString & text);
     void refreshDynamic();
+    void refreshDynamicNewOnly();
     void refreshStatic();
     void notYetReady();
     void show_about_dialog();

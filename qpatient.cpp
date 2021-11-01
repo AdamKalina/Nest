@@ -65,27 +65,44 @@ void QPatient::add_record(Record record){
 
 QDataStream & operator<<(QDataStream & out, const QPatient & Qpatient)
 {
-    out << Qpatient.id << (qint32)Qpatient.last_record << Qpatient.name << Qpatient.sex << (qint8)Qpatient.no << Qpatient.Qrecords_map;
+    out << Qpatient.id << (qint32)Qpatient.last_record << Qpatient.name << Qpatient.sex << (qint16)Qpatient.no << Qpatient.Qrecords_map;
+    //qDebug() << "no out:" << Qpatient.no;
     return out;
 }
 
 QDataStream & operator<<(QDataStream & out, const QRecord & Qrecord)
 {
-    out << Qrecord.check_flag << Qrecord.class_code << Qrecord.file_name << Qrecord.file_path << Qrecord.file_size << Qrecord.id << Qrecord.name << Qrecord.protocol << Qrecord.record_start << Qrecord.recording_flag << Qrecord.sex << Qrecord.video_flag << (qint8)Qrecord.num_pages;
+    out << Qrecord.check_flag << Qrecord.class_code << Qrecord.file_name << Qrecord.file_path;
+    out << (quint32)Qrecord.file_size << Qrecord.id << Qrecord.name << Qrecord.protocol << Qrecord.record_start;
+    out << Qrecord.recording_flag << Qrecord.sex << Qrecord.video_flag << (qint16)Qrecord.num_pages;
+    //qDebug() << "pages out: " << Qrecord.num_pages;
     return out;
 }
 
 
 QDataStream & operator>>(QDataStream & in, QPatient & Qpatient)
 {
-    in >> Qpatient.id >> (qint32&)Qpatient.last_record >> Qpatient.name >> Qpatient.sex >> (qint8&)Qpatient.no >> Qpatient.Qrecords_map;
-    //qDebug() << Qpatient.name;
+    in >> Qpatient.id >> (qint32&)Qpatient.last_record >> Qpatient.name >> Qpatient.sex;
+    qint16 no;
+    in >> no;
+    Qpatient.no = no; // do I have to do it inline?
+
+    //in >> (qint16&)Qpatient.no;
+    in >> Qpatient.Qrecords_map;
+    //qDebug() << "no in:" << (qint16&)Qpatient.no;
     return in;
 }
 
 QDataStream & operator>>(QDataStream & in, QRecord & Qrecord)
 {
-    in >> Qrecord.check_flag >> Qrecord.class_code >> Qrecord.file_name >> Qrecord.file_path >> Qrecord.file_size >> Qrecord.id >> Qrecord.name >> Qrecord.protocol >> Qrecord.record_start >> Qrecord.recording_flag >> Qrecord.sex >> Qrecord.video_flag >> (qint8&)Qrecord.num_pages;
-    //qDebug() << Qrecord.file_path;
+    in >> Qrecord.check_flag >> Qrecord.class_code >> Qrecord.file_name >> Qrecord.file_path;
+    in >> (qint32&)Qrecord.file_size >> Qrecord.id >> Qrecord.name >> Qrecord.protocol >> Qrecord.record_start;
+    in >> Qrecord.recording_flag >> Qrecord.sex >> Qrecord.video_flag;
+
+    qint16 pages;
+    in >> pages;
+    Qrecord.num_pages = pages;
+    //in >> (qint16&)Qrecord.num_pages;
+    //qDebug() << "pages in: " << (qint16&)Qrecord.num_pages;
     return in;
 }

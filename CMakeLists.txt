@@ -11,6 +11,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+
 # QtCreator supports the following variables for Android, which are identical to qmake Android variables.
 # Check https://doc.qt.io/qt/deployment-android.html for more information.
 # They need to be set before the find_package( ...) calls below.
@@ -26,6 +27,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
+
+# for Win XP
+if(${QT_VERSION_MAJOR} EQUAL 5 AND ${QT_VERSION_MINOR} LESS_EQUAL 6)
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS,5.01")
+    message(STATUS "XP only")
+endif()
 
 set(PROJECT_SOURCES
         main.cpp
@@ -48,9 +55,12 @@ else()
         )
     else()
         add_executable(Nest
+            WIN32
             ${PROJECT_SOURCES}
         )
     endif()
 endif()
 
 target_link_libraries(Nest PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+
+# add WIN32 in add_executable(${PROJECT_NAME} WIN32 main.cpp)?

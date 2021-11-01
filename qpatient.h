@@ -22,7 +22,7 @@ public:
 
 struct QRecord{
     int check_flag = 0; // 1 = valid BrainLab file, 0 if not
-    double file_size;
+    long file_size;
     QString id;
     QString name;
     time_t record_start;

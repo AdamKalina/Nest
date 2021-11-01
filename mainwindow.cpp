@@ -1,25 +1,12 @@
 #include "mainwindow.h"
 
-string MainWindow::convert_time_for_sorting(const time_t * timer){ //deprecated
-    // convert time
-    char buffer [80];
-    struct tm * timeinfo = localtime(timer);
-    strftime (buffer,sizeof(buffer),"%Y-%m-%d %H:%M:%S",timeinfo);
-    //qDebug() << buffer;
-    return buffer;
-}
-
-
 // ======== LOAD DATA ========
 
 void MainWindow::loadData(QString path2load){
 
     //qDebug() << path2load;
     // TO DO
-    // store the mymap on HDD or use SQLite
-    // add only new files - probably best secured by MyMap
     // report duplicates
-    // dynamic folders
     // check if the files still exists?
 
     //    // test - go through the QDirIterator once and count files, then use it for qprogressdialog
@@ -61,6 +48,7 @@ void MainWindow::loadData(QString path2load){
         // TO DO - the same for video file, is there a field in signal that states that video exists?
 
         QFileInfo fi(Qpath);
+
         record.recording_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".LOG"); // bool to int
         record.video_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".M01"); // bool to int
 
@@ -79,26 +67,68 @@ void MainWindow::loadData(QString path2load){
             Qpatient.set_values(record);
             patientMap.insert(Qpatient.id, Qpatient);
         }
+    }
+    no_files_loaded = no_files_loaded + ii;
+    qDebug() << "no of files processed: " << ii;
+    //ii = 0;
+}
 
-        // clasic map
-        std::map<string, Patient>::iterator it;
-        it = mymap.find(record.id);
-        if (it != mymap.end()){ // if the patient already exists, add record to it
-            //mymap.erase (it);
-            //cout << it->first << " already exists" << endl;
-            it->second.add_record(record);
+void MainWindow::loadNewDataOnly(QString path2load){
+
+    int ii = 0;
+
+    // QDirIterator - goes through files recursively
+    QDirIterator QDit(path2load, QStringList() << "*.sig" << "*.SIG", QDir::Files, QDirIterator::Subdirectories);
+    while (QDit.hasNext()){
+
+        QString Qpath = QDit.next();
+        QFileInfo fi(Qpath);
+
+        // if the file has been lastmodified before last update, skip it
+        if(fi.lastModified() < lastUpdateTime){
+            qDebug() << "nothing new in this file, skipping";
+            continue;
         }
-        else{ // if the patient does not exist, create him
-            Patient patient;
-            patient.set_values(record);
-            // insert into map
-            mymap.insert(std::pair<string,Patient>(patient.id,patient));
+
+        string path= Qpath.toLocal8Bit().data();
+        //qDebug() << Qpath;
+
+        // this function returns only the data needed - maybe rename it
+        Record record = read_signal_file(path);
+        ii++;
+
+        // if something is wrong with this file, skip it
+        if (record.check_flag == 0){
+            continue;
+        }
+
+        // check if .LOG file with same name exists - and if it does, flag the record as still being recorded
+        // TO DO - is this the best way? There is lot of data in the header of recorded file, search for "TEMP" instead?
+        // TO DO - the same for video file, is there a field in signal that states that video exists?
+        record.recording_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".LOG"); // bool to int
+        record.video_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".M01"); // bool to int
+
+        // using QMap
+        QMap<QString, QPatient>::iterator qit = patientMap.find(QString::fromLocal8Bit(record.id.c_str()));
+        if (qit != patientMap.end()) {
+            // if QPatient already exists, add record to it
+            // QMap = If there is already an item with the key key, that item's value is replaced with value
+            // so it will rewrite data from dynamic folders
+            // TO DO - check for duplicates here?
+            qit->add_record(record);
+        }
+        else{
+            // if QPatient does not exist, create it
+            QPatient Qpatient;
+            Qpatient.set_values(record);
+            patientMap.insert(Qpatient.id, Qpatient);
         }
     }
     no_files_loaded = no_files_loaded + ii;
     qDebug() << "no of files processed: " << ii;
     //ii = 0;
 }
+
 
 void MainWindow::initLoadData(){
     if(static_dirs.isEmpty() && dynamic_dirs.isEmpty()){ // if there is no path to data it will ask for it right away
@@ -119,73 +149,13 @@ void MainWindow::initLoadData(){
         qDebug() << "total no of files processed: " << no_files_loaded;
         buildTreeView();
     }
+}
 
+void MainWindow::updateLastCheckTime(){
+    lastUpdateTime = lastUpdateTime.currentDateTime();
 }
 
 // ======== TREE MODEL ========
-
-void addPatient2model(QAbstractItemModel *model, string ID, Patient patient){
-
-    // define patient
-    model->insertRow(0);
-
-    model->setData(model->index(0, 0), QString::fromStdString(ID));
-    model->setData(model->index(0, 1), QString::fromLocal8Bit(patient.name.c_str()));
-
-
-#if QT_VERSION >= 0x050800
-    model->setData(model->index(0, 2), QDateTime::fromSecsSinceEpoch(patient.last_record));
-#else
-    model->setData(model->index(0, 2), QDateTime::fromTime_t(patient.last_record));
-#endif
-
-    model->setData(model->index(0, 3), patient.no, Qt::DisplayRole);
-    model->setData(model->index(0, 3), Qt::AlignCenter, Qt::TextAlignmentRole);
-    //QDateTime last_record = QDateTime::fromSecsSinceEpoch(patient.last_record); // This function was introduced in Qt 5.8., before that use QDateTime::fromTime_t
-
-    const QModelIndex parent = model->index(0,0); // get the item in the first row and first column
-
-    // iterate through records
-    int ind = 0;
-    int ncol = 6;
-    model->insertColumns(0, ncol, parent); // adds a child to the previous item
-
-    QIcon *dvicon = new QIcon(":/images/DV_icon.png"); // or reuse it somehow? or use QPainter?
-
-    std::map<string, Record>::iterator to = patient.records_map.begin();
-    for (patient.records_map.begin();to!=patient.records_map.end(); ++to){
-        model->insertRows(ind, 1, parent); // adds a child to the previous item
-        model->setData(model->index(ind, 0, parent), QString::fromStdString(to->first), Qt::DisplayRole);
-        model->setData(model->index(ind, 1, parent), QString::fromLocal8Bit(to->second.class_code.c_str()), Qt::DisplayRole);
-
-#if QT_VERSION >= 0x050800
-        model->setData(model->index(ind, 2, parent), QDateTime::fromSecsSinceEpoch(to->second.record_start), Qt::DisplayRole);
-#else
-        model->setData(model->index(ind, 2, parent), QDateTime::fromTime_t(to->second.record_start), Qt::DisplayRole);
-#endif
-
-        //model->setData(model->index(0, 3, parent), "", Qt::DisplayRole);
-        model->setData(model->index(ind, 4, parent), QString::fromLocal8Bit(to->second.file_path.c_str()), Qt::DisplayRole);
-        model->setData(model->index(ind, 5, parent), to->second.recording_flag, Qt::DisplayRole);
-
-        // if recording flag = 1 --> color the whole row red
-        // TO DO - use delegate?
-        if (to->second.recording_flag){
-            for (int i = 0;i < ncol;i++){
-                model->setData(model->index(ind, i, parent), QColor(Qt::red), Qt::ForegroundRole);
-            }
-        }
-
-        // if file has video - show DVicon
-        if (to->second.video_flag){
-            model->setData(model->index(ind,0, parent), *dvicon, Qt::DecorationRole);
-        }
-
-        ind++;
-    }
-    delete dvicon;
-}
-
 
 void addQPatient2model(QAbstractItemModel *model, QString ID, QPatient Qpatient){
 
@@ -253,7 +223,7 @@ void addQPatient2model(QAbstractItemModel *model, QString ID, QPatient Qpatient)
 
 
 // make this part of MainWindow
-QAbstractItemModel *createPatientTreeModel(QObject *parent, std::map<string, Patient> mymap, QMap<QString, QPatient> patientMap)
+QAbstractItemModel *createPatientTreeModel(QObject *parent, QMap<QString, QPatient> patientMap)
 {
     QStandardItemModel *model = new QStandardItemModel(0, 6, parent);
 
@@ -263,16 +233,6 @@ QAbstractItemModel *createPatientTreeModel(QObject *parent, std::map<string, Pat
     model->setHeaderData(3, Qt::Horizontal, QString::fromLocal8Bit("Poèet EEG"));
     model->setHeaderData(4, Qt::Horizontal, QString::fromLocal8Bit("Cesta"));
     model->setHeaderData(5, Qt::Horizontal, QString::fromLocal8Bit("Recorded"));
-    // https://forum.qt.io/topic/123358/qtreeview-header-text-alignment/2
-
-    //QIcon *DVicon = new QIcon(":/images/DV_icon.png");
-
-    // iterate over patients - using std::map
-    //std::map<string, Patient>::iterator it = mymap.begin();
-    //for (it=mymap.begin(); it!=mymap.end(); ++it){
-    //qDebug() << QString::fromLocal8Bit(it->first.c_str());
-    //addPatient2model(model,it->first, it->second);
-    //}
 
     // iterate over patients using QMap
     QMap<QString, QPatient>::iterator qit = patientMap.begin();
@@ -290,7 +250,7 @@ void MainWindow::buildTreeView(){
     treeView = new QTreeView;
 
     qDebug() << "creating source model";
-    sourceModel = createPatientTreeModel(this, mymap, patientMap); // create sourceModel
+    sourceModel = createPatientTreeModel(this, patientMap); // create sourceModel
     sourceModelLoaded = 1;
 
     //proxyModel = new QSortFilterProxyModel(this);
@@ -298,8 +258,8 @@ void MainWindow::buildTreeView(){
 
     proxyModel->setSourceModel(sourceModel);
 
-#if QT_VERSION >= 0x051000
-    proxyModel->setRecursiveFilteringEnabled(1); // This property was introduced in Qt 5.10. - Luckily LeafFilterProxyModel probably takes care of that
+#if QT_VERSION >= 0x050A00
+    proxyModel->setRecursiveFilteringEnabled(1); // This property was introduced in Qt 5.10. - Luckily LeafFilterProxyModel (probably) takes care of that
 #else
 #endif
     proxyModel->setFilterKeyColumn(-1); // filter through all columns
@@ -319,7 +279,7 @@ void MainWindow::buildTreeView(){
     treeView->setAlternatingRowColors(1);
     treeView->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
     treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
-    //treeView->expand(proxyModel->index(1,0)); // expands the second patient
+    //treeView->expand(proxyModel->index(1,0)); // expands also the second patient
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(double_click_tree(QModelIndex)));
 
     layout->addWidget(treeView);
@@ -333,13 +293,6 @@ void MainWindow::updatePatientTreeModel(){
     // hardcore delete all rows
     sourceModel->removeRows(0,sourceModel->rowCount());
 
-    // and add all patients and records again
-    std::map<string, Patient>::iterator it = mymap.begin();
-    for (it=mymap.begin(); it!=mymap.end(); ++it){
-        //qDebug() << QString::fromLocal8Bit(it->first.c_str());
-        //addPatient2model(sourceModel,it->first, it->second);
-    }
-
     // iterate over patients again using QMap
     QMap<QString, QPatient>::iterator qit = patientMap.begin();
     for (qit=patientMap.begin();qit!=patientMap.end();++qit){
@@ -352,12 +305,12 @@ void MainWindow::updatePatientTreeModel(){
 
 void MainWindow::double_click_tree(QModelIndex index){
     //qDebug() << index.data(); // data pod kurzorem
-#if QT_VERSION >= 0x051100
+#if QT_VERSION >= 0x050B00
     QVariant path = index.siblingAtColumn(4).data();
     QVariant recording_flag = index.siblingAtColumn(5).data();
 #else
-    QVariant path = index.sibling(0,4).data();
-    QVariant recording_flag = index.sibling(0,5).data();
+    QVariant path = index.sibling(index.row(),4).data();
+    QVariant recording_flag = index.sibling(index.row(),5).data();
 #endif
 
     //qDebug() << path;
@@ -436,7 +389,6 @@ void MainWindow::AddFolderDialog(QString folder_type){
 };
 
 
-
 void MainWindow::chooseExternalProgram(){
 
     QString temp = QFileDialog::getOpenFileName(this, tr("Choose EEG reader"), defaultReaderFolder, tr("BrainLab reader (*.exe)"));
@@ -455,8 +407,18 @@ void MainWindow::refreshDynamic(){
             loadData(dynamic_dirs.at(j));
         }
     }
-    updatePatientTreeModel();
-    //buildTreeView(); // or rebuilt it somehow? What is more time consuming? Building model and treeview or mymap?
+    //lastUpdateTime = QDateTime::currentDateTime();
+    updatePatientTreeModel(); // TO DO - is this the best way?
+}
+
+void MainWindow::refreshDynamicNewOnly(){
+    if(!dynamic_dirs.isEmpty()){
+        for (int j = 0; j < dynamic_dirs.size(); j++ ) {
+            loadNewDataOnly(dynamic_dirs.at(j));
+        }
+    }
+    updateLastCheckTime();
+    updatePatientTreeModel(); // TO DO - is this the best way?
 }
 
 void MainWindow::refreshStatic(){
@@ -483,17 +445,25 @@ void MainWindow::refreshStatic(){
 
 void MainWindow::show_about_dialog()
 {
-    qDebug() << QString("Compiled with Qt Version %1").arg(QT_VERSION_STR);
+    QString compiler = "undefined compiler";
+
+    if (QT_VERSION == 0x50F02){
+        compiler = "MinGW, 64-bit";
+    }
+
+    if(QT_VERSION == 0x050603){
+        compiler = "MSVC 2013, 32-bit";
+    }
 
     QMessageBox messagewindow;
     messagewindow.setIcon(QMessageBox::NoIcon);
     messagewindow.setText("About this program");
     QString aboutQString = QString("EEGle Nest is a BrainLab record database using convertSIGtoEDF from Frederik-D-Weber to read BrainLab EEG files header.\n"
     "\n"
-    "Built using Qt Creator 4.14.1 and Qt %1 (MSVC 2019, 64 bit)"
+    "Built using Qt Creator 4.14.1 and Qt %1 (%2)"
     "\n"
     "\n"
-    "by Adam Kalina, Department of Neurology, Second Faculty of Medicine, Charles University and Motol University Hospital, 2021, during COVID-19").arg(QT_VERSION_STR);
+    "by Adam Kalina, Department of Neurology, Second Faculty of Medicine, Charles University and Motol University Hospital, 2021, during COVID-19").arg(QT_VERSION_STR, compiler);
     messagewindow.setInformativeText(aboutQString);
     messagewindow.setStyleSheet("QLabel{min-width: 700px;}");
     messagewindow.exec();
@@ -549,8 +519,10 @@ MainWindow::MainWindow(QWidget *parent)
     filemenu->setTitle(tr("&Data"));
     filemenu->addAction(tr("Add Static Folder"), this, SLOT(AddStaticFolderDialog()));
     filemenu->addAction(tr("Add Dynamic Folder"), this, SLOT(AddDynamicFolderDialog()));
-    filemenu->addAction(tr("Refresh Dynamic"), this, SLOT(refreshDynamic()));
     filemenu->addAction(tr("Refresh Static"), this, SLOT(refreshStatic()));
+    filemenu->addAction(tr("Refresh Dynamic"), this, SLOT(refreshDynamic()));
+    filemenu->addAction(tr("Refresh Dynamic - New Only"), this, SLOT(refreshDynamicNewOnly()));
+
 
     // ======== Settings ========
     setmenu = new QMenu(this);
@@ -587,6 +559,7 @@ MainWindow::MainWindow(QWidget *parent)
     readSettings(); // read setting from .ini file
     buildFilterLine(); // build filter line - do it first if you want it on the top
     initLoadData(); //load data and update patientMap
+    updateLastCheckTime();
 
     if (patientMap.size() == 0){
         showNoFileWarning(); // show warning that there are no files to load
@@ -667,7 +640,7 @@ void MainWindow::saveQMap(){
     }
 
     QDataStream out(&myFile);
-    out.setVersion(QDataStream::Qt_5_3);
+    out.setVersion(QDataStream::Qt_5_6);
     out << (quint32)0xD0AD; // = 53421 = digit sum = 6
     out << patientMap;
 }
@@ -683,7 +656,7 @@ int MainWindow::loadQMap(){
     myFile.open(QIODevice::ReadOnly);
     QDataStream in(&myFile);
 
-    in.setVersion(QDataStream::Qt_5_3);
+    in.setVersion(QDataStream::Qt_5_6);
 
     // Read and check the header
     quint32 magic;
