@@ -2,8 +2,11 @@
     <qresource>
         <file>style.qss</file>
 		<file>images/DV_icon.png</file>
+		<file>images/DV_icon_small.png</file>
+		<file>images/DV_icon_orig.png</file>
 		<file>images/nest_icon.ico</file>
 		<file>images/nest_icon_small.png</file>
 		<file>images/nest_icon.png</file>
+		<file>images/nest.png</file>
     </qresource>
 </RCC>
