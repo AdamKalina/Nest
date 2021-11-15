@@ -32,9 +32,18 @@
 #include <QDataStream>
 #include <QFile>
 #include <QShortcut>
+#include <QSplashScreen>
+#include <QStack>
+#include <QListWidget>
+#include <QPushButton>
+#include <QProgressDialog>
+#include <QQueue>
 #include "read_signal_file.h"
 #include "qpatient.h"
+#include "folderlist.h"
+#include "externalprogramlist.h"
 #include "leaffilterproxymodel.h"
+#include "refreshsettings.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -47,9 +56,8 @@ public:
     ~MainWindow();
     QMap<QString, QPatient> patientMap;
     string convert_time_for_sorting(const time_t * timer);
-    QString externalProgram;// = "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
-    //QString stat_dir;// = "D:/Dropbox/Scripts/Cpp/no_data_test"; //static directory
-    //QString dyn_dir; //dynamic directory
+    QString externalProgram1; // for regular files, scan.exe. in XP "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
+    QString externalProgram2;// for files being recorded - control.exe in XP
     QString new_dir;
     QString QMapFile;
     QStringList static_dirs;
@@ -58,14 +66,25 @@ public:
     QString defaultDataFolder;
     QString defaultReaderFolder;
     QDateTime lastUpdateTime;
+    QIcon dvicon;
+    QStack<int> test;
+    QStack<QRecord> QrecordStack;
+    QStack<QPatient> QpatientStack;
+    int refreshingPeriod; // in minutes
+    bool periodicRefreshingEnabled;
     void readSettings();
     void writeSettings();
     void initLoadData();
     void loadData(QString path2load);
-    void loadNewDataOnly(QString path2load);
+    void refreshData(QString path2load);
     void updateLastCheckTime();
+    void setUpQTimer();
+    void setQTimer();
     void buildTreeView();
     void updatePatientTreeModel();
+    void updatePatientTreeModel2();
+    void incrementParentNo(QModelIndex parentInd);
+    void updateParentTime(QModelIndex parentInd);
     void showNoFileWarning();
     void AddFolderDialog(QString folder_type);
     void buildFilterLine();
@@ -73,19 +92,24 @@ public:
     int loadQMap();
     void saveMap();
     long no_files_loaded = 0;
+    QDateTime TimeT2QDateTime(time_t);
 
 
 public slots:
     void double_click_tree(QModelIndex index);
     void AddDynamicFolderDialog();
     void AddStaticFolderDialog();
-    void chooseExternalProgram();
+    void chooseExternalProgram1();
+    void chooseExternalProgram2();
     void filter_text_changed(const QString & text);
     void refreshDynamic();
-    void refreshDynamicNewOnly();
     void refreshStatic();
     void notYetReady();
     void show_about_dialog();
+    void connect2storage();
+    void editFolderList();
+    void editProgramList();
+    void editRefreshSettings();
 
 private:
     QMenuBar *menubar;
@@ -101,6 +125,7 @@ private:
     QWidget *centralWidget;
     QVBoxLayout *layout;
     QShortcut *refreshKey;
+    QTimer *timer;
 
 
 };

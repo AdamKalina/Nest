@@ -25,6 +25,8 @@ void Patient::add_record(Record record){
     no = records_map.size(); // beter than no++ since it would increment even in duplicate files
 };
 
+// TO DO - make Time_t --> QDateTime conversion part of QRecord constructor
+
 void QPatient::set_values(Record record){
     id = QString::fromLocal8Bit(record.id.c_str());
     name = QString::fromLocal8Bit(record.name.c_str());
@@ -46,6 +48,7 @@ void QPatient::add_record(Record record){
     Qrecord.record_start = record.record_start;
     Qrecord.sex = record.sex;
     Qrecord.class_code = QString::fromLocal8Bit(record.class_code.c_str());
+    Qrecord.doctor = QString::fromLocal8Bit(record.doctor.c_str());
     Qrecord.protocol = QString::fromLocal8Bit(record.protocol.c_str());
     Qrecord.file_name = QString::fromLocal8Bit(record.file_name.c_str());
     Qrecord.file_path = QString::fromLocal8Bit(record.file_path.c_str());

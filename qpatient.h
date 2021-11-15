@@ -29,6 +29,7 @@ struct QRecord{
     short sex;
     QString class_code;
     QString protocol;
+    QString doctor;
     QString file_name;
     QString file_path;
     int recording_flag;

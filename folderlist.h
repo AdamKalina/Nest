@@ -28,6 +28,9 @@ private:
 
     QListWidgetItem *listItem;
 
+    QLabel *staticLabel,
+    *dynamicLabel;
+
     int row;
 
 

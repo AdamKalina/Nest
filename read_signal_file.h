@@ -197,6 +197,7 @@ struct Record{
     short sex;
     string class_code;
     string protocol;
+    string doctor;
     string file_name;
     string file_path;
     int recording_flag;

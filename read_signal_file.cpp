@@ -107,13 +107,13 @@ DataTable read_data_table(fstream &file)
     DataTable data_table;
     long y = 0;
     vector<long> dt = readChannel(y, file, 17);
-    data_table.measurement_info = Block{dt[0], dt[1], NULL};
-data_table.recorder_montage_info = Block{dt[2], dt[3]};
-data_table.events_info = Block{dt[4], dt[5]};
-data_table.notes_info = Block{dt[6], dt[7]};
-data_table.impedance_info = Block{dt[8], dt[9]};
-data_table.display_montages_info = Block{dt[10], dt[11]};
-data_table.stimulator_info = Block{dt[12], dt[13]};
+    data_table.measurement_info = Block{dt[0], dt[1], 0};
+data_table.recorder_montage_info = Block{dt[2], dt[3],0};
+data_table.events_info = Block{dt[4], dt[5],0};
+data_table.notes_info = Block{dt[6], dt[7],0};
+data_table.impedance_info = Block{dt[8], dt[9],0};
+data_table.display_montages_info = Block{dt[10], dt[11],0};
+data_table.stimulator_info = Block{dt[12], dt[13],0};
 data_table.signal_info = Block{dt[14], dt[15], dt[16]};
 return data_table;
 }
@@ -287,14 +287,22 @@ Record read_signal_file(string file_path){
     record.id = signal.measurement.id;
     // removes "/" in ID (rodné èíslo)
     record.id.erase(std::remove(record.id.begin(), record.id.end(), '/'), record.id.end());
+
+    // capitalize "x" ind ID
+    std::size_t found = record.id.find("x");
+    if(found != std::string::npos){
+        record.id[found] = toupper(record.id[found]);
+    }
+
     record.name = signal.measurement.name;
     record.sex = signal.measurement.sex;
     record.protocol = signal.measurement.protocol;
     record.class_code = signal.measurement.class_code;
+    record.doctor = signal.measurement.doctor;
     record.file_path = file_path;
     string file_name = file_path.substr(file_path.find_last_of("/\\") + 1);
     std::string::size_type const p(file_name.find_last_of('.'));
-    record.file_name = file_name.substr(0, p);
+    record.file_name = file_name.substr(0, p); // extract file name
     record.num_pages = (file_size - signal.data_table.signal_info.offset) / signal.data_table.signal_info.size;
 
     return record;

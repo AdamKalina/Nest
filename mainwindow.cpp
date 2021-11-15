@@ -4,25 +4,6 @@
 
 void MainWindow::loadData(QString path2load){
 
-    //qDebug() << path2load;
-    // TO DO
-    // report duplicates
-    // check if the files still exists?
-
-    //    // test - go through the QDirIterator once and count files, then use it for qprogressdialog
-    //    QElapsedTimer timer;
-    //        timer.start();
-
-    //    int iii = 0;
-    //    QDirIterator testQDit(this->stat_dir, QStringList() << "*.sig" << "*.SIG", QDir::Files, QDirIterator::Subdirectories);
-    //    while (testQDit.hasNext()){
-    //        QString Qpath = testQDit.next();
-    //    iii++;
-    //    }
-    //    qDebug() << "no of files which will be proccessed: " << iii;
-    //    qDebug() << "The slow operation took" << timer.elapsed() << "milliseconds";
-
-    //int count = 0;
     int ii = 0;
 
     // QDirIterator - goes through files recursively
@@ -73,9 +54,9 @@ void MainWindow::loadData(QString path2load){
     //ii = 0;
 }
 
-void MainWindow::loadNewDataOnly(QString path2load){
+void MainWindow::refreshData(QString path2load){
 
-    int ii = 0;
+    QQueue<QFileInfo> fiQueue;
 
     // QDirIterator - goes through files recursively
     QDirIterator QDit(path2load, QStringList() << "*.sig" << "*.SIG", QDir::Files, QDirIterator::Subdirectories);
@@ -84,18 +65,36 @@ void MainWindow::loadNewDataOnly(QString path2load){
         QString Qpath = QDit.next();
         QFileInfo fi(Qpath);
 
-        // if the file has been lastmodified before last update, skip it
+
+        // put here what files shoud be enqeued
+
+        fiQueue.enqueue(fi);
+
         if(fi.lastModified() < lastUpdateTime){
-            qDebug() << "nothing new in this file, skipping";
-            continue;
+            //qDebug() << "nothing new in this file, skipping";
+            //qDebug() << fi.lastModified().daysTo(QDateTime::currentDateTime()); // kladna cisla
+            //qDebug() << QDateTime::currentDateTime().daysTo(fi.lastModified()); // zaporna cisla
         }
+    }
 
-        string path= Qpath.toLocal8Bit().data();
-        //qDebug() << Qpath;
+    qDebug() << "fiQueue size " << fiQueue.size();
 
+    int ii = 0;
+
+
+    QProgressDialog progress("Refreshing data...", "Abort", 0, fiQueue.size(), this);
+        progress.setWindowModality(Qt::WindowModal);
+        progress.setCancelButton(nullptr);
+        progress.setMinimumDuration(0);
+
+    while (!fiQueue.isEmpty()){
         // this function returns only the data needed - maybe rename it
-        Record record = read_signal_file(path);
+
+        QFileInfo fid = fiQueue.dequeue();
+
+        Record record = read_signal_file(fid.filePath().toStdString());
         ii++;
+        progress.setValue(ii);
 
         // if something is wrong with this file, skip it
         if (record.check_flag == 0){
@@ -104,9 +103,9 @@ void MainWindow::loadNewDataOnly(QString path2load){
 
         // check if .LOG file with same name exists - and if it does, flag the record as still being recorded
         // TO DO - is this the best way? There is lot of data in the header of recorded file, search for "TEMP" instead?
+        record.recording_flag = QFileInfo::exists(fid.canonicalPath() + "/" + fid.baseName() + ".LOG"); // bool to int
         // TO DO - the same for video file, is there a field in signal that states that video exists?
-        record.recording_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".LOG"); // bool to int
-        record.video_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".M01"); // bool to int
+        record.video_flag = QFileInfo::exists(fid.canonicalPath() + "/" + fid.baseName() + ".M01"); // bool to int
 
         // using QMap
         QMap<QString, QPatient>::iterator qit = patientMap.find(QString::fromLocal8Bit(record.id.c_str()));
@@ -114,19 +113,21 @@ void MainWindow::loadNewDataOnly(QString path2load){
             // if QPatient already exists, add record to it
             // QMap = If there is already an item with the key key, that item's value is replaced with value
             // so it will rewrite data from dynamic folders
-            // TO DO - check for duplicates here?
+            // TO DO - check for duplicates (with almost same ID) here?
             qit->add_record(record);
+
+            QMap<QString, QRecord>::iterator qot = qit->Qrecords_map.find(record.file_name.c_str()); // find the record in patient - conversion to QRecord is already done
+
+            QrecordStack.push(qot.value()); // add record to buffer
         }
         else{
             // if QPatient does not exist, create it
             QPatient Qpatient;
             Qpatient.set_values(record);
             patientMap.insert(Qpatient.id, Qpatient);
+            QpatientStack.push(Qpatient); // add patient to buffer
         }
     }
-    no_files_loaded = no_files_loaded + ii;
-    qDebug() << "no of files processed: " << ii;
-    //ii = 0;
 }
 
 
@@ -141,7 +142,6 @@ void MainWindow::initLoadData(){
                 loadData(static_dirs.at(j));
             }
         }
-        qDebug() << "after static folders";
         // now go through dynamic folders
         for (int j = 0; j < dynamic_dirs.size(); j++ ) {
             loadData(dynamic_dirs.at(j));
@@ -156,15 +156,57 @@ void MainWindow::updateLastCheckTime(){
 }
 
 // ======== TREE MODEL ========
+// TO DO - make this part of separate class
+
+
+void addQRecord2model(QAbstractItemModel *model, int ind, int ncol, QModelIndex parent, QRecord Qrecord, bool newRecord){
+
+    QTime n(0, 0, 0);
+
+    if(newRecord){
+        model->insertRows(ind, 1, parent); // adds a child to the previous item
+    }
+
+    model->setData(model->index(ind, 0, parent), Qrecord.file_name, Qt::DisplayRole);
+    model->setData(model->index(ind, 1, parent), Qrecord.class_code, Qt::DisplayRole);
+
+#if QT_VERSION >= 0x050800
+    model->setData(model->index(ind, 2, parent), QDateTime::fromSecsSinceEpoch(Qrecord.record_start), Qt::DisplayRole);
+#else
+    model->setData(model->index(ind, 2, parent), QDateTime::fromTime_t(Qrecord.record_start), Qt::DisplayRole);
+#endif
+
+    model->setData(model->index(ind, 3, parent), n.addSecs(Qrecord.num_pages*10).toString("hh:mm:ss"), Qt::DisplayRole);
+    model->setData(model->index(ind, 4, parent), Qrecord.file_path, Qt::DisplayRole);
+    model->setData(model->index(ind, 5, parent), Qrecord.recording_flag, Qt::DisplayRole);
+    model->setData(model->index(ind, 6, parent), Qrecord.doctor, Qt::DisplayRole);
+
+    // if recording flag = 1 --> color the whole row red
+    // TO DO - use delegate?
+    if (Qrecord.recording_flag){
+        for (int i = 0;i < ncol;i++){
+            model->setData(model->index(ind, i, parent), QColor(Qt::red), Qt::ForegroundRole);
+        }
+    }
+
+    QIcon *dvicon = new QIcon(":/images/DV_icon.png");
+
+    // if file has video - show DVicon
+    if (Qrecord.video_flag){
+        model->setData(model->index(ind,0, parent), *dvicon, Qt::DecorationRole);
+    }
+
+}
 
 void addQPatient2model(QAbstractItemModel *model, QString ID, QPatient Qpatient){
 
     // define patient
     model->insertRow(0);
-
     model->setData(model->index(0, 0), ID);
     model->setData(model->index(0, 1), Qpatient.name);
 
+    //MainWindow mw;
+    //QDateTime test = mw.TimeT2QDateTime(Qpatient.last_record);
 
 #if QT_VERSION >= 0x050800
     model->setData(model->index(0, 2), QDateTime::fromSecsSinceEpoch(Qpatient.last_record));
@@ -175,57 +217,29 @@ void addQPatient2model(QAbstractItemModel *model, QString ID, QPatient Qpatient)
 
     model->setData(model->index(0, 3), Qpatient.no, Qt::DisplayRole);
     model->setData(model->index(0, 3), Qt::AlignCenter, Qt::TextAlignmentRole);
-    //QDateTime last_record = QDateTime::fromSecsSinceEpoch(patient.last_record); // This function was introduced in Qt 5.8., before that use QDateTime::fromTime_t
 
     const QModelIndex parent = model->index(0,0); // get the item in the first row and first column
 
     // iterate through records
     int ind = 0;
-    int ncol = 6;
+    int ncol = 7;
     model->insertColumns(0, ncol, parent); // adds a child to the previous item
-
-    QIcon *dvicon = new QIcon(":/images/DV_icon.png"); // or reuse it somehow? or use QPainter?
 
     QTime n(0, 0, 0);
 
     QMap<QString, QRecord>::iterator to = Qpatient.Qrecords_map.begin();
     for (Qpatient.Qrecords_map.begin();to!=Qpatient.Qrecords_map.end(); ++to){
-        model->insertRows(ind, 1, parent); // adds a child to the previous item
-        model->setData(model->index(ind, 0, parent), to.key(), Qt::DisplayRole);
-        model->setData(model->index(ind, 1, parent), to.value().class_code, Qt::DisplayRole);
 
-#if QT_VERSION >= 0x050800
-        model->setData(model->index(ind, 2, parent), QDateTime::fromSecsSinceEpoch(to.value().record_start), Qt::DisplayRole);
-#else
-        model->setData(model->index(ind, 2, parent), QDateTime::fromTime_t(to.value().record_start), Qt::DisplayRole);
-#endif
-
-        model->setData(model->index(ind, 3, parent), n.addSecs(to.value().num_pages*10).toString("hh:mm:ss"), Qt::DisplayRole);
-        model->setData(model->index(ind, 4, parent), to.value().file_path, Qt::DisplayRole);
-        model->setData(model->index(ind, 5, parent), to.value().recording_flag, Qt::DisplayRole);
-
-        // if recording flag = 1 --> color the whole row red
-        // TO DO - use delegate?
-        if (to.value().recording_flag){
-            for (int i = 0;i < ncol;i++){
-                model->setData(model->index(ind, i, parent), QColor(Qt::red), Qt::ForegroundRole);
-            }
-        }
-
-        // if file has video - show DVicon
-        if (to.value().video_flag){
-            model->setData(model->index(ind,0, parent), *dvicon, Qt::DecorationRole);
-        }
-
+        addQRecord2model(model, ind, ncol, parent, to.value(),1); // newRecord = 1 --> append new record
         ind++;
     }
 }
 
 
-// make this part of MainWindow
+// make this part of separate class - TreeModel
 QAbstractItemModel *createPatientTreeModel(QObject *parent, QMap<QString, QPatient> patientMap)
 {
-    QStandardItemModel *model = new QStandardItemModel(0, 6, parent);
+    QStandardItemModel *model = new QStandardItemModel(0, 7, parent);
 
     model->setHeaderData(0, Qt::Horizontal, QString::fromLocal8Bit("Rodné èíslo"));
     model->setHeaderData(1, Qt::Horizontal, QString::fromLocal8Bit("Jméno"));
@@ -233,6 +247,7 @@ QAbstractItemModel *createPatientTreeModel(QObject *parent, QMap<QString, QPatie
     model->setHeaderData(3, Qt::Horizontal, QString::fromLocal8Bit("Poèet EEG"));
     model->setHeaderData(4, Qt::Horizontal, QString::fromLocal8Bit("Cesta"));
     model->setHeaderData(5, Qt::Horizontal, QString::fromLocal8Bit("Recorded"));
+    model->setHeaderData(6, Qt::Horizontal, QString::fromLocal8Bit("Doctor"));
 
     // iterate over patients using QMap
     QMap<QString, QPatient>::iterator qit = patientMap.begin();
@@ -287,9 +302,6 @@ void MainWindow::buildTreeView(){
 
 void MainWindow::updatePatientTreeModel(){
 
-    // to use it this properly I would need to subclass QAbstractItemModel and define reset
-    //model->beginResetModel();
-
     // hardcore delete all rows
     sourceModel->removeRows(0,sourceModel->rowCount());
 
@@ -302,6 +314,67 @@ void MainWindow::updatePatientTreeModel(){
     treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
 
 }
+
+
+void MainWindow::updatePatientTreeModel2(){
+
+    while (!QpatientStack.isEmpty()){
+        // adds the patient to the model
+        QString patientID = QpatientStack.top().id;
+        addQPatient2model(sourceModel, patientID, QpatientStack.pop());
+    }
+
+    while (!QrecordStack.isEmpty()){
+        // finds patient with matching id and adds the record to it
+        QString patientID = QrecordStack.top().id;
+        QString recordID = QrecordStack.top().file_name;
+        QModelIndexList parents = sourceModel->match(sourceModel->index(0,0), Qt::DisplayRole, patientID, 1, Qt::MatchExactly); // find matching row by patient ID, only one match is expected
+        QModelIndex parentInd = parents.first();
+
+
+        QModelIndexList childs = sourceModel->match(sourceModel->index(0,0,parentInd),Qt::DisplayRole, recordID,1,Qt::MatchExactly); // find matching row by file ID, only one match is expected
+
+        if(childs.isEmpty()){
+            incrementParentNo(parentInd);
+            updateParentTime(parentInd);
+            addQRecord2model(sourceModel, 0, sourceModel->columnCount(), parentInd, QrecordStack.pop(),1); // 1 = newRecord --> append new record
+        }
+        else{
+            // TO DO - update existing records?
+            int tempInd = childs.first().row();
+            addQRecord2model(sourceModel, tempInd, sourceModel->columnCount(), parentInd, QrecordStack.pop(),0); // 0 = newRecord --> update existing
+        }
+
+    }
+}
+
+void MainWindow::incrementParentNo(QModelIndex parentInd){
+    // increment parent number of EEG by 1
+    QVariant QtempNo = sourceModel->data(parentInd.sibling(parentInd.row(),3));
+    int tempNo = QtempNo.toInt();
+    tempNo++;
+    sourceModel->setData(parentInd.sibling(parentInd.row(),3),tempNo,Qt::DisplayRole);
+}
+
+void MainWindow::updateParentTime(QModelIndex parentInd){
+    // change time of last EEG to current record - if it is newer
+    QVariant QtempTime = sourceModel->data(parentInd.sibling(parentInd.row(),2));
+    QDateTime QnewTime = TimeT2QDateTime(QrecordStack.top().record_start);
+    if(QnewTime > QtempTime.toDateTime()){
+        sourceModel->setData(parentInd.sibling(parentInd.row(),2),QnewTime,Qt::DisplayRole);
+    }
+}
+
+QDateTime MainWindow::TimeT2QDateTime(time_t){
+#if QT_VERSION >= 0x050800
+    QDateTime QnewTime = QDateTime::fromSecsSinceEpoch(QrecordStack.top().record_start);
+#else
+    QDateTime QnewTime = QDateTime::fromTime_t(QrecordStack.top().record_start);
+#endif
+
+    return QnewTime;
+}
+
 
 void MainWindow::double_click_tree(QModelIndex index){
     //qDebug() << index.data(); // data pod kurzorem
@@ -316,34 +389,57 @@ void MainWindow::double_click_tree(QModelIndex index){
     //qDebug() << path;
     //qDebug() << recording_flag;
 
-    if (externalProgram.isEmpty()){
-        QMessageBox msgBox;
-        msgBox.setIcon(QMessageBox::Question);
-        msgBox.setText(tr("EEG reader is not set"));
-        msgBox.setInformativeText(tr("Do you want to set it now?"));
-        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        msgBox.setDefaultButton(QMessageBox::Yes);
-        int ret = msgBox.exec();
-
-        if (ret == QMessageBox::Yes){
-            chooseExternalProgram();
-        }
-        else{
-            return;
-        }
-    }
+    // TO DO - check if the path exists?
 
     if (path.isValid()){ // in patient (where there is no path set) is not valid
+
+        QMessageBox setProgram;
+        setProgram.setIcon(QMessageBox::Question);
+        setProgram.setText(tr("EEG reader is not set"));
+        setProgram.setInformativeText(tr("Do you want to set it now?"));
+        setProgram.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        setProgram.setDefaultButton(QMessageBox::Yes);
+        //int ret = setProgram.exec();
+
         if (recording_flag.toBool()){
-            QMessageBox msgBox;
-            msgBox.setIcon(QMessageBox::Warning);
-            msgBox.setText(tr("This is file is still being recorded, you will not able to review new data until you open it again."));
-            msgBox.exec();
+            if(externalProgram2.isEmpty()){
+                int ret = setProgram.exec();
+                if (ret == QMessageBox::Yes){
+                    chooseExternalProgram2();
+                }
+                else{
+                    return;
+                }
+            }
+
+            //QMessageBox msgBox; // this messagebox is not really useful in XP - redirecting to control
+            //msgBox.setIcon(QMessageBox::Warning);
+            //msgBox.setText(tr("This is file is still being recorded, you will not able to review new data until you open it again."));
+            //msgBox.exec();
+            QProcess *myProcess = new QProcess(nullptr);
+            QStringList arguments;
+            arguments << path.toString();
+            myProcess->setProgram(this->externalProgram2);
+            myProcess->setArguments(arguments);
+            myProcess->start();
         }
-        QStringList arguments;
-        arguments << path.toString();
-        QProcess *myProcess = new QProcess(nullptr);
-        myProcess->start(this->externalProgram, arguments);
+        else{
+            if(externalProgram1.isEmpty()){
+                int ret = setProgram.exec();
+                if (ret == QMessageBox::Yes){
+                    chooseExternalProgram1();
+                }
+                else{
+                    return;
+                }
+            }
+            QProcess *myProcess = new QProcess(nullptr);
+            QStringList arguments;
+            arguments << path.toString();
+            myProcess->setProgram(this->externalProgram1);
+            myProcess->setArguments(arguments);
+            myProcess->start();
+        }
     }
 }
 
@@ -388,8 +484,21 @@ void MainWindow::AddFolderDialog(QString folder_type){
     }
 };
 
+void MainWindow::connect2storage(){
+    // runs the batch command for storage connection
+    QProcess connectProcess;
+    connectProcess.setProgram("cmd.exe");
+    QStringList arguments =  (QStringList() << "/C" << "connect.bat");
+    connectProcess.setArguments(arguments);
+    connectProcess.setWorkingDirectory(QDir::currentPath());
+    connectProcess.start();
+    connectProcess.waitForFinished(-1);
+    qDebug() << connectProcess.readAllStandardOutput();
+    qDebug() << connectProcess.readAllStandardError();
+};
 
-void MainWindow::chooseExternalProgram(){
+
+void MainWindow::chooseExternalProgram1(){
 
     QString temp = QFileDialog::getOpenFileName(this, tr("Choose EEG reader"), defaultReaderFolder, tr("BrainLab reader (*.exe)"));
 
@@ -397,28 +506,31 @@ void MainWindow::chooseExternalProgram(){
         return;
     }
     else{
-        externalProgram = temp;
+        externalProgram1 = temp;
+    }
+};
+
+void MainWindow::chooseExternalProgram2(){
+
+    QString temp = QFileDialog::getOpenFileName(this, tr("Choose EEG reader for control"), defaultReaderFolder, tr("BrainLab reader (*.exe)"));
+
+    if(temp.isEmpty()){
+        return;
+    }
+    else{
+        externalProgram2 = temp;
     }
 };
 
 void MainWindow::refreshDynamic(){
     if(!dynamic_dirs.isEmpty()){
         for (int j = 0; j < dynamic_dirs.size(); j++ ) {
-            loadData(dynamic_dirs.at(j));
-        }
-    }
-    //lastUpdateTime = QDateTime::currentDateTime();
-    updatePatientTreeModel(); // TO DO - is this the best way?
-}
-
-void MainWindow::refreshDynamicNewOnly(){
-    if(!dynamic_dirs.isEmpty()){
-        for (int j = 0; j < dynamic_dirs.size(); j++ ) {
-            loadNewDataOnly(dynamic_dirs.at(j));
+            qDebug() << "loading data: " << dynamic_dirs.at(j);
+            refreshData(dynamic_dirs.at(j));
         }
     }
     updateLastCheckTime();
-    updatePatientTreeModel(); // TO DO - is this the best way?
+    updatePatientTreeModel2();
 }
 
 void MainWindow::refreshStatic(){
@@ -505,6 +617,22 @@ void MainWindow::notYetReady(){
     msgBox.exec();
 }
 
+void MainWindow::editFolderList()
+{
+    folderList(this);
+}
+
+void MainWindow::editProgramList()
+{
+    externalprogramlist(this);
+}
+
+void MainWindow::editRefreshSettings()
+{
+    refreshSettings(this);
+}
+
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -520,15 +648,18 @@ MainWindow::MainWindow(QWidget *parent)
     filemenu->addAction(tr("Add Static Folder"), this, SLOT(AddStaticFolderDialog()));
     filemenu->addAction(tr("Add Dynamic Folder"), this, SLOT(AddDynamicFolderDialog()));
     filemenu->addAction(tr("Refresh Static"), this, SLOT(refreshStatic()));
-    filemenu->addAction(tr("Refresh Dynamic"), this, SLOT(refreshDynamic()));
-    filemenu->addAction(tr("Refresh Dynamic - New Only"), this, SLOT(refreshDynamicNewOnly()));
+    filemenu->addAction(tr("Refresh Dynamic"), this, SLOT(refreshDynamic())); // stack
+    filemenu->addAction(tr("Connect to storage"), this, SLOT(connect2storage()));
 
 
     // ======== Settings ========
     setmenu = new QMenu(this);
     setmenu->setTitle(tr("&Settings"));
-    setmenu->addAction(tr("Add Reader"), this, SLOT(chooseExternalProgram()));
-    setmenu->addAction(tr("Folder list"), this, SLOT(notYetReady()));
+    setmenu->addAction(tr("Add Reader"), this, SLOT(chooseExternalProgram1()));
+    setmenu->addAction(tr("Add Control"), this, SLOT(chooseExternalProgram2()));
+    setmenu->addAction(tr("Folder list"), this, SLOT(editFolderList()));
+    setmenu->addAction(tr("Program list"), this, SLOT(editProgramList()));
+    setmenu->addAction(tr("Refresh settings"), this, SLOT(editRefreshSettings()));
 
     // ======== Help & About ========
     helpmenu = new QMenu(this);
@@ -559,6 +690,7 @@ MainWindow::MainWindow(QWidget *parent)
     readSettings(); // read setting from .ini file
     buildFilterLine(); // build filter line - do it first if you want it on the top
     initLoadData(); //load data and update patientMap
+    setUpQTimer();
     updateLastCheckTime();
 
     if (patientMap.size() == 0){
@@ -567,16 +699,37 @@ MainWindow::MainWindow(QWidget *parent)
 
 }
 
+void MainWindow::setUpQTimer(){
+    timer = new QTimer(this);
+     connect(timer, SIGNAL(timeout()), this, SLOT(refreshDynamic()));
+    setQTimer();
+}
+
+void MainWindow::setQTimer(){
+
+    qDebug() << refreshingPeriod;
+
+    if (periodicRefreshingEnabled){
+        timer->start(refreshingPeriod*60*1000); // in ms
+    }else{
+        timer->stop();
+    }
+}
+
+
 // ======== Write and Read Settings ========
 
 void MainWindow::writeSettings()
 {
     //QSettings settings("PuffinSoft", "EEGle Nest");
     QSettings settings("settings.ini",QSettings::IniFormat);
-    settings.setValue("external_program", externalProgram);
+    settings.setValue("external_program_reader", externalProgram1);
+    settings.setValue("external_program_control", externalProgram2);
     settings.setValue("path2QMap",QMapFile);
     settings.setValue("defaultDataFolder","D:/Dropbox/Scripts/Cpp/");
     settings.setValue("defaultReaderFolder","D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/");
+    settings.setValue("refreshing_period",refreshingPeriod);
+    settings.setValue("periodic_refreshing_enabled", periodicRefreshingEnabled);
 
     settings.beginWriteArray("static_dirs");
     for (int i = 0; i < static_dirs.size(); ++i) {
@@ -597,10 +750,13 @@ void MainWindow::writeSettings()
 void MainWindow::readSettings()
 {
     QSettings settings("settings.ini",QSettings::IniFormat);
-    externalProgram = settings.value("external_program").toString();
+    externalProgram1 = settings.value("external_program_reader").toString();
+    externalProgram2 = settings.value("external_program_control").toString();
     QMapFile = settings.value("path2QMap").toString();
     defaultDataFolder = settings.value("defaultDataFolder").toString();
     defaultReaderFolder = settings.value("defaultReaderFolder").toString();
+    refreshingPeriod = settings.value("refreshing_period").toInt();
+    periodicRefreshingEnabled = settings.value("periodic_refreshing_enabled").toBool();
 
     // check for duplicates here? Or will suffice in "Add folder dialog"
 
@@ -666,8 +822,6 @@ int MainWindow::loadQMap(){
         qDebug() << "Wrong data format";
         return 0;
     }
-
-
 
     in >> patientMap;
     return 1;

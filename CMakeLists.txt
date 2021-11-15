@@ -11,6 +11,15 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_CXX_STANDARD_LIBRARIES "-static-libgcc -static-libstdc++ ${CMAKE_CXX_STANDARD_LIBRARIES}")
+#set(CMAKE_CXX_STANDARD_LIBRARIES "-static-libgcc -static-libstdc++ -lwsock32 -lws2_32 ${CMAKE_CXX_STANDARD_LIBRARIES}")
+
+
+if(MINGW)
+     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
+     message(STATUS "MinGW")
+endif()
+
 
 # QtCreator supports the following variables for Android, which are identical to qmake Android variables.
 # Check https://doc.qt.io/qt/deployment-android.html for more information.
@@ -32,6 +41,8 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 if(${QT_VERSION_MAJOR} EQUAL 5 AND ${QT_VERSION_MINOR} LESS_EQUAL 6)
     SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS,5.01")
     message(STATUS "XP only")
+else()
+
 endif()
 
 set(PROJECT_SOURCES
@@ -41,6 +52,9 @@ set(PROJECT_SOURCES
         read_signal_file.cpp
         leaffilterproxymodel.cpp
         qpatient.cpp
+        folderlist.cpp
+        externalprogramlist.cpp
+        refreshsettings.cpp
         resources.qrc
 )
 
@@ -62,5 +76,3 @@ else()
 endif()
 
 target_link_libraries(Nest PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
-
-# add WIN32 in add_executable(${PROJECT_NAME} WIN32 main.cpp)?
