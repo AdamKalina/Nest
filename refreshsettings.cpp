@@ -4,6 +4,8 @@ refreshSettings::refreshSettings(QWidget *w_parent)
 {
     mainwindow = (MainWindow *)w_parent;
 
+    loadSettingsFromMainWindow();
+
     QFont b( "Arial", 10, QFont::Bold);
     QFont ff( "Arial", 10);
 
@@ -27,26 +29,23 @@ refreshSettings::refreshSettings(QWidget *w_parent)
     refreshMonth->setFont(ff);
     QCheckBox *refreshWeek = new QCheckBox("Refresh only files modified in the last week");
     refreshWeek->setFont(ff);
-    QCheckBox *refreshToday = new QCheckBox("Refresh only files modified today");
+    QCheckBox *refreshToday = new QCheckBox("Refresh only files modified in the last 24 hours");
     refreshToday->setFont(ff);
 
 
     QButtonGroup *buttonGroup = new QButtonGroup( this );
-    buttonGroup->addButton(refreshAll);
-    buttonGroup->addButton(refreshYear);
-    buttonGroup->addButton(refreshMonth);
-    buttonGroup->addButton(refreshWeek);
-    buttonGroup->addButton(refreshToday);
+    buttonGroup->addButton(refreshAll,0);
+    buttonGroup->addButton(refreshYear,1);
+    buttonGroup->addButton(refreshMonth,2);
+    buttonGroup->addButton(refreshWeek,3);
+    buttonGroup->addButton(refreshToday,4);
     buttonGroup->setExclusive(true);
 
+    buttonGroup->button(RefreshModeId)->setChecked(1);
 
     //======== PERIODIC REFRESHING SETTINGS ========
     QLabel *dialLabel = new QLabel(tr("Periodic refreshing setting"));
     dialLabel->setFont(b);
-
-    periodicRefreshingEnabled = mainwindow->periodicRefreshingEnabled;
-    refreshingPeriod = mainwindow->refreshingPeriod;
-
 
     // QDial
     hourDial = new QDial;
@@ -68,11 +67,7 @@ refreshSettings::refreshSettings(QWidget *w_parent)
     hourDial->setWrapping(1);
     hourDial->setNotchesVisible(1);
     hourDial->setEnabled(periodicRefreshingEnabled);
-    //hourDial->setWheelScrollLines(1);
 
-    //QLabel *timeLabel = new QLabel("test");
-
-    // TO DO - make ->setEnabled(false) dependent on settings
     timeLabel = new QLabel(QString("Refresh automatically every %1 minutes").arg(refreshingPeriod)); // construct like this so it can be updated
     timeLabel->setFont(ff);
     timeLabel->setEnabled(periodicRefreshingEnabled);
@@ -84,6 +79,7 @@ refreshSettings::refreshSettings(QWidget *w_parent)
     useWorkingHours = new QCheckBox("Use in working hours only - not yet ready");
     useWorkingHours->setFont(ff);
     useWorkingHours->setEnabled(periodicRefreshingEnabled);
+    useWorkingHours->setChecked(workingHoursOnly);
 
     // ======== BUTTONS ========
 
@@ -131,13 +127,45 @@ refreshSettings::refreshSettings(QWidget *w_parent)
 
     // ======== SLOTS ========
 
+    connect(buttonGroup, SIGNAL(buttonClicked(int)), this, SLOT(modeButtonClicked(int)));
     connect(hourDial, SIGNAL(valueChanged(int)), this, SLOT(hourDialValueChanged(int)));
     connect(usePeriodic, SIGNAL(toggled(bool)), this, SLOT(enablePeriodicRefreshing(bool)));
+    connect(useWorkingHours, SIGNAL(toggled(bool)), this, SLOT(enableWorkingHoursOnly(bool)));
     connect(cancelButton,   SIGNAL(clicked()), edit_refresh_settings, SLOT(close()));
     connect(saveButton,   SIGNAL(clicked()), this, SLOT(saveAndClose()));
 
     // ======== RUN THIS THING ========
     edit_refresh_settings->exec();
+}
+
+void refreshSettings::loadSettingsFromMainWindow(){
+    periodicRefreshMode = mainwindow->periodicRefreshMode;
+    refreshingPeriod = mainwindow->refreshingPeriod;
+    periodicRefreshingEnabled = mainwindow->periodicRefreshingEnabled;
+    workingHoursOnly = mainwindow->workingHoursOnly;
+
+    qDebug() << periodicRefreshMode;
+
+
+    if (periodicRefreshMode == "all"){
+        RefreshModeId = 0;
+    }
+    if (periodicRefreshMode == "year"){
+        RefreshModeId = 1;
+    }
+    if (periodicRefreshMode == "month"){
+        RefreshModeId = 2;
+    }
+    if (periodicRefreshMode == "week"){
+        RefreshModeId = 3;
+    }
+    if (periodicRefreshMode == "day"){
+        RefreshModeId = 4;
+    }
+}
+
+void refreshSettings::modeButtonClicked(int value){
+    RefreshModeId = value;
 }
 
 void refreshSettings::hourDialValueChanged(int value){
@@ -162,13 +190,33 @@ void refreshSettings::enablePeriodicRefreshing(bool checked){
     periodicRefreshingEnabled = checked;
 }
 
+void refreshSettings::enableWorkingHoursOnly(bool checked){
+    workingHoursOnly = checked;
+    qDebug() << checked;
+}
+
 void refreshSettings::saveAndClose(){
 
     //qDebug() << "period" << refreshingPeriod;
     //qDebug() << "usePeriodic" << periodicRefreshingEnabled;
 
+    switch(RefreshModeId){
+    case 0 : periodicRefreshMode = "all";
+        break;
+    case 1 : periodicRefreshMode = "year";
+        break;
+    case 2 : periodicRefreshMode = "month";
+        break;
+    case 3 : periodicRefreshMode = "week";
+        break;
+    case 4 : periodicRefreshMode = "day";
+        break;
+    }
+
+    mainwindow->periodicRefreshMode = periodicRefreshMode;
     mainwindow->refreshingPeriod = refreshingPeriod;
     mainwindow->periodicRefreshingEnabled = periodicRefreshingEnabled;
+    mainwindow->workingHoursOnly = workingHoursOnly;
     mainwindow->setQTimer();
 
     //qDebug() << "Save and Close";

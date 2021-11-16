@@ -47,6 +47,7 @@
 #include <stdio.h>
 #include <string.h>
 
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -54,24 +55,32 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+
+    // std variables
+    int sourceModelLoaded = 0;
+    int refreshingPeriod = 5; // in minutes
+    bool periodicRefreshingEnabled = false;
+    bool workingHoursOnly = false;
+    long no_files_loaded = 0;
+
+    // Qt variables
     QMap<QString, QPatient> patientMap;
-    string convert_time_for_sorting(const time_t * timer);
+    QStack<QRecord> QrecordStack;
+    QStack<QPatient> QpatientStack;
+    QStringList static_dirs;
+    QStringList dynamic_dirs;
     QString externalProgram1; // for regular files, scan.exe. in XP "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
     QString externalProgram2;// for files being recorded - control.exe in XP
     QString new_dir;
     QString QMapFile;
-    QStringList static_dirs;
-    QStringList dynamic_dirs;
-    int sourceModelLoaded = 0;
     QString defaultDataFolder;
     QString defaultReaderFolder;
+    QString periodicRefreshMode = QString("all");
     QDateTime lastUpdateTime;
     QIcon dvicon;
-    QStack<int> test;
-    QStack<QRecord> QrecordStack;
-    QStack<QPatient> QpatientStack;
-    int refreshingPeriod; // in minutes
-    bool periodicRefreshingEnabled;
+    QSplashScreen *splash;
+
+    // functions
     void readSettings();
     void writeSettings();
     void initLoadData();
@@ -91,7 +100,6 @@ public:
     void saveQMap();
     int loadQMap();
     void saveMap();
-    long no_files_loaded = 0;
     QDateTime TimeT2QDateTime(time_t);
 
 
@@ -126,7 +134,6 @@ private:
     QVBoxLayout *layout;
     QShortcut *refreshKey;
     QTimer *timer;
-
 
 };
 #endif // MAINWINDOW_H

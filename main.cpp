@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-
 #include <QApplication>
 
 int main(int argc, char *argv[])
@@ -14,14 +13,17 @@ int main(int argc, char *argv[])
     QFont sansFont("Century Gothic", 10);
     p.setFont(sansFont);
     p.setPen(Qt::black);
-    p.drawText(200, 340, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, "version 0.2");
+    p.drawText(20, 60, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, "version 0.3");
 
-    QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);
+    QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint); // I tried to pass reference of splash to MainWindow using setter nad getter, but it is not fast enough
+    splash.setFont(sansFont);
 
     QTimer t1;
     t1.setSingleShot(true);
+
     QObject::connect(&t1, SIGNAL(timeout()), &splash, SLOT(close()));
     splash.show();
+    splash.showMessage("Program is starting", Qt::AlignHCenter | Qt::AlignBottom);
 
     t1.start(1500); // show the splash screen for 1500 ms
     QEventLoop evlp;
@@ -29,11 +31,24 @@ int main(int argc, char *argv[])
     evlp.exec();
 
     MainWindow w;
-
     w.setWindowTitle("EEGLE Nest");
-    //w.setWindowIcon(QIcon(":/images/nest_icon.png")); // this sets the icon just for the MainWindow
-    //w.setMinimumHeight(820);
-    //w.setMinimumWidth(875); // 1200
+
+    // ======== APPLICATION CYCLE ========
+
+    splash.showMessage("Reading settings", Qt::AlignHCenter | Qt::AlignBottom);
+    w.readSettings();
+
+    splash.showMessage("Loading data", Qt::AlignHCenter | Qt::AlignBottom);
+    w.initLoadData(); //load data and update patientMap
+
+    splash.showMessage("Building tree model", Qt::AlignHCenter | Qt::AlignBottom);
+    w.buildTreeView();
+    w.setUpQTimer();
+    w.updateLastCheckTime();
+
+    if (w.patientMap.size() == 0){
+        w.showNoFileWarning(); // show warning that there are no files to load
+    }
 
     //Set Stylesheet
     QFile qss(":style.qss");

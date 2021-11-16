@@ -13,20 +13,33 @@ class refreshSettings : public QObject
     Q_OBJECT
 
 public:
-    refreshSettings(QWidget *parent);
+    // std
+    int refreshingPeriod; // in min
+    int RefreshModeId;
+    bool periodicRefreshingEnabled;
+    bool workingHoursOnly;
+
+    // Qt
     MainWindow *mainwindow;
     QDialog      *edit_refresh_settings;
     QLabel *dialLabel, *timeLabel;
     QCheckBox *usePeriodic, *useWorkingHours;
     QDial *hourDial;
     QPushButton *cancelButton, *saveButton;
-    int refreshingPeriod; // in ms
-    bool periodicRefreshingEnabled;
+    QString periodicRefreshMode;
+
+
+    //functions
+    refreshSettings(QWidget *parent);
+    void loadSettingsFromMainWindow();
+
 
 public slots:
     void hourDialValueChanged(int value);
     void enablePeriodicRefreshing(bool state);
+    void enableWorkingHoursOnly(bool state);
     void saveAndClose();
+    void modeButtonClicked(int value);
 };
 
 #endif // REFRESHSETTINGS_H

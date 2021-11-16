@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 
+
 // ======== LOAD DATA ========
 
 void MainWindow::loadData(QString path2load){
@@ -56,7 +57,13 @@ void MainWindow::loadData(QString path2load){
 
 void MainWindow::refreshData(QString path2load){
 
-    QQueue<QFileInfo> fiQueue;
+    QQueue<QFileInfo> fiQueue; // initiate queue for files
+
+    // use QProgressDialog as busy indicator - minimum and maximum both are set to 0
+    QProgressDialog QDitProgress("Looking throug files - wait for it", "Abort", 0, 0, this);
+    QDitProgress.setWindowModality(Qt::WindowModal);
+    QDitProgress.setCancelButton(nullptr);
+    QDitProgress.setMinimumDuration(0);
 
     // QDirIterator - goes through files recursively
     QDirIterator QDit(path2load, QStringList() << "*.sig" << "*.SIG", QDir::Files, QDirIterator::Subdirectories);
@@ -64,7 +71,6 @@ void MainWindow::refreshData(QString path2load){
 
         QString Qpath = QDit.next();
         QFileInfo fi(Qpath);
-
 
         // put here what files shoud be enqeued
 
@@ -77,15 +83,15 @@ void MainWindow::refreshData(QString path2load){
         }
     }
 
-    qDebug() << "fiQueue size " << fiQueue.size();
+    //qDebug() << "fiQueue size " << fiQueue.size();
 
     int ii = 0;
 
-
-    QProgressDialog progress("Refreshing data...", "Abort", 0, fiQueue.size(), this);
-        progress.setWindowModality(Qt::WindowModal);
-        progress.setCancelButton(nullptr);
-        progress.setMinimumDuration(0);
+    QString ProgressLabel = QString("Refreshing data in folder %1").arg(path2load);
+    QProgressDialog progress(ProgressLabel, "Abort", 0, fiQueue.size(), this);
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setCancelButton(nullptr);
+    progress.setMinimumDuration(0);
 
     while (!fiQueue.isEmpty()){
         // this function returns only the data needed - maybe rename it
@@ -140,6 +146,7 @@ void MainWindow::initLoadData(){
             // only when there is no QMap to load it goes through the static folders
             for (int j = 0; j < static_dirs.size(); ++j) {
                 loadData(static_dirs.at(j));
+                qDebug() << "here!";
             }
         }
         // now go through dynamic folders
@@ -147,7 +154,7 @@ void MainWindow::initLoadData(){
             loadData(dynamic_dirs.at(j));
         }
         qDebug() << "total no of files processed: " << no_files_loaded;
-        buildTreeView();
+        //buildTreeView();
     }
 }
 
@@ -195,7 +202,6 @@ void addQRecord2model(QAbstractItemModel *model, int ind, int ncol, QModelIndex 
     if (Qrecord.video_flag){
         model->setData(model->index(ind,0, parent), *dvicon, Qt::DecorationRole);
     }
-
 }
 
 void addQPatient2model(QAbstractItemModel *model, QString ID, QPatient Qpatient){
@@ -254,7 +260,6 @@ QAbstractItemModel *createPatientTreeModel(QObject *parent, QMap<QString, QPatie
     for (qit=patientMap.begin();qit!=patientMap.end();++qit){
         addQPatient2model(model,qit.key(), qit.value());
     }
-
     return model;
 }
 
@@ -274,7 +279,7 @@ void MainWindow::buildTreeView(){
     proxyModel->setSourceModel(sourceModel);
 
 #if QT_VERSION >= 0x050A00
-    proxyModel->setRecursiveFilteringEnabled(1); // This property was introduced in Qt 5.10. - Luckily LeafFilterProxyModel (probably) takes care of that
+    proxyModel->setRecursiveFilteringEnabled(1); // This property was introduced in Qt 5.10.
 #else
 #endif
     proxyModel->setFilterKeyColumn(-1); // filter through all columns
@@ -523,6 +528,7 @@ void MainWindow::chooseExternalProgram2(){
 };
 
 void MainWindow::refreshDynamic(){
+
     if(!dynamic_dirs.isEmpty()){
         for (int j = 0; j < dynamic_dirs.size(); j++ ) {
             qDebug() << "loading data: " << dynamic_dirs.at(j);
@@ -638,7 +644,6 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
 
-
     // ======== Main Menu ========
     menubar = menuBar();
 
@@ -685,23 +690,28 @@ MainWindow::MainWindow(QWidget *parent)
 
     layout = new QVBoxLayout(centralWidget);
 
+    // Filter line
+    buildFilterLine(); // build filter line - do it first if you want it on the top
+
 
     // ====== APPLICATION CYCLE ======
-    readSettings(); // read setting from .ini file
-    buildFilterLine(); // build filter line - do it first if you want it on the top
-    initLoadData(); //load data and update patientMap
-    setUpQTimer();
-    updateLastCheckTime();
 
-    if (patientMap.size() == 0){
-        showNoFileWarning(); // show warning that there are no files to load
-    }
+    //    readSettings(); // read setting from .ini file
+    //    buildFilterLine(); // build filter line - do it first if you want it on the top
+    //    initLoadData(); //load data and update patientMap
+    //    buildTreeView() // build tree view
+    //    setUpQTimer();
+    //    updateLastCheckTime();
+
+    //    if (patientMap.size() == 0){
+    //        showNoFileWarning(); // show warning that there are no files to load
+    //    }
 
 }
 
 void MainWindow::setUpQTimer(){
     timer = new QTimer(this);
-     connect(timer, SIGNAL(timeout()), this, SLOT(refreshDynamic()));
+    connect(timer, SIGNAL(timeout()), this, SLOT(refreshDynamic()));
     setQTimer();
 }
 
@@ -730,6 +740,8 @@ void MainWindow::writeSettings()
     settings.setValue("defaultReaderFolder","D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/");
     settings.setValue("refreshing_period",refreshingPeriod);
     settings.setValue("periodic_refreshing_enabled", periodicRefreshingEnabled);
+    settings.setValue("periodic_refreshing_in_working_hours_only",workingHoursOnly);
+    settings.setValue("periodic_refresh_mode",periodicRefreshMode);
 
     settings.beginWriteArray("static_dirs");
     for (int i = 0; i < static_dirs.size(); ++i) {
@@ -757,8 +769,8 @@ void MainWindow::readSettings()
     defaultReaderFolder = settings.value("defaultReaderFolder").toString();
     refreshingPeriod = settings.value("refreshing_period").toInt();
     periodicRefreshingEnabled = settings.value("periodic_refreshing_enabled").toBool();
-
-    // check for duplicates here? Or will suffice in "Add folder dialog"
+    workingHoursOnly = settings.value("periodic_refreshing_in_working_hours_only").toBool();
+    periodicRefreshMode = settings.value("periodic_refresh_mode").toString();
 
     // load array of static folders
     int size = settings.beginReadArray("static_dirs");
@@ -779,8 +791,8 @@ void MainWindow::readSettings()
     }
     settings.endArray();
 
-    qDebug() << "static directories: " << dynamic_dirs;
-    qDebug() << "dynamic directories: " << static_dirs;
+    //qDebug() << "static directories: " << dynamic_dirs;
+    //qDebug() << "dynamic directories: " << static_dirs;
 
 }
 
