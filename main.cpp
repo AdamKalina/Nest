@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
     p.setPen(Qt::black);
     p.drawText(20, 60, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, "version 0.35");
 
-    QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint); // I tried to pass reference of splash to MainWindow using setter nad getter, but it is not fast enough
+    QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);
     splash.setFont(sansFont);
 
     QTimer t1;
@@ -37,6 +37,9 @@ int main(int argc, char *argv[])
 
     splash.showMessage("Reading settings", Qt::AlignHCenter | Qt::AlignBottom);
     w.readSettings();
+
+    splash.showMessage("Connecting to database", Qt::AlignHCenter | Qt::AlignBottom);
+    w.connectDb();
 
     splash.showMessage("Loading data", Qt::AlignHCenter | Qt::AlignBottom);
     w.initLoadData(); //load data and update patientMap
@@ -63,6 +66,8 @@ int main(int argc, char *argv[])
         qApp->setStyleSheet(ts.readAll());
     }
 
+
+    // show mainwindow
     w.show();
     return a.exec();
 }

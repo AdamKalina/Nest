@@ -35,7 +35,7 @@ endif()
 #endif()
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Sql REQUIRED)
 
 # for Win XP
 if(${QT_VERSION_MAJOR} EQUAL 5 AND ${QT_VERSION_MINOR} LESS_EQUAL 6)
@@ -56,6 +56,7 @@ set(PROJECT_SOURCES
         externalprogramlist.cpp
         refreshsettings.cpp
         customdelegate.cpp
+        dbmanager.cpp
         resources.qrc
 )
 
@@ -76,4 +77,4 @@ else()
     endif()
 endif()
 
-target_link_libraries(Nest PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(Nest PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Sql)

@@ -17,6 +17,9 @@
 #include <cstdint>
 #include <functional>
 #include <algorithm>
+//#include <QString>
+//#include "qpatient.h"
+
 
 using namespace std;
 

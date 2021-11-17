@@ -245,6 +245,7 @@ Record read_signal_file(string file_path){
     // Signal struct
     SignalFile signal;
     Record record;
+    //QRecord qrecord;
 
     // READ THE FILE
     streampos fileSize;

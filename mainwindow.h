@@ -45,9 +45,11 @@
 #include "leaffilterproxymodel.h"
 #include "refreshsettings.h"
 #include "customdelegate.h"
+#include "dbmanager.h"
 #include <stdio.h>
 #include <string.h>
 
+class DbManager;
 
 class MainWindow : public QMainWindow
 {
@@ -77,9 +79,10 @@ public:
     QString QMapFile;
     QString defaultDataFolder;
     QString defaultReaderFolder;
+    QString path2db = "records.db";
     QDateTime lastUpdateTime;
     QIcon dvicon;
-    QSplashScreen *splash;
+    DbManager db;
 
     // functions
     void readSettings();
@@ -100,9 +103,9 @@ public:
     void showNoFileWarning();
     void AddFolderDialog(QString folder_type);
     void buildFilterLine();
+    void connectDb();
     void saveQMap();
     int loadQMap();
-    void saveMap();
     QDateTime TimeT2QDateTime(time_t);
 
 

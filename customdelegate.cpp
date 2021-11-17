@@ -4,9 +4,12 @@
 
 void CustomDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-    if (index.siblingAtColumn(5).data().toBool()) {
+
+    // if the file is still being recorded - color it read
+    if (index.sibling(index.row(),5).data().toBool()) {
         //painter->save();
 
+        // need to reimplement color for Selected and MouseOver
         if (option.state & QStyle::State_Selected)
                     painter->fillRect(option.rect, QColor(204, 231, 254, 255));
 
@@ -16,6 +19,7 @@ void CustomDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option
         painter->setPen(Qt::red);
         painter->drawText(option.rect, Qt::AlignLeft|Qt::AlignVCenter, displayText(index.data(),QLocale::system()));
         //painter->restore();
+        // otherwise use base QStyledItemDelegate
     } else {
         QStyledItemDelegate::paint(painter, option, index);
     }

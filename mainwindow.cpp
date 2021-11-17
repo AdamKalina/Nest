@@ -115,6 +115,8 @@ void MainWindow::refreshData(QString path2load){
         // TO DO - the same for video file, is there a field in signal that states that video exists?
         record.video_flag = QFileInfo::exists(fid.canonicalPath() + "/" + fid.baseName() + ".M01"); // bool to int
 
+        db.addRecord(record);
+
         // using QMap
         QMap<QString, QPatient>::iterator qit = patientMap.find(QString::fromLocal8Bit(record.id.c_str()));
         if (qit != patientMap.end()) {
@@ -293,7 +295,7 @@ void MainWindow::buildTreeView(){
     treeView->setAlternatingRowColors(1);
     treeView->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
     treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
-    treeView->setItemDelegate(new CustomDelegate(treeView));
+    treeView->setItemDelegate(new CustomDelegate); // set custom delegate
     //treeView->expand(proxyModel->index(1,0)); // expands also the second patient
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(double_click_tree(QModelIndex)));
 
@@ -819,6 +821,31 @@ void MainWindow::readSettings()
     //qDebug() << "dynamic directories: " << static_dirs;
 
 }
+
+// ======== connect db ========
+
+void MainWindow::connectDb(){
+
+    // Load db
+
+    //DbManager db;
+
+    db.setPath(path2db);
+
+        if (db.isOpen())
+        {
+            db.createTablePatients();   // Creates a table if it doesn't exist. Otherwise, it will use existing table.
+            db.createTableRecords();
+            db.printAllPersons();
+            qDebug() << "End";
+        }
+        else
+        {
+            qDebug() << "Database is not open!";
+        }
+
+}
+
 
 // ======== WRITE and READ QMap ========
 
