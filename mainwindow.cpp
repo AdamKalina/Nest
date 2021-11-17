@@ -60,10 +60,12 @@ void MainWindow::refreshData(QString path2load){
     QQueue<QFileInfo> fiQueue; // initiate queue for files
 
     // use QProgressDialog as busy indicator - minimum and maximum both are set to 0
-    QProgressDialog QDitProgress("Looking throug files - wait for it", "Abort", 0, 0, this);
+    QProgressDialog QDitProgress("Looking through files - wait for it", "Abort", 0, 0, this);
     QDitProgress.setWindowModality(Qt::WindowModal);
     QDitProgress.setCancelButton(nullptr);
     QDitProgress.setMinimumDuration(0);
+
+    QDateTime now = QDateTime::currentDateTime();
 
     // QDirIterator - goes through files recursively
     QDirIterator QDit(path2load, QStringList() << "*.sig" << "*.SIG", QDir::Files, QDirIterator::Subdirectories);
@@ -73,15 +75,15 @@ void MainWindow::refreshData(QString path2load){
         QFileInfo fi(Qpath);
 
         // put here what files shoud be enqeued
+        if(periodicRefreshMode != 0){
+            if(fi.lastModified().daysTo(now) > periodicRefreshMode)
+                qDebug() << "This files is too old - skipping";
+        }
 
         fiQueue.enqueue(fi);
-
-        if(fi.lastModified() < lastUpdateTime){
-            //qDebug() << "nothing new in this file, skipping";
-            //qDebug() << fi.lastModified().daysTo(QDateTime::currentDateTime()); // kladna cisla
-            //qDebug() << QDateTime::currentDateTime().daysTo(fi.lastModified()); // zaporna cisla
-        }
     }
+
+    QDitProgress.close();
 
     //qDebug() << "fiQueue size " << fiQueue.size();
 
@@ -182,18 +184,16 @@ void addQRecord2model(QAbstractItemModel *model, int ind, int ncol, QModelIndex 
 #else
     model->setData(model->index(ind, 2, parent), QDateTime::fromTime_t(Qrecord.record_start), Qt::DisplayRole);
 #endif
-
     model->setData(model->index(ind, 3, parent), n.addSecs(Qrecord.num_pages*10).toString("hh:mm:ss"), Qt::DisplayRole);
     model->setData(model->index(ind, 4, parent), Qrecord.file_path, Qt::DisplayRole);
     model->setData(model->index(ind, 5, parent), Qrecord.recording_flag, Qt::DisplayRole);
     model->setData(model->index(ind, 6, parent), Qrecord.doctor, Qt::DisplayRole);
 
     // if recording flag = 1 --> color the whole row red
-    // TO DO - use delegate?
     if (Qrecord.recording_flag){
-        for (int i = 0;i < ncol;i++){
-            model->setData(model->index(ind, i, parent), QColor(Qt::red), Qt::ForegroundRole);
-        }
+        //for (int i = 0;i < ncol;i++){
+        //    model->setData(model->index(ind, i, parent), QColor(Qt::red), Qt::ForegroundRole);
+        //}
     }
 
     QIcon *dvicon = new QIcon(":/images/DV_icon.png");
@@ -210,9 +210,6 @@ void addQPatient2model(QAbstractItemModel *model, QString ID, QPatient Qpatient)
     model->insertRow(0);
     model->setData(model->index(0, 0), ID);
     model->setData(model->index(0, 1), Qpatient.name);
-
-    //MainWindow mw;
-    //QDateTime test = mw.TimeT2QDateTime(Qpatient.last_record);
 
 #if QT_VERSION >= 0x050800
     model->setData(model->index(0, 2), QDateTime::fromSecsSinceEpoch(Qpatient.last_record));
@@ -265,15 +262,12 @@ QAbstractItemModel *createPatientTreeModel(QObject *parent, QMap<QString, QPatie
 
 void MainWindow::buildTreeView(){
 
-    //delete treeView; // check whether this needs to be here
-
     treeView = new QTreeView;
 
-    qDebug() << "creating source model";
+    //qDebug() << "creating source model";
     sourceModel = createPatientTreeModel(this, patientMap); // create sourceModel
     sourceModelLoaded = 1;
 
-    //proxyModel = new QSortFilterProxyModel(this);
     proxyModel = new LeafFilterProxyModel(this); // use this custom FilterProxyModel
 
     proxyModel->setSourceModel(sourceModel);
@@ -287,7 +281,7 @@ void MainWindow::buildTreeView(){
 
     treeView->setModel(proxyModel); // or set SourceModel here for no filtering
     treeView->setColumnHidden(4,1); // hide path to EEG file
-    treeView->setColumnHidden(5,1); // hide being recorded
+    treeView->setColumnHidden(5,1); // hide "being recorded"
     treeView->setSortingEnabled(1); //enable sorting
     treeView->sortByColumn(2,Qt::DescendingOrder); //newest files first
     treeView->header()->setSectionsMovable(0); //disable moving columns by dragging
@@ -299,6 +293,7 @@ void MainWindow::buildTreeView(){
     treeView->setAlternatingRowColors(1);
     treeView->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
     treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
+    treeView->setItemDelegate(new CustomDelegate(treeView));
     //treeView->expand(proxyModel->index(1,0)); // expands also the second patient
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(double_click_tree(QModelIndex)));
 
@@ -709,21 +704,50 @@ MainWindow::MainWindow(QWidget *parent)
 
 }
 
-void MainWindow::setUpQTimer(){
+
+// ======== QTimers ========
+
+void MainWindow::setUpRefreshQTimer(){
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(refreshDynamic()));
-    setQTimer();
+    refreshQTimer();
 }
 
-void MainWindow::setQTimer(){
+void MainWindow::refreshQTimer(){
 
-    qDebug() << refreshingPeriod;
+    qDebug() << "refreshing period: " << refreshingPeriod << " minutes";
+    qDebug() << "periodic Refreshing Enabled: " << periodicRefreshingEnabled;
 
     if (periodicRefreshingEnabled){
-        timer->start(refreshingPeriod*60*1000); // in ms
+        timer->start(refreshingPeriod*60*1000); // in ms (from minutes)
     }else{
         timer->stop();
     }
+}
+
+void MainWindow::setUpWorkingHoursQTimer(){
+    whTimer = new QTimer(this);
+    connect(whTimer, SIGNAL(timeout()), this, SLOT(isItWorkingHours()));
+    workingHoursQTimer();
+}
+
+void MainWindow::workingHoursQTimer(){
+    if (workingHoursOnly){
+        whTimer->start(1000*3600); // one hour
+    }else{
+        whTimer->stop();
+    }
+}
+
+void MainWindow::isItWorkingHours(){
+    int now = QTime::currentTime().hour();
+    if(now > 7 && now < 17){
+        periodicRefreshingEnabled = true;
+    }else
+    {
+        periodicRefreshingEnabled = false;
+    }
+    refreshQTimer();
 }
 
 
@@ -770,7 +794,7 @@ void MainWindow::readSettings()
     refreshingPeriod = settings.value("refreshing_period").toInt();
     periodicRefreshingEnabled = settings.value("periodic_refreshing_enabled").toBool();
     workingHoursOnly = settings.value("periodic_refreshing_in_working_hours_only").toBool();
-    periodicRefreshMode = settings.value("periodic_refresh_mode").toString();
+    periodicRefreshMode = settings.value("periodic_refresh_mode").toInt();
 
     // load array of static folders
     int size = settings.beginReadArray("static_dirs");

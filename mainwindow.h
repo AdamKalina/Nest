@@ -44,6 +44,7 @@
 #include "externalprogramlist.h"
 #include "leaffilterproxymodel.h"
 #include "refreshsettings.h"
+#include "customdelegate.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -62,6 +63,7 @@ public:
     bool periodicRefreshingEnabled = false;
     bool workingHoursOnly = false;
     long no_files_loaded = 0;
+    int periodicRefreshMode = 0;
 
     // Qt variables
     QMap<QString, QPatient> patientMap;
@@ -75,7 +77,6 @@ public:
     QString QMapFile;
     QString defaultDataFolder;
     QString defaultReaderFolder;
-    QString periodicRefreshMode = QString("all");
     QDateTime lastUpdateTime;
     QIcon dvicon;
     QSplashScreen *splash;
@@ -87,8 +88,10 @@ public:
     void loadData(QString path2load);
     void refreshData(QString path2load);
     void updateLastCheckTime();
-    void setUpQTimer();
-    void setQTimer();
+    void setUpRefreshQTimer();
+    void refreshQTimer();
+    void setUpWorkingHoursQTimer();
+    void workingHoursQTimer();
     void buildTreeView();
     void updatePatientTreeModel();
     void updatePatientTreeModel2();
@@ -118,6 +121,7 @@ public slots:
     void editFolderList();
     void editProgramList();
     void editRefreshSettings();
+    void isItWorkingHours();
 
 private:
     QMenuBar *menubar;
@@ -134,6 +138,7 @@ private:
     QVBoxLayout *layout;
     QShortcut *refreshKey;
     QTimer *timer;
+    QTimer *whTimer;
 
 };
 #endif // MAINWINDOW_H

@@ -35,10 +35,10 @@ refreshSettings::refreshSettings(QWidget *w_parent)
 
     QButtonGroup *buttonGroup = new QButtonGroup( this );
     buttonGroup->addButton(refreshAll,0);
-    buttonGroup->addButton(refreshYear,1);
-    buttonGroup->addButton(refreshMonth,2);
-    buttonGroup->addButton(refreshWeek,3);
-    buttonGroup->addButton(refreshToday,4);
+    buttonGroup->addButton(refreshYear,365);
+    buttonGroup->addButton(refreshMonth,31);
+    buttonGroup->addButton(refreshWeek,7);
+    buttonGroup->addButton(refreshToday,1);
     buttonGroup->setExclusive(true);
 
     buttonGroup->button(RefreshModeId)->setChecked(1);
@@ -139,29 +139,10 @@ refreshSettings::refreshSettings(QWidget *w_parent)
 }
 
 void refreshSettings::loadSettingsFromMainWindow(){
-    periodicRefreshMode = mainwindow->periodicRefreshMode;
+    RefreshModeId = mainwindow->periodicRefreshMode;
     refreshingPeriod = mainwindow->refreshingPeriod;
     periodicRefreshingEnabled = mainwindow->periodicRefreshingEnabled;
     workingHoursOnly = mainwindow->workingHoursOnly;
-
-    qDebug() << periodicRefreshMode;
-
-
-    if (periodicRefreshMode == "all"){
-        RefreshModeId = 0;
-    }
-    if (periodicRefreshMode == "year"){
-        RefreshModeId = 1;
-    }
-    if (periodicRefreshMode == "month"){
-        RefreshModeId = 2;
-    }
-    if (periodicRefreshMode == "week"){
-        RefreshModeId = 3;
-    }
-    if (periodicRefreshMode == "day"){
-        RefreshModeId = 4;
-    }
 }
 
 void refreshSettings::modeButtonClicked(int value){
@@ -200,25 +181,14 @@ void refreshSettings::saveAndClose(){
     //qDebug() << "period" << refreshingPeriod;
     //qDebug() << "usePeriodic" << periodicRefreshingEnabled;
 
-    switch(RefreshModeId){
-    case 0 : periodicRefreshMode = "all";
-        break;
-    case 1 : periodicRefreshMode = "year";
-        break;
-    case 2 : periodicRefreshMode = "month";
-        break;
-    case 3 : periodicRefreshMode = "week";
-        break;
-    case 4 : periodicRefreshMode = "day";
-        break;
-    }
-
-    mainwindow->periodicRefreshMode = periodicRefreshMode;
+    mainwindow->periodicRefreshMode = RefreshModeId;
     mainwindow->refreshingPeriod = refreshingPeriod;
     mainwindow->periodicRefreshingEnabled = periodicRefreshingEnabled;
     mainwindow->workingHoursOnly = workingHoursOnly;
-    mainwindow->setQTimer();
+    mainwindow->refreshQTimer();
+    mainwindow->workingHoursQTimer();
 
     //qDebug() << "Save and Close";
+    qDebug() << "Refresh mode: " << RefreshModeId;
     edit_refresh_settings->close();
 }

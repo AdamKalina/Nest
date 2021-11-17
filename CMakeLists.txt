@@ -55,6 +55,7 @@ set(PROJECT_SOURCES
         folderlist.cpp
         externalprogramlist.cpp
         refreshsettings.cpp
+        customdelegate.cpp
         resources.qrc
 )
 

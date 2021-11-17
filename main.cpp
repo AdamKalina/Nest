@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
     QFont sansFont("Century Gothic", 10);
     p.setFont(sansFont);
     p.setPen(Qt::black);
-    p.drawText(20, 60, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, "version 0.3");
+    p.drawText(20, 60, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, "version 0.35");
 
     QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint); // I tried to pass reference of splash to MainWindow using setter nad getter, but it is not fast enough
     splash.setFont(sansFont);
@@ -43,7 +43,8 @@ int main(int argc, char *argv[])
 
     splash.showMessage("Building tree model", Qt::AlignHCenter | Qt::AlignBottom);
     w.buildTreeView();
-    w.setUpQTimer();
+    w.setUpRefreshQTimer();
+    w.setUpWorkingHoursQTimer();
     w.updateLastCheckTime();
 
     if (w.patientMap.size() == 0){

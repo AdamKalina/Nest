@@ -26,8 +26,6 @@ public:
     QCheckBox *usePeriodic, *useWorkingHours;
     QDial *hourDial;
     QPushButton *cancelButton, *saveButton;
-    QString periodicRefreshMode;
-
 
     //functions
     refreshSettings(QWidget *parent);
