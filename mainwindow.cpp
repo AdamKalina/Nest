@@ -34,6 +34,8 @@ void MainWindow::loadData(QString path2load){
         qrecord.recording_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".LOG"); // bool to int
         qrecord.video_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".M01"); // bool to int
 
+        db.addRecord(qrecord);
+
         // using QMap
         QMap<QString, QPatient>::iterator qit = patientMap.find(qrecord.id);
         if (qit != patientMap.end()) {
@@ -288,10 +290,10 @@ void MainWindow::buildTreeView(){
     treeView->setModel(proxyModel); // or set SourceModel here for no filtering
     treeView->setColumnHidden(4,1); // hide path to EEG file
     treeView->setColumnHidden(5,1); // hide "being recorded"
-    treeView->setSortingEnabled(1); //enable sorting
+    treeView->setSortingEnabled(1); // enable sorting
     treeView->sortByColumn(2,Qt::DescendingOrder); //newest files first
-    treeView->header()->setSectionsMovable(0); //disable moving columns by dragging
-    treeView->header()->setDefaultAlignment(Qt::AlignCenter); //align header labels to center
+    treeView->header()->setSectionsMovable(0); // disable moving columns by dragging
+    treeView->header()->setDefaultAlignment(Qt::AlignCenter); // align header labels to center
     treeView->header()->setStretchLastSection(false); // do not stretch last section
     treeView->header()->setFont(QFont("Sans Serif", 12, QFont::Bold)); // set header font
     treeView->setEditTriggers(QAbstractItemView::NoEditTriggers); // turn off editing of existin data by user
@@ -840,6 +842,7 @@ void MainWindow::connectDb(){
         {
             db.createTablePatients();   // Creates a table if it doesn't exist. Otherwise, it will use existing table.
             db.createTableRecords();
+            db.createIndexPatients();
             db.printAllPersons();
             qDebug() << "End";
         }

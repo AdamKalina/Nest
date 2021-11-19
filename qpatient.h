@@ -16,7 +16,7 @@ public:
     QString id;
     QString name;
     time_t record_start;
-    short sex;
+    int sex;
     QString class_code;
     QString protocol;
     QString doctor;
@@ -33,7 +33,7 @@ class QPatient{
 public:
     QString id;
     QString name;
-    QString sex;
+    int sex;
     int no; // no of records
     time_t last_record; // date of last EEG
     QMap<QString, QRecord> Qrecords_map;

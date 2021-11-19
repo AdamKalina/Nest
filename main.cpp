@@ -7,6 +7,8 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     QApplication::setWindowIcon(QIcon(":/images/nest_icon.png"));
 
+    // ======== SPLASH SCREEN ========
+
     QPixmap pixmap(":images/nest.png");
 
     QPainter p(&pixmap);
@@ -14,6 +16,7 @@ int main(int argc, char *argv[])
     p.setFont(sansFont);
     p.setPen(Qt::black);
     p.drawText(20, 60, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, "version 0.35");
+    p.drawText(20, 300, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, QString("build %1").arg(__DATE__));
 
     QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);
     splash.setFont(sansFont);
@@ -25,7 +28,7 @@ int main(int argc, char *argv[])
     splash.show();
     splash.showMessage("Program is starting", Qt::AlignHCenter | Qt::AlignBottom);
 
-    t1.start(1500); // show the splash screen for 1500 ms
+    t1.start(1500); // show the splash screen for 1500 ms - even after the app is loaded (?)
     QEventLoop evlp;
     QTimer::singleShot(100, &evlp, SLOT(quit()));
     evlp.exec();
@@ -44,15 +47,19 @@ int main(int argc, char *argv[])
     splash.showMessage("Loading data", Qt::AlignHCenter | Qt::AlignBottom);
     w.initLoadData(); //load data and update patientMap
 
-    splash.showMessage("Building tree model", Qt::AlignHCenter | Qt::AlignBottom);
-    w.buildTreeView();
+    if (w.patientMap.size() == 0){
+        w.showNoFileWarning(); // show warning that there are no files to load
+    }else{
+        splash.showMessage("Building tree model", Qt::AlignHCenter | Qt::AlignBottom);
+        w.buildTreeView();
+    }
+    splash.clearMessage();
+
     w.setUpRefreshQTimer();
     w.setUpWorkingHoursQTimer();
     w.updateLastCheckTime();
 
-    if (w.patientMap.size() == 0){
-        w.showNoFileWarning(); // show warning that there are no files to load
-    }
+    // =================================
 
     //Set Stylesheet
     QFile qss(":style.qss");

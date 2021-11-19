@@ -4,7 +4,7 @@
 #include <QString>
 #include <QDebug>
 #include <QtSql>
-#include "read_signal_file.h""
+#include "read_signal_file.h"
 
 // based on https://github.com/katecpp/sql_with_qt - but added default constructor so it can be included in header of other class
 
@@ -38,7 +38,16 @@ public:
      */
     bool createTablePatients();
 
+    /**
+     * @brief Creates a new index in TABLE 'patients' if it doesn't already exist
+     * @return true - index created successfully, false - table not created
+     */
+
+    bool createIndexPatients();
+
     bool createTableRecords();
+
+    bool createIndexRecords();
 
     /**
      * @brief Add person data to db
@@ -48,6 +57,12 @@ public:
     bool addPerson(QRecord qrecord);
 
     bool addRecord(QRecord qrecord);
+
+    bool insertNewRecord(QRecord qrecord, bool updatePatient);
+
+    bool updateRecord(QRecord qrecord);
+
+    bool updatePatientLastRecord(QRecord qrecord);
 
     /**
      * @brief Remove person data from db
@@ -62,6 +77,13 @@ public:
      * @return true - person exists, false - person does not exist
      */
     bool personExists(const QString& name) const;
+
+    /**
+     * @brief Check if record of name "file_name" exists in db
+     * @param file_name - name of record to check.
+     * @return true - record exists, false - record does not exist
+     */
+    bool recordExists(const QString& file_name) const;
 
     /**
      * @brief Print names of all persons in db

@@ -15,7 +15,7 @@ void QRecord::setPath(QString old_path){
     file_path = old_path;
     // extract file name
     QFileInfo fi(file_path);
-    file_name = fi.fileName();
+    file_name = fi.baseName();
 }
 
 // TO DO - make Time_t --> QDateTime conversion part of QRecord constructor ?
