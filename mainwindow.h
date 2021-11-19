@@ -37,6 +37,7 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QProgressDialog>
+#include <QProgressBar>
 #include <QQueue>
 #include "read_signal_file.h"
 #include "qpatient.h"

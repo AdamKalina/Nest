@@ -2,59 +2,34 @@
 
 // ======== CLASS for QPATIENT and STREAMER methods ========
 
-void Patient::set_values (Record record) {
-    id = record.id;
-    name = record.name;
-    sex = record.sex;
-    no = 1;
-    last_record = record.record_start;
-    //records.push_back(record);
-    records_map.insert(std::pair<string,Record>(record.file_name,record));
-};
 
-void Patient::add_record(Record record){
-    // TO DO - check for duplicates?
-    //records.push_back(record);
-    records_map.insert(std::pair<string,Record>(record.file_name,record));
-
-    // compares start of recordings and uses later
-    if (difftime(last_record, record.record_start) < 0){
-        last_record = record.record_start;
-    };
-
-    no = records_map.size(); // beter than no++ since it would increment even in duplicate files
-};
-
-// TO DO - make Time_t --> QDateTime conversion part of QRecord constructor
-
-void QPatient::set_values(Record record){
-    id = QString::fromLocal8Bit(record.id.c_str());
-    name = QString::fromLocal8Bit(record.name.c_str());
-    sex = record.sex;
-    no = 1;
-    last_record = record.record_start;
-    this->add_record(record);
-    //Qrecords_map.insert(Qrecord.file_name,Qrecord);
+void QRecord::setID(std::string old_id){
+    // removes "/" in ID (rodné èíslo)
+    id = QString::fromLocal8Bit(old_id.c_str());
+    id.remove(QChar('/'), Qt::CaseInsensitive);
+    //capitalize "x" ind ID
+    id.replace("x", "X", Qt::CaseSensitive);
 }
 
-void QPatient::add_record(Record record){
+void QRecord::setPath(QString old_path){
+    file_path = old_path;
+    // extract file name
+    QFileInfo fi(file_path);
+    file_name = fi.fileName();
+}
 
-    QRecord Qrecord;
+// TO DO - make Time_t --> QDateTime conversion part of QRecord constructor ?
 
-    Qrecord.check_flag = record.check_flag;
-    Qrecord.file_size = record.file_size;
-    Qrecord.id = QString::fromLocal8Bit(record.id.c_str());
-    Qrecord.name = QString::fromLocal8Bit(record.name.c_str());
-    Qrecord.record_start = record.record_start;
-    Qrecord.sex = record.sex;
-    Qrecord.class_code = QString::fromLocal8Bit(record.class_code.c_str());
-    Qrecord.doctor = QString::fromLocal8Bit(record.doctor.c_str());
-    Qrecord.protocol = QString::fromLocal8Bit(record.protocol.c_str());
-    Qrecord.file_name = QString::fromLocal8Bit(record.file_name.c_str());
-    Qrecord.file_path = QString::fromLocal8Bit(record.file_path.c_str());
-    Qrecord.recording_flag = record.recording_flag;
-    Qrecord.video_flag = record.video_flag;
-    Qrecord.num_pages = record.num_pages;
+void QPatient::set_values(QRecord qrecord){
+    id = qrecord.id;
+    name = qrecord.name;
+    sex = qrecord.sex;
+    no = 1;
+    last_record = qrecord.record_start;
+    this->add_record(qrecord);
+}
+
+void QPatient::add_record(QRecord Qrecord){
 
     Qrecords_map.insert(Qrecord.file_name,Qrecord);
 

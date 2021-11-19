@@ -232,10 +232,10 @@ RecorderMontageInfo read_recorder_info(fstream &file, long offset, long size)
     return recorder_info;
 }
 
-Record read_signal_file(string file_path){
+QRecord read_signal_file(QString file_path){
 
     // GET THE FILE SIZE
-    ifstream myfile(file_path, ios::binary);
+    ifstream myfile(file_path.toLocal8Bit(), ios::binary);
     const auto begin = myfile.tellg();
     myfile.seekg(0, ios::end);
     const auto end = myfile.tellg();
@@ -244,17 +244,16 @@ Record read_signal_file(string file_path){
 
     // Signal struct
     SignalFile signal;
-    Record record;
-    //QRecord qrecord;
+    QRecord qrecord;
 
     // READ THE FILE
     streampos fileSize;
-    fstream file(file_path, ios::in | ios::out | ios::binary);
+    fstream file(file_path.toLocal8Bit(), ios::in | ios::out | ios::binary);
 
     if (file.fail())
     {
         cout << "ERROR: Cannot open the file..." << endl;
-        return record;
+        return qrecord;
     }
 
     // Signal header
@@ -263,9 +262,8 @@ Record read_signal_file(string file_path){
     // check if it is BrainLab *.SIG file
     if (signal.header.program_id != 1096045395){
         //cout << file_path << " is not valid BrainLab file, skipping" << endl;
-        return record;
+        return qrecord;
     }
-
 
     // Data table
     signal.data_table = read_data_table(file);
@@ -279,32 +277,18 @@ Record read_signal_file(string file_path){
 
     file.close();
 
+    // or make special constructor for this? - but class QRecord does not know struct measurement
+    qrecord.setID(signal.measurement.id);
+    qrecord.setPath(file_path);
+    qrecord.name = QString::fromLocal8Bit(signal.measurement.name);
+    qrecord.class_code = QString::fromLocal8Bit(signal.measurement.class_code);
+    qrecord.doctor = QString::fromLocal8Bit(signal.measurement.doctor);
+    qrecord.protocol = QString::fromLocal8Bit(signal.measurement.protocol);
+    qrecord.file_size = file_size;
+    qrecord.record_start = decode_date_time(signal.measurement.start_date, signal.measurement.start_hour);
+    qrecord.sex = signal.measurement.sex;
+    qrecord.num_pages = (file_size - signal.data_table.signal_info.offset) / signal.data_table.signal_info.size;
+    qrecord.check_flag = 1;
 
-
-    // or make special constructor for this?
-    record.check_flag = 1;
-    record.file_size = file_size;
-    record.record_start = decode_date_time(signal.measurement.start_date, signal.measurement.start_hour);
-    record.id = signal.measurement.id;
-    // removes "/" in ID (rodné èíslo)
-    record.id.erase(std::remove(record.id.begin(), record.id.end(), '/'), record.id.end());
-
-    // capitalize "x" ind ID
-    std::size_t found = record.id.find("x");
-    if(found != std::string::npos){
-        record.id[found] = toupper(record.id[found]);
-    }
-
-    record.name = signal.measurement.name;
-    record.sex = signal.measurement.sex;
-    record.protocol = signal.measurement.protocol;
-    record.class_code = signal.measurement.class_code;
-    record.doctor = signal.measurement.doctor;
-    record.file_path = file_path;
-    string file_name = file_path.substr(file_path.find_last_of("/\\") + 1);
-    std::string::size_type const p(file_name.find_last_of('.'));
-    record.file_name = file_name.substr(0, p); // extract file name
-    record.num_pages = (file_size - signal.data_table.signal_info.offset) / signal.data_table.signal_info.size;
-
-    return record;
+    return qrecord;
 }

@@ -18,10 +18,10 @@ void MainWindow::loadData(QString path2load){
         //qDebug() << Qpath;
 
         // this function returns only the data needed - maybe rename it
-        Record record = read_signal_file(path);
+        QRecord qrecord = read_signal_file(Qpath);
 
         // if something is wrong with this file, skip it
-        if (record.check_flag == 0){
+        if (qrecord.check_flag == 0){
             continue;
         }
 
@@ -31,22 +31,22 @@ void MainWindow::loadData(QString path2load){
 
         QFileInfo fi(Qpath);
 
-        record.recording_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".LOG"); // bool to int
-        record.video_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".M01"); // bool to int
+        qrecord.recording_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".LOG"); // bool to int
+        qrecord.video_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".M01"); // bool to int
 
         // using QMap
-        QMap<QString, QPatient>::iterator qit = patientMap.find(QString::fromLocal8Bit(record.id.c_str()));
+        QMap<QString, QPatient>::iterator qit = patientMap.find(qrecord.id);
         if (qit != patientMap.end()) {
             // if QPatient already exists, add record to it
             // QMap = If there is already an item with the key key, that item's value is replaced with value
             // so it will rewrite data from dynamic folders
             // TO DO - check for duplicates here?
-            qit->add_record(record);
+            qit->add_record(qrecord);
         }
         else{
             // if QPatient does not exist, create it
             QPatient Qpatient;
-            Qpatient.set_values(record);
+            Qpatient.set_values(qrecord);
             patientMap.insert(Qpatient.id, Qpatient);
         }
     }
@@ -60,10 +60,12 @@ void MainWindow::refreshData(QString path2load){
     QQueue<QFileInfo> fiQueue; // initiate queue for files
 
     // use QProgressDialog as busy indicator - minimum and maximum both are set to 0
-    QProgressDialog QDitProgress("Looking through files - wait for it", "Abort", 0, 0, this);
-    QDitProgress.setWindowModality(Qt::WindowModal);
-    QDitProgress.setCancelButton(nullptr);
-    QDitProgress.setMinimumDuration(0);
+    //QProgressDialog QDitProgress("Looking through files - wait for it", "Abort", 0, 0, this);
+    //QDitProgress.setWindowModality(Qt::WindowModal);
+    //QDitProgress.setCancelButton(nullptr);
+    //QDitProgress.setMinimumDuration(0);
+    QProgressBar QDitProgress;
+    QDitProgress.setRange(0,0);
 
     QDateTime now = QDateTime::currentDateTime();
 
@@ -83,7 +85,8 @@ void MainWindow::refreshData(QString path2load){
         fiQueue.enqueue(fi);
     }
 
-    QDitProgress.close();
+    //QDitProgress.close();
+    QDitProgress.setValue(10);
 
     //qDebug() << "fiQueue size " << fiQueue.size();
 
@@ -100,40 +103,40 @@ void MainWindow::refreshData(QString path2load){
 
         QFileInfo fid = fiQueue.dequeue();
 
-        Record record = read_signal_file(fid.filePath().toStdString());
+        QRecord qrecord = read_signal_file(fid.filePath());
         ii++;
         progress.setValue(ii);
 
         // if something is wrong with this file, skip it
-        if (record.check_flag == 0){
+        if (qrecord.check_flag == 0){
             continue;
         }
 
         // check if .LOG file with same name exists - and if it does, flag the record as still being recorded
         // TO DO - is this the best way? There is lot of data in the header of recorded file, search for "TEMP" instead?
-        record.recording_flag = QFileInfo::exists(fid.canonicalPath() + "/" + fid.baseName() + ".LOG"); // bool to int
+        qrecord.recording_flag = QFileInfo::exists(fid.canonicalPath() + "/" + fid.baseName() + ".LOG"); // bool to int
         // TO DO - the same for video file, is there a field in signal that states that video exists?
-        record.video_flag = QFileInfo::exists(fid.canonicalPath() + "/" + fid.baseName() + ".M01"); // bool to int
+        qrecord.video_flag = QFileInfo::exists(fid.canonicalPath() + "/" + fid.baseName() + ".M01"); // bool to int
 
-        db.addRecord(record);
+        db.addRecord(qrecord);
 
         // using QMap
-        QMap<QString, QPatient>::iterator qit = patientMap.find(QString::fromLocal8Bit(record.id.c_str()));
+        QMap<QString, QPatient>::iterator qit = patientMap.find(qrecord.id);
         if (qit != patientMap.end()) {
             // if QPatient already exists, add record to it
             // QMap = If there is already an item with the key key, that item's value is replaced with value
             // so it will rewrite data from dynamic folders
             // TO DO - check for duplicates (with almost same ID) here?
-            qit->add_record(record);
+            qit->add_record(qrecord);
 
-            QMap<QString, QRecord>::iterator qot = qit->Qrecords_map.find(record.file_name.c_str()); // find the record in patient - conversion to QRecord is already done
+            QMap<QString, QRecord>::iterator qot = qit->Qrecords_map.find(qrecord.file_name); // find the record in patient - conversion to QRecord is already done
 
             QrecordStack.push(qot.value()); // add record to buffer
         }
         else{
             // if QPatient does not exist, create it
             QPatient Qpatient;
-            Qpatient.set_values(record);
+            Qpatient.set_values(qrecord);
             patientMap.insert(Qpatient.id, Qpatient);
             QpatientStack.push(Qpatient); // add patient to buffer
         }
@@ -170,7 +173,8 @@ void MainWindow::updateLastCheckTime(){
 // TO DO - make this part of separate class
 
 
-void addQRecord2model(QAbstractItemModel *model, int ind, int ncol, QModelIndex parent, QRecord Qrecord, bool newRecord){
+void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QRecord Qrecord, bool newRecord){
+    // add int ncol for the old way of coloring red
 
     QTime n(0, 0, 0);
 
@@ -192,11 +196,11 @@ void addQRecord2model(QAbstractItemModel *model, int ind, int ncol, QModelIndex 
     model->setData(model->index(ind, 6, parent), Qrecord.doctor, Qt::DisplayRole);
 
     // if recording flag = 1 --> color the whole row red
-    if (Qrecord.recording_flag){
-        //for (int i = 0;i < ncol;i++){
-        //    model->setData(model->index(ind, i, parent), QColor(Qt::red), Qt::ForegroundRole);
-        //}
-    }
+//    if (Qrecord.recording_flag){
+//        for (int i = 0;i < ncol;i++){
+//            model->setData(model->index(ind, i, parent), QColor(Qt::red), Qt::ForegroundRole);
+//        }
+//    }
 
     QIcon *dvicon = new QIcon(":/images/DV_icon.png");
 
@@ -235,7 +239,7 @@ void addQPatient2model(QAbstractItemModel *model, QString ID, QPatient Qpatient)
     QMap<QString, QRecord>::iterator to = Qpatient.Qrecords_map.begin();
     for (Qpatient.Qrecords_map.begin();to!=Qpatient.Qrecords_map.end(); ++to){
 
-        addQRecord2model(model, ind, ncol, parent, to.value(),1); // newRecord = 1 --> append new record
+        addQRecord2model(model, ind, parent, to.value(),1); // newRecord = 1 --> append new record
         ind++;
     }
 }
@@ -294,8 +298,8 @@ void MainWindow::buildTreeView(){
     treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
     treeView->setAlternatingRowColors(1);
     treeView->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
-    treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
     treeView->setItemDelegate(new CustomDelegate); // set custom delegate
+    treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
     //treeView->expand(proxyModel->index(1,0)); // expands also the second patient
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(double_click_tree(QModelIndex)));
 
@@ -339,12 +343,12 @@ void MainWindow::updatePatientTreeModel2(){
         if(childs.isEmpty()){
             incrementParentNo(parentInd);
             updateParentTime(parentInd);
-            addQRecord2model(sourceModel, 0, sourceModel->columnCount(), parentInd, QrecordStack.pop(),1); // 1 = newRecord --> append new record
+            addQRecord2model(sourceModel, 0, parentInd, QrecordStack.pop(),1); // 1 = newRecord --> append new record
         }
         else{
             // TO DO - update existing records?
             int tempInd = childs.first().row();
-            addQRecord2model(sourceModel, tempInd, sourceModel->columnCount(), parentInd, QrecordStack.pop(),0); // 0 = newRecord --> update existing
+            addQRecord2model(sourceModel, tempInd, parentInd, QrecordStack.pop(),0); // 0 = newRecord --> update existing
         }
 
     }

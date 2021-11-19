@@ -4,23 +4,13 @@
 #include <QDataStream>
 #include <QMap>
 #include <QDebug>
-#include <string.h>
-#include <stdio.h>
-#include <read_signal_file.h>
+#include <QFileInfo>
+#include <string>
+#include <time.h>
 
-class Patient{
+
+class QRecord{
 public:
-    string id;
-    string name;
-    string sex;
-    int no; // no of records
-    time_t last_record; // date of last EEG
-    std::map<string, Record> records_map;
-    void set_values(Record);
-    void add_record(Record);
-};
-
-struct QRecord{
     int check_flag = 0; // 1 = valid BrainLab file, 0 if not
     long file_size;
     QString id;
@@ -35,6 +25,8 @@ struct QRecord{
     int recording_flag;
     int video_flag;
     int num_pages;
+    void setID(std::string);
+    void setPath(QString);
 };
 
 class QPatient{
@@ -45,8 +37,8 @@ public:
     int no; // no of records
     time_t last_record; // date of last EEG
     QMap<QString, QRecord> Qrecords_map;
-    void set_values(Record);
-    void add_record(Record);
+    void set_values(QRecord);
+    void add_record(QRecord);
 };
 
 QDataStream & operator<<(QDataStream & out, const QPatient & Qpatient);

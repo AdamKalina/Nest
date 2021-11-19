@@ -12,13 +12,13 @@
 #include <cmath>
 #include <math.h>
 #include <time.h>
-#include <string.h>
+//#include <string.h>
 #include <type_traits>
 #include <cstdint>
 #include <functional>
 #include <algorithm>
 //#include <QString>
-//#include "qpatient.h"
+#include "qpatient.h"
 
 
 using namespace std;
@@ -191,25 +191,8 @@ struct SignalFile
     vector<SignalPage> signal_pages;
 };
 
-struct Record{
-    int check_flag = 0; // 1 = valid BrainLab file, 0 if not
-    double file_size;
-    string id;
-    string name;
-    time_t record_start;
-    short sex;
-    string class_code;
-    string protocol;
-    string doctor;
-    string file_name;
-    string file_path;
-    int recording_flag;
-    int video_flag;
-    int num_pages;
-};
-
 time_t decode_date_time(long date, long time);
 
-Record read_signal_file(string file_name);
+QRecord read_signal_file(QString file_name);
 
 #endif

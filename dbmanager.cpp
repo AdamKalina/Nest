@@ -19,6 +19,9 @@ DbManager::DbManager(){
 }
 
 bool DbManager::setPath(const QString& path){
+    qDebug() << QSqlDatabase::drivers();
+
+
     m_db = QSqlDatabase::addDatabase("QSQLITE");
     m_db.setDatabaseName(path);
 
@@ -46,10 +49,10 @@ bool DbManager::isOpen() const
     return m_db.isOpen();
 }
 
-bool DbManager::addRecord(Record record){
+bool DbManager::addRecord(QRecord qrecord){
 
-    if(!personExists(QString::fromLocal8Bit(record.id.c_str()))){
-        addPerson(record);
+    if(!personExists(qrecord.id)){
+        addPerson(qrecord);
     }else{
         // check if record exists and then update it or create new one - is it quicker?
         // adding new record - increment no in patient
@@ -93,16 +96,16 @@ bool DbManager::createTableRecords()
     return success;
 }
 
-bool DbManager::addPerson(Record record)
+bool DbManager::addPerson(QRecord qrecord)
 {
     bool success = false;
     QSqlQuery queryAdd;
     queryAdd.prepare("INSERT INTO patients (id, name, sex, no, last_record) VALUES (:id, :name, :sex, :no, :last_record)");
-    queryAdd.bindValue(":id", QString::fromLocal8Bit(record.id.c_str()));
-    queryAdd.bindValue(":name", QString::fromLocal8Bit(record.name.c_str()));
-    queryAdd.bindValue(":sex", record.sex);
-    queryAdd.bindValue(":no", 0); // initiate as one and then increment when addin record
-    queryAdd.bindValue(":last_record", record.record_start);
+    queryAdd.bindValue(":id", qrecord.id);
+    queryAdd.bindValue(":name", qrecord.name);
+    queryAdd.bindValue(":sex", qrecord.sex);
+    queryAdd.bindValue(":no", 0); // initiate as one and then increment when adding record
+    queryAdd.bindValue(":last_record", qrecord.record_start);
 
     if(queryAdd.exec())
     {

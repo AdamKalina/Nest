@@ -45,9 +45,9 @@ public:
      * @param name - name of person to add
      * @return true - person added successfully, false - person not added
      */
-    bool addPerson(Record record);
+    bool addPerson(QRecord qrecord);
 
-    bool addRecord(Record record);
+    bool addRecord(QRecord qrecord);
 
     /**
      * @brief Remove person data from db
