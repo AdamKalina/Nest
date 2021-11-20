@@ -7,6 +7,18 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     QApplication::setWindowIcon(QIcon(":/images/nest_icon.png"));
 
+    //Set Stylesheet
+    QFile qss(":style.qss");
+
+    if (!qss.exists())   {
+        printf("Unable to set stylesheet, file not found\n");
+    }
+    else   {
+        qss.open(QFile::ReadOnly | QFile::Text);
+        QTextStream ts(&qss);
+        qApp->setStyleSheet(ts.readAll());
+    }
+
     // ======== SPLASH SCREEN ========
 
     QPixmap pixmap(":images/nest.png");
@@ -57,23 +69,9 @@ int main(int argc, char *argv[])
 
     w.setUpRefreshQTimer();
     w.setUpWorkingHoursQTimer();
-    w.updateLastCheckTime();
+    w.updateLastRefreshTime();
 
     // =================================
-
-    //Set Stylesheet
-    QFile qss(":style.qss");
-
-    if (!qss.exists())   {
-        printf("Unable to set stylesheet, file not found\n");
-    }
-    else   {
-        qss.open(QFile::ReadOnly | QFile::Text);
-        QTextStream ts(&qss);
-        qApp->setStyleSheet(ts.readAll());
-    }
-
-
     // show mainwindow
     w.show();
     return a.exec();

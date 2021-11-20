@@ -3,71 +3,15 @@
 
 // ======== LOAD DATA ========
 
-void MainWindow::loadData(QString path2load){
-
-    int ii = 0;
-
-    // QDirIterator - goes through files recursively
-    QDirIterator QDit(path2load, QStringList() << "*.sig" << "*.SIG", QDir::Files, QDirIterator::Subdirectories);
-    while (QDit.hasNext()){
-
-        QString Qpath = QDit.next();
-        ii++;
-
-        string path= Qpath.toLocal8Bit().data();
-        //qDebug() << Qpath;
-
-        // this function returns only the data needed - maybe rename it
-        QRecord qrecord = read_signal_file(Qpath);
-
-        // if something is wrong with this file, skip it
-        if (qrecord.check_flag == 0){
-            continue;
-        }
-
-        // check if .LOG file with same name exists - and if it does, flag the record as still being recorded
-        // TO DO - is this the best way? There is lot of data in the header of recorded file, search for "TEMP" instead?
-        // TO DO - the same for video file, is there a field in signal that states that video exists?
-
-        QFileInfo fi(Qpath);
-
-        qrecord.recording_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".LOG"); // bool to int
-        qrecord.video_flag = QFileInfo::exists(fi.canonicalPath() + "/" + fi.baseName() + ".M01"); // bool to int
-
-        db.addRecord(qrecord);
-
-        // using QMap
-        QMap<QString, QPatient>::iterator qit = patientMap.find(qrecord.id);
-        if (qit != patientMap.end()) {
-            // if QPatient already exists, add record to it
-            // QMap = If there is already an item with the key key, that item's value is replaced with value
-            // so it will rewrite data from dynamic folders
-            // TO DO - check for duplicates here?
-            qit->add_record(qrecord);
-        }
-        else{
-            // if QPatient does not exist, create it
-            QPatient Qpatient;
-            Qpatient.set_values(qrecord);
-            patientMap.insert(Qpatient.id, Qpatient);
-        }
-    }
-    no_files_loaded = no_files_loaded + ii;
-    qDebug() << "no of files processed: " << ii;
-    //ii = 0;
-}
-
-void MainWindow::refreshData(QString path2load){
+void MainWindow::loadData(QString path2load, bool dynamic){
 
     QQueue<QFileInfo> fiQueue; // initiate queue for files
 
-    // use QProgressDialog as busy indicator - minimum and maximum both are set to 0
-    //QProgressDialog QDitProgress("Looking through files - wait for it", "Abort", 0, 0, this);
-    //QDitProgress.setWindowModality(Qt::WindowModal);
-    //QDitProgress.setCancelButton(nullptr);
-    //QDitProgress.setMinimumDuration(0);
-    QProgressBar QDitProgress;
-    QDitProgress.setRange(0,0);
+    QProgressDialog QDitProgress("Wait for it","Abort",0,0); // initiate progress
+    QDitProgress.setMinimumDuration(0);
+    QDitProgress.setCancelButton(nullptr);
+    QDitProgress.setMinimumWidth(300);
+    // where to close it?
 
     QDateTime now = QDateTime::currentDateTime();
 
@@ -78,22 +22,26 @@ void MainWindow::refreshData(QString path2load){
         QString Qpath = QDit.next();
         QFileInfo fi(Qpath);
 
-        // put here what files shoud be enqeued
-        if(periodicRefreshMode != 0){
-            if(fi.lastModified().daysTo(now) > periodicRefreshMode)
-                qDebug() << "This files is too old - skipping";
+        if(dynamic){
+            // put here what files shoud be enqeued
+            if(periodicRefreshMode != 0){
+                if(fi.lastModified().daysTo(now) > periodicRefreshMode)
+                    qDebug() << "This files is too old - skipping";
+                continue;
+            }
         }
 
         fiQueue.enqueue(fi);
     }
 
     //QDitProgress.close();
-    QDitProgress.setValue(10);
+    //QDitProgress.setValue(10);
 
     //qDebug() << "fiQueue size " << fiQueue.size();
 
     int ii = 0;
 
+    // Progress dialog - shows the progress on reading files
     QString ProgressLabel = QString("Refreshing data in folder %1").arg(path2load);
     QProgressDialog progress(ProgressLabel, "Abort", 0, fiQueue.size(), this);
     progress.setWindowModality(Qt::WindowModal);
@@ -103,9 +51,12 @@ void MainWindow::refreshData(QString path2load){
     while (!fiQueue.isEmpty()){
         // this function returns only the data needed - maybe rename it
 
-        QFileInfo fid = fiQueue.dequeue();
+        QFileInfo fid = fiQueue.dequeue(); // take the next fileinfo from queue
 
+        // read the data header
         QRecord qrecord = read_signal_file(fid.filePath());
+
+        // update progress dialog
         ii++;
         progress.setValue(ii);
 
@@ -120,7 +71,7 @@ void MainWindow::refreshData(QString path2load){
         // TO DO - the same for video file, is there a field in signal that states that video exists?
         qrecord.video_flag = QFileInfo::exists(fid.canonicalPath() + "/" + fid.baseName() + ".M01"); // bool to int
 
-        db.addRecord(qrecord);
+        db.addRecord(qrecord); // add this record into databse
 
         // using QMap
         QMap<QString, QPatient>::iterator qit = patientMap.find(qrecord.id);
@@ -146,29 +97,25 @@ void MainWindow::refreshData(QString path2load){
 }
 
 
+
+
 void MainWindow::initLoadData(){
     if(static_dirs.isEmpty() && dynamic_dirs.isEmpty()){ // if there is no path to data it will ask for it right away
-        AddFolderDialog("static");
+        AddFolderDialog(0);
     }
     else{
         if (!loadQMap()){
             // only when there is no QMap to load it goes through the static folders
             for (int j = 0; j < static_dirs.size(); ++j) {
-                loadData(static_dirs.at(j));
-                qDebug() << "here!";
+                loadData(static_dirs.at(j),0);
             }
         }
         // now go through dynamic folders
         for (int j = 0; j < dynamic_dirs.size(); j++ ) {
-            loadData(dynamic_dirs.at(j));
+            loadData(dynamic_dirs.at(j),1);
         }
         qDebug() << "total no of files processed: " << no_files_loaded;
-        //buildTreeView();
     }
-}
-
-void MainWindow::updateLastCheckTime(){
-    lastUpdateTime = lastUpdateTime.currentDateTime();
 }
 
 // ======== TREE MODEL ========
@@ -198,11 +145,11 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
     model->setData(model->index(ind, 6, parent), Qrecord.doctor, Qt::DisplayRole);
 
     // if recording flag = 1 --> color the whole row red
-//    if (Qrecord.recording_flag){
-//        for (int i = 0;i < ncol;i++){
-//            model->setData(model->index(ind, i, parent), QColor(Qt::red), Qt::ForegroundRole);
-//        }
-//    }
+    //    if (Qrecord.recording_flag){
+    //        for (int i = 0;i < ncol;i++){
+    //            model->setData(model->index(ind, i, parent), QColor(Qt::red), Qt::ForegroundRole);
+    //        }
+    //    }
 
     QIcon *dvicon = new QIcon(":/images/DV_icon.png");
 
@@ -308,7 +255,7 @@ void MainWindow::buildTreeView(){
     layout->addWidget(treeView);
 };
 
-void MainWindow::updatePatientTreeModel(){
+void MainWindow::rebuildPatientTreeModel(){
 
     // hardcore delete all rows
     sourceModel->removeRows(0,sourceModel->rowCount());
@@ -324,7 +271,7 @@ void MainWindow::updatePatientTreeModel(){
 }
 
 
-void MainWindow::updatePatientTreeModel2(){
+void MainWindow::updatePatientTreeModel(){
 
     while (!QpatientStack.isEmpty()){
         // adds the patient to the model
@@ -352,7 +299,6 @@ void MainWindow::updatePatientTreeModel2(){
             int tempInd = childs.first().row();
             addQRecord2model(sourceModel, tempInd, parentInd, QrecordStack.pop(),0); // 0 = newRecord --> update existing
         }
-
     }
 }
 
@@ -454,14 +400,14 @@ void MainWindow::double_click_tree(QModelIndex index){
 // ======== SLOTS ========
 
 void MainWindow::AddStaticFolderDialog(){
-    AddFolderDialog("static");
+    AddFolderDialog(0);
 }
 
 void MainWindow::AddDynamicFolderDialog(){
-    AddFolderDialog("dynamic");
+    AddFolderDialog(1);
 }
 
-void MainWindow::AddFolderDialog(QString folder_type){
+void MainWindow::AddFolderDialog(bool dynamic){
 
     new_dir = QFileDialog::getExistingDirectory(this, tr("Choose directory"), defaultDataFolder);
     if(new_dir.isEmpty()){
@@ -471,21 +417,20 @@ void MainWindow::AddFolderDialog(QString folder_type){
 
     // add the folder only when it is not in the list already
 
-    QStringList *dirs = nullptr;
-
-
-    if (folder_type == "static"){
-        dirs = &static_dirs;
+    if (dynamic){
+        if(!dynamic_dirs.contains(new_dir)){
+            dynamic_dirs << new_dir;
+        }
     }else{
-        dirs = &dynamic_dirs;
+        if(!static_dirs.contains(new_dir)){
+            static_dirs << new_dir;
+        }
     }
-
-    if (!dirs->contains(new_dir)){
-        *dirs << new_dir;
-    }
-    loadData(new_dir);
+    loadData(new_dir,dynamic);
+    //loadData(new_dir);
     if(sourceModelLoaded){
         updatePatientTreeModel();
+        //rebuildPatientTreeModel();
     }
     else{
         buildTreeView();
@@ -535,11 +480,11 @@ void MainWindow::refreshDynamic(){
     if(!dynamic_dirs.isEmpty()){
         for (int j = 0; j < dynamic_dirs.size(); j++ ) {
             qDebug() << "loading data: " << dynamic_dirs.at(j);
-            refreshData(dynamic_dirs.at(j));
+            loadData(dynamic_dirs.at(j),1);
         }
     }
-    updateLastCheckTime();
-    updatePatientTreeModel2();
+    updateLastRefreshTime();
+    updatePatientTreeModel();
 }
 
 void MainWindow::refreshStatic(){
@@ -557,10 +502,11 @@ void MainWindow::refreshStatic(){
     else{
         if(!static_dirs.isEmpty()){
             for (int j = 0; j < static_dirs.size(); j++ ) {
-                loadData(static_dirs.at(j));
+                loadData(static_dirs.at(j),0);
             }
         }
-        updatePatientTreeModel();
+        buildTreeView();
+        //rebuildPatientTreeModel();
     }
 }
 
@@ -641,8 +587,6 @@ void MainWindow::editRefreshSettings()
     refreshSettings(this);
 }
 
-
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -656,9 +600,8 @@ MainWindow::MainWindow(QWidget *parent)
     filemenu->addAction(tr("Add Static Folder"), this, SLOT(AddStaticFolderDialog()));
     filemenu->addAction(tr("Add Dynamic Folder"), this, SLOT(AddDynamicFolderDialog()));
     filemenu->addAction(tr("Refresh Static"), this, SLOT(refreshStatic()));
-    filemenu->addAction(tr("Refresh Dynamic"), this, SLOT(refreshDynamic())); // stack
+    filemenu->addAction(tr("Refresh Dynamic F5"), this, SLOT(refreshDynamic())); // stack
     filemenu->addAction(tr("Connect to storage"), this, SLOT(connect2storage()));
-
 
     // ======== Settings ========
     setmenu = new QMenu(this);
@@ -681,12 +624,10 @@ MainWindow::MainWindow(QWidget *parent)
     menubar->addMenu(helpmenu);
 
     // ====== SHORTCUTS ======
-
     refreshKey = new QShortcut(QKeySequence::Refresh, this);
     connect(refreshKey,  SIGNAL(activated()), this, SLOT(refreshDynamic()));
 
     // ====== LAYOUT =====
-
     //set the layout
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
@@ -715,9 +656,13 @@ MainWindow::MainWindow(QWidget *parent)
 
 // ======== QTimers ========
 
+void MainWindow::updateLastRefreshTime(){
+    lastRefreshTime = lastRefreshTime.currentDateTime();
+}
+
 void MainWindow::setUpRefreshQTimer(){
     timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), this, SLOT(refreshDynamic()));
+    connect(timer, SIGNAL(timeout()), this, SLOT(isItTimeToRefresh()));
     refreshQTimer();
 }
 
@@ -733,13 +678,21 @@ void MainWindow::refreshQTimer(){
     }
 }
 
+// do not refresh automatically if it less then "refreshingPeriod" since last manual refresh
+void MainWindow::isItTimeToRefresh(){
+    if (lastRefreshTime.secsTo(QDateTime::currentDateTime()) > refreshingPeriod*60){
+        refreshDynamic();
+    }
+
+}
+
 void MainWindow::setUpWorkingHoursQTimer(){
     whTimer = new QTimer(this);
     connect(whTimer, SIGNAL(timeout()), this, SLOT(isItWorkingHours()));
     workingHoursQTimer();
 }
 
-void MainWindow::workingHoursQTimer(){
+void MainWindow::workingHoursQTimer(){ // fires every hour to check if it working hours
     if (workingHoursOnly){
         whTimer->start(1000*3600); // one hour
     }else{
@@ -828,28 +781,27 @@ void MainWindow::readSettings()
 
 }
 
-// ======== connect db ========
+// ======== CONNECT DB ========
 
 void MainWindow::connectDb(){
 
     // Load db
-
-    //DbManager db;
-
     db.setPath(path2db);
 
-        if (db.isOpen())
-        {
-            db.createTablePatients();   // Creates a table if it doesn't exist. Otherwise, it will use existing table.
-            db.createTableRecords();
-            db.createIndexPatients();
-            db.printAllPersons();
-            qDebug() << "End";
-        }
-        else
-        {
-            qDebug() << "Database is not open!";
-        }
+    if (db.isOpen())
+    {
+        qDebug() << "Database is open!";
+        db.createTablePatients();   // Creates a table if it doesn't exist. Otherwise, it will use existing table.
+        db.createTableRecords();
+        db.createIndexPatients();
+        //db.printAllPersons();
+        db.selectPatient();
+
+    }
+    else
+    {
+        qDebug() << "Database is not open!";
+    }
 
 }
 

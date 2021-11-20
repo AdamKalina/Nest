@@ -90,6 +90,8 @@ public:
      */
     void printAllPersons() const;
 
+    bool selectPatient();
+
     /**
      * @brief Remove all persons from db
      * @return true - all persons removed successfully, false - not removed

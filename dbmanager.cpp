@@ -290,6 +290,37 @@ bool DbManager::recordExists(const QString& file_name) const
     return exists;
 }
 
+bool DbManager::selectPatient(){
+    bool success = false;
+
+    QSqlQuery selectQuery;
+    selectQuery.prepare("SELECT id, name, last_record FROM patients");
+    selectQuery.exec();
+
+    while (selectQuery.next())
+    {
+        QString id = selectQuery.value(0).toString();
+        QString name = selectQuery.value(1).toString();
+        int tTime = selectQuery.value(2).toInt();
+        QDateTime last_record = QDateTime::fromTime_t(tTime);
+
+        qDebug() << "===" << name << "===" << id << "===" << last_record;
+
+        QSqlQuery selectRecordQuery;
+        selectRecordQuery.prepare("SELECT file_name FROM records WHERE id = (:id)");
+        selectRecordQuery.bindValue(":id",id);
+        selectRecordQuery.exec();
+
+        while (selectRecordQuery.next())
+        {
+            QString file_name = selectRecordQuery.value(0).toString();
+            qDebug() << "======" << file_name;
+        }
+    }
+
+    return success;
+}
+
 bool DbManager::removeAllPersons()
 {
     bool success = false;

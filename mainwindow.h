@@ -81,7 +81,7 @@ public:
     QString defaultDataFolder;
     QString defaultReaderFolder;
     QString path2db = "records.db";
-    QDateTime lastUpdateTime;
+    QDateTime lastRefreshTime;
     QIcon dvicon;
     DbManager db;
 
@@ -89,20 +89,19 @@ public:
     void readSettings();
     void writeSettings();
     void initLoadData();
-    void loadData(QString path2load);
-    void refreshData(QString path2load);
-    void updateLastCheckTime();
+    void loadData(QString path2load, bool dynamic);
+    void updateLastRefreshTime();
     void setUpRefreshQTimer();
     void refreshQTimer();
     void setUpWorkingHoursQTimer();
     void workingHoursQTimer();
     void buildTreeView();
+    void rebuildPatientTreeModel();
     void updatePatientTreeModel();
-    void updatePatientTreeModel2();
     void incrementParentNo(QModelIndex parentInd);
     void updateParentTime(QModelIndex parentInd);
     void showNoFileWarning();
-    void AddFolderDialog(QString folder_type);
+    void AddFolderDialog(bool dynamic);
     void buildFilterLine();
     void connectDb();
     void saveQMap();
@@ -126,6 +125,7 @@ public slots:
     void editProgramList();
     void editRefreshSettings();
     void isItWorkingHours();
+    void isItTimeToRefresh();
 
 private:
     QMenuBar *menubar;
