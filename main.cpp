@@ -57,9 +57,11 @@ int main(int argc, char *argv[])
     w.connectDb();
 
     splash.showMessage("Loading data", Qt::AlignHCenter | Qt::AlignBottom);
-    w.initLoadData(); //load data and update patientMap
+    w.loadDataFromDb();
+    w.initLoadData(); //load data
 
-    if (w.patientMap.size() == 0){
+
+    if (w.IdMap.size() == 0){
         w.showNoFileWarning(); // show warning that there are no files to load
     }else{
         splash.showMessage("Building tree model", Qt::AlignHCenter | Qt::AlignBottom);

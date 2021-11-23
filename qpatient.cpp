@@ -18,6 +18,21 @@ void QRecord::setPath(QString old_path){
     file_name = fi.baseName();
 }
 
+void QRecord::set_values_from_db(QSqlRecord rec){
+    file_name = rec.value("file_name").toString();
+    id = rec.value("id").toString();
+    name = rec.value("name").toString();
+    record_start = rec.value("record_start").toInt();
+    sex = rec.value("sex").toInt();
+    class_code = rec.value("class_code").toString();
+    protocol = rec.value("protocol").toString();
+    doctor = rec.value("doctor").toString();
+    file_path = rec.value("file_path").toString();
+    recording_flag = rec.value("recording_flag").toInt();
+    video_flag = rec.value("video_flag").toInt();
+    num_pages = rec.value("num_pages").toInt();
+}
+
 // TO DO - make Time_t --> QDateTime conversion part of QRecord constructor ?
 
 void QPatient::set_values(QRecord qrecord){
@@ -27,6 +42,13 @@ void QPatient::set_values(QRecord qrecord){
     no = 1;
     last_record = qrecord.record_start;
     this->add_record(qrecord);
+}
+
+void QPatient::set_values_from_db(QSqlRecord rec){
+    id = rec.value("id").toString();
+    name = rec.value("name").toString();
+    last_record = rec.value("last_record").toInt();
+    sex = rec.value("sex").toInt();
 }
 
 void QPatient::add_record(QRecord Qrecord){

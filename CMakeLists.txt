@@ -71,7 +71,7 @@ else()
         )
     else()
         add_executable(Nest
-            WIN32
+            WIN32 #comment here for console application
             ${PROJECT_SOURCES}
         )
     endif()

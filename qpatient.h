@@ -5,6 +5,7 @@
 #include <QMap>
 #include <QDebug>
 #include <QFileInfo>
+#include <QtSql>
 #include <string>
 #include <time.h>
 
@@ -27,6 +28,7 @@ public:
     int num_pages;
     void setID(std::string);
     void setPath(QString);
+    void set_values_from_db(QSqlRecord);
 };
 
 class QPatient{
@@ -39,6 +41,7 @@ public:
     QMap<QString, QRecord> Qrecords_map;
     void set_values(QRecord);
     void add_record(QRecord);
+    void set_values_from_db(QSqlRecord);
 };
 
 QDataStream & operator<<(QDataStream & out, const QPatient & Qpatient);

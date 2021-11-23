@@ -34,21 +34,39 @@ bool DbManager::isOpen() const
 
 bool DbManager::addRecord(QRecord qrecord){
 
-    if(!personExists(qrecord.id)){
-        addPerson(qrecord);
-        insertNewRecord(qrecord,0); // no need to update patient since this is the first entry
+    // TO DO - redo this function
+    // 1) check if record exists
+    //  1a) record exists --> update record
+    //  1b) record does not exist --> insert as new record AND 2) check if patient exists
+    // 2a) patient exists --> update last_record
+    // 2b) patient does not exist --> create new patient
+
+    if(recordExists(qrecord.file_name)){ // check if record exists
+        updateRecord(qrecord); // updating record - only class_code, protocol, doctor, recording_flag, video_flag, num_pages
     }else{
-        if(!recordExists(qrecord.file_name)){ // check if record exists
-            insertNewRecord(qrecord,1); // insert as new and update patient
+        insertNewRecord(qrecord); // insert as new and update patient
+        if(!patientExists(qrecord.id)){
+            addPerson(qrecord);
         }else{
-            updateRecord(qrecord); // updating record - only class_code, protocol, doctor, recording_flag, video_flag, num_pages
+            updatePatientLastRecord(qrecord);
         }
     }
+
+    //    if(!personExists(qrecord.id)){
+    //        addPerson(qrecord);
+    //        insertNewRecord(qrecord,0); // no need to update patient since this is the first entry
+    //    }else{
+    //        if(!recordExists(qrecord.file_name)){ // check if record exists
+    //            insertNewRecord(qrecord,1); // insert as new and update patient
+    //        }else{
+    //            updateRecord(qrecord); // updating record - only class_code, protocol, doctor, recording_flag, video_flag, num_pages
+    //        }
+    //    }
 
     return true;
 }
 
-bool DbManager::insertNewRecord(QRecord qrecord, bool updatePatient){
+bool DbManager::insertNewRecord(QRecord qrecord){
     bool success = false;
 
     // insert into TABLE records
@@ -74,11 +92,6 @@ bool DbManager::insertNewRecord(QRecord qrecord, bool updatePatient){
         success = false;
     }
 
-    if(updatePatient){
-        // update time of last_record if needed
-        updatePatientLastRecord(qrecord);
-    }
-
     return success;
 }
 
@@ -94,7 +107,7 @@ bool DbManager::updateRecord(QRecord qrecord){
     query.bindValue(":file_path",qrecord.file_path);
     query.bindValue(":recording_flag",qrecord.recording_flag);
     query.bindValue(":video_flag",qrecord.video_flag);
-    query.bindValue(":num_pages",qrecord.video_flag);
+    query.bindValue(":num_pages",qrecord.num_pages);
     query.bindValue(":file_name",qrecord.file_name);
 
     if (!query.exec())
@@ -108,16 +121,16 @@ bool DbManager::updateRecord(QRecord qrecord){
 
 bool DbManager::updatePatientLastRecord(QRecord qrecord){
     QSqlQuery selectQuery;
-    selectQuery.prepare("SELECT id, last_record FROM patients WHERE id = (:id)");
+    selectQuery.prepare("SELECT last_record FROM patients WHERE id = (:id)");
     selectQuery.bindValue(":id", qrecord.id);
 
     if (!selectQuery.exec())
     {
-        qDebug() << "Couldn't find id in the table 'patients'" << selectQuery.lastError();
+        qDebug() << "Couldn't find ID in the table 'patients' " << selectQuery.lastError();
         return false;
     }
     selectQuery.next();
-    time_t old_time = selectQuery.value(1).toInt();
+    time_t old_time = selectQuery.value("last_record").toInt();
 
     if(old_time < qrecord.record_start){
         QSqlQuery updateQuery;
@@ -143,12 +156,11 @@ bool DbManager::createTablePatients(){
     bool success = true;
 
     QSqlQuery query;
-    //query.prepare("CREATE TABLE IF NOT EXISTS patients(id TEXT PRIMARY KEY, name TEXT, sex TEXT, no INTEGER, last_record INTEGER);");
     query.prepare("CREATE TABLE IF NOT EXISTS patients(id TEXT PRIMARY KEY, name TEXT, sex INTEGER, last_record INTEGER);");
 
     if (!query.exec())
     {
-        qDebug() << "Couldn't create the table 'patients': one might already exist.";
+        qDebug() << "Couldn't create the table 'patients': one might already exist. " << query.lastError();
         success = false;
     }
 
@@ -207,11 +219,13 @@ bool DbManager::addPerson(QRecord qrecord){
     return success;
 }
 
+
+// not my function
 bool DbManager::removePerson(const QString& name)
 {
     bool success = false;
 
-    if (personExists(name))
+    if (patientExists(name))
     {
         QSqlQuery queryDelete;
         queryDelete.prepare("DELETE FROM patients WHERE name = (:name)");
@@ -231,6 +245,7 @@ bool DbManager::removePerson(const QString& name)
     return success;
 }
 
+// not my function
 void DbManager::printAllPersons() const
 {
     qDebug() << "Patients in db:";
@@ -244,7 +259,7 @@ void DbManager::printAllPersons() const
     }
 }
 
-bool DbManager::personExists(const QString& id) const
+bool DbManager::patientExists(const QString& id) const
 {
     bool exists = false;
 
@@ -290,37 +305,103 @@ bool DbManager::recordExists(const QString& file_name) const
     return exists;
 }
 
+// TO DO - generic version of this function
+QVector<QString> DbManager::getPatientsIds(){
+
+    int twoYearsAgo = QDateTime::currentDateTimeUtc().addYears(-2).toTime_t();
+    //qDebug()  << twoYearsAgo;
+
+    QVector<QString> qpatientIds;
+    QSqlQuery selectQuery;
+    selectQuery.prepare("SELECT id FROM patients WHERE last_record > :date");
+    selectQuery.bindValue(":date",twoYearsAgo);
+    //selectQuery.prepare("SELECT id FROM patients");
+
+    if(selectQuery.exec()){
+        while(selectQuery.next()){
+            qpatientIds.append(selectQuery.value("id").toString());
+            //qDebug() << selectQuery.value("id").toString();
+        }
+
+    }else{
+        qDebug() << "problem with selecting patients by ID" << selectQuery.lastError();
+    }
+
+    return qpatientIds;
+}
+
+
 bool DbManager::selectPatient(){
     bool success = false;
 
     QSqlQuery selectQuery;
-    selectQuery.prepare("SELECT id, name, last_record FROM patients");
+    selectQuery.prepare("SELECT id, name, last_record, sex FROM patients");
     selectQuery.exec();
 
     while (selectQuery.next())
     {
-        QString id = selectQuery.value(0).toString();
-        QString name = selectQuery.value(1).toString();
-        int tTime = selectQuery.value(2).toInt();
-        QDateTime last_record = QDateTime::fromTime_t(tTime);
+        QPatient qpatient;
+        qpatient.set_values_from_db(selectQuery.record());
 
-        qDebug() << "===" << name << "===" << id << "===" << last_record;
+        qDebug() << "===" << qpatient.id << "===" << qpatient.name << "===" << QDateTime::fromTime_t(qpatient.last_record);
 
         QSqlQuery selectRecordQuery;
-        selectRecordQuery.prepare("SELECT file_name FROM records WHERE id = (:id)");
-        selectRecordQuery.bindValue(":id",id);
+        selectRecordQuery.prepare("SELECT file_name, id, name, record_start, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, num_pages FROM records WHERE id = (:id)");
+        selectRecordQuery.bindValue(":id",qpatient.id);
         selectRecordQuery.exec();
 
-        while (selectRecordQuery.next())
-        {
-            QString file_name = selectRecordQuery.value(0).toString();
-            qDebug() << "======" << file_name;
+        if(selectRecordQuery.exec()){
+            while (selectRecordQuery.next()){
+
+                QRecord qrecord;
+                qrecord.set_values_from_db(selectRecordQuery.record());
+                qpatient.add_record(qrecord);
+
+                qDebug() << "======" << qrecord.file_name;
+            }
+            qDebug() << "======" << qpatient.no;
+        }else{
+            qDebug() << "Problem with selecting record by ID" << selectRecordQuery.lastError();
         }
+
     }
 
     return success;
 }
 
+QPatient DbManager::selectPatientbyIdWithRecords(QString id){
+
+    QPatient qpatient;
+
+    QSqlQuery selectRecordQuery;
+    selectRecordQuery.prepare("SELECT file_name, id, name, record_start, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, num_pages FROM records WHERE id = (:id)");
+    selectRecordQuery.bindValue(":id",id);
+    selectRecordQuery.exec();
+
+    if(selectRecordQuery.exec()){
+        while (selectRecordQuery.next()){
+
+            QRecord qrecord;
+            qrecord.set_values_from_db(selectRecordQuery.record());
+
+            if(selectRecordQuery.at() == 0){
+                //qDebug() << "first";
+                qpatient.set_values(qrecord);
+                //qDebug() << qpatient.name;
+            }else{
+                qpatient.add_record(qrecord);
+            }
+            //qDebug() << "======" << qrecord.file_name;
+        }
+        //qDebug() << "======" << qpatient.no;
+    }else{
+        qDebug() << "Problem with selecting record by ID" << selectRecordQuery.lastError();
+    }
+
+    return qpatient;
+}
+
+// not my function
 bool DbManager::removeAllPersons()
 {
     bool success = false;

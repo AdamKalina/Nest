@@ -58,7 +58,7 @@ public:
 
     bool addRecord(QRecord qrecord);
 
-    bool insertNewRecord(QRecord qrecord, bool updatePatient);
+    bool insertNewRecord(QRecord qrecord);
 
     bool updateRecord(QRecord qrecord);
 
@@ -76,7 +76,7 @@ public:
      * @param name - name of person to check.
      * @return true - person exists, false - person does not exist
      */
-    bool personExists(const QString& name) const;
+    bool patientExists(const QString& name) const;
 
     /**
      * @brief Check if record of name "file_name" exists in db
@@ -90,7 +90,14 @@ public:
      */
     void printAllPersons() const;
 
+    QVector<QString> getPatientsIds();
+
     bool selectPatient();
+
+    QPatient selectPatientbyIdWithRecords(QString id);
+
+    // return QRecord selected by patient Id
+    QRecord selectRecordById();
 
     /**
      * @brief Remove all persons from db

@@ -61,8 +61,9 @@ public:
     ~MainWindow();
 
     // std variables
-    int sourceModelLoaded = 0;
-    int refreshingPeriod = 5; // in minutes
+    bool sourceModelLoaded = false;
+    bool dbLoaded = false;
+    int refreshingPeriod = 15; // in minutes
     bool periodicRefreshingEnabled = false;
     bool workingHoursOnly = false;
     long no_files_loaded = 0;
@@ -70,6 +71,7 @@ public:
 
     // Qt variables
     QMap<QString, QPatient> patientMap;
+    QMap<QString,bool> IdMap;
     QStack<QRecord> QrecordStack;
     QStack<QPatient> QpatientStack;
     QStringList static_dirs;
@@ -89,13 +91,15 @@ public:
     void readSettings();
     void writeSettings();
     void initLoadData();
-    void loadData(QString path2load, bool dynamic);
+    void loadDataFromDb();
+    void loadDataFromHDD(QString path2load, bool dynamic);
     void updateLastRefreshTime();
     void setUpRefreshQTimer();
     void refreshQTimer();
     void setUpWorkingHoursQTimer();
     void workingHoursQTimer();
     void buildTreeView();
+    QAbstractItemModel* createPatientTreeModel();
     void rebuildPatientTreeModel();
     void updatePatientTreeModel();
     void incrementParentNo(QModelIndex parentInd);
@@ -106,7 +110,7 @@ public:
     void connectDb();
     void saveQMap();
     int loadQMap();
-    QDateTime TimeT2QDateTime(time_t);
+    //QDateTime TimeT2QDateTime(time_t);
 
 
 public slots:

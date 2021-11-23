@@ -3,18 +3,29 @@
 
 // ======== LOAD DATA ========
 
-void MainWindow::loadData(QString path2load, bool dynamic){
+void MainWindow::loadDataFromDb(){
 
-    QQueue<QFileInfo> fiQueue; // initiate queue for files
+    // get IDs of patients that had at least one recording in last 2 years - hardcoded in the dbmanager for now
+    QVector<QString> qpatientIds = db.getPatientsIds();
 
-    QProgressDialog QDitProgress("Wait for it","Abort",0,0); // initiate progress
-    QDitProgress.setMinimumDuration(0);
-    QDitProgress.setCancelButton(nullptr);
-    QDitProgress.setMinimumWidth(300);
-    // where to close it?
+    QVectorIterator<QString> i(qpatientIds);
+    while (i.hasNext()){
+        QPatient qpatient = db.selectPatientbyIdWithRecords(i.next());
+        QpatientStack.push(qpatient);
+        IdMap.insert(qpatient.id,1);
+    }
+    dbLoaded = true;
+}
+
+void MainWindow::loadDataFromHDD(QString path2load, bool dynamic){
+
+    QQueue<QFileInfo> fiQueue; // initiate queue for filesInfo
 
     QDateTime now = QDateTime::currentDateTime();
 
+
+    // ======== PART ONE - go through files and collect fileInfo ========
+    // TO DO - busy indicator
     // QDirIterator - goes through files recursively
     QDirIterator QDit(path2load, QStringList() << "*.sig" << "*.SIG", QDir::Files, QDirIterator::Subdirectories);
     while (QDit.hasNext()){
@@ -22,38 +33,37 @@ void MainWindow::loadData(QString path2load, bool dynamic){
         QString Qpath = QDit.next();
         QFileInfo fi(Qpath);
 
-        if(dynamic){
-            // put here what files shoud be enqeued
-            if(periodicRefreshMode != 0){
-                if(fi.lastModified().daysTo(now) > periodicRefreshMode)
-                    qDebug() << "This files is too old - skipping";
+        // if this is dynamic folder and periodicRefreshMode != 0 --> decide whether to put the file in queue
+        if(dynamic && periodicRefreshMode != 0){
+            if(fi.lastModified().daysTo(now) > periodicRefreshMode){
+                //qDebug() << "This files is too old - skipping";
                 continue;
             }
         }
-
+        //qDebug() << "just before enqueing" << fi.fileName();
         fiQueue.enqueue(fi);
     }
 
-    //QDitProgress.close();
-    //QDitProgress.setValue(10);
-
     //qDebug() << "fiQueue size " << fiQueue.size();
 
-    int ii = 0;
+    // ======== PART TWO - go through file info and read file headers ========
 
+
+    //
     // Progress dialog - shows the progress on reading files
     QString ProgressLabel = QString("Refreshing data in folder %1").arg(path2load);
     QProgressDialog progress(ProgressLabel, "Abort", 0, fiQueue.size(), this);
     progress.setWindowModality(Qt::WindowModal);
     progress.setCancelButton(nullptr);
     progress.setMinimumDuration(0);
+    int ii = 0;
 
     while (!fiQueue.isEmpty()){
-        // this function returns only the data needed - maybe rename it
 
         QFileInfo fid = fiQueue.dequeue(); // take the next fileinfo from queue
 
         // read the data header
+        // this function returns only the data needed - maybe rename it
         QRecord qrecord = read_signal_file(fid.filePath());
 
         // update progress dialog
@@ -73,83 +83,78 @@ void MainWindow::loadData(QString path2load, bool dynamic){
 
         db.addRecord(qrecord); // add this record into databse
 
+        // TO DO - add filter - so only qrecord fullfilling criteria (e.g. less than 2 years old) are commited
+
         // using QMap
-        QMap<QString, QPatient>::iterator qit = patientMap.find(qrecord.id);
-        if (qit != patientMap.end()) {
-            // if QPatient already exists, add record to it
-            // QMap = If there is already an item with the key key, that item's value is replaced with value
-            // so it will rewrite data from dynamic folders
-            // TO DO - check for duplicates (with almost same ID) here?
-            qit->add_record(qrecord);
-
-            QMap<QString, QRecord>::iterator qot = qit->Qrecords_map.find(qrecord.file_name); // find the record in patient - conversion to QRecord is already done
-
-            QrecordStack.push(qot.value()); // add record to buffer
+        QMap<QString, bool>::iterator qit = IdMap.find(qrecord.id);
+        if (qit != IdMap.end()) {
+            // if the ID of QPatient is already loaded, add the record to QrecordStack (do not create new QPatient)
+            QrecordStack.push(qrecord); // add record to buffer
         }
         else{
             // if QPatient does not exist, create it
             QPatient Qpatient;
             Qpatient.set_values(qrecord);
-            patientMap.insert(Qpatient.id, Qpatient);
             QpatientStack.push(Qpatient); // add patient to buffer
+            IdMap.insert(qrecord.id,1); // register patient to IDmap
         }
     }
 }
-
-
-
 
 void MainWindow::initLoadData(){
     if(static_dirs.isEmpty() && dynamic_dirs.isEmpty()){ // if there is no path to data it will ask for it right away
         AddFolderDialog(0);
     }
     else{
-        if (!loadQMap()){
-            // only when there is no QMap to load it goes through the static folders
+        if (!dbLoaded){
+            // only when there is no databse data to load it goes through the static folders
             for (int j = 0; j < static_dirs.size(); ++j) {
-                loadData(static_dirs.at(j),0);
+                loadDataFromHDD(static_dirs.at(j),0);
             }
         }
         // now go through dynamic folders
         for (int j = 0; j < dynamic_dirs.size(); j++ ) {
-            loadData(dynamic_dirs.at(j),1);
+            loadDataFromHDD(dynamic_dirs.at(j),1);
         }
         qDebug() << "total no of files processed: " << no_files_loaded;
     }
 }
 
 // ======== TREE MODEL ========
-// TO DO - make this part of separate class
+// TO DO - make this part of separate class?
 
+QDateTime TimeT2QDateTime(time_t t){ // no need to be part of MainWindow
+#if QT_VERSION >= 0x050800
+    QDateTime QnewTime = QDateTime::fromSecsSinceEpoch(t);
+#else
+    QDateTime QnewTime = QDateTime::fromTime_t(t);
+#endif
+
+    return QnewTime;
+}
 
 void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QRecord Qrecord, bool newRecord){
     // add int ncol for the old way of coloring red
 
-    QTime n(0, 0, 0);
+    QTime nullTime(0, 0, 0);
 
     if(newRecord){
         model->insertRows(ind, 1, parent); // adds a child to the previous item
     }
 
+#if QT_VERSION >= 0x050800
+    //model->setData(model->index(ind, 2, parent), QDateTime::fromSecsSinceEpoch(Qrecord.record_start), Qt::DisplayRole);
+#else
+    //model->setData(model->index(ind, 2, parent), QDateTime::fromTime_t(Qrecord.record_start), Qt::DisplayRole);
+#endif
+
     model->setData(model->index(ind, 0, parent), Qrecord.file_name, Qt::DisplayRole);
     model->setData(model->index(ind, 1, parent), Qrecord.class_code, Qt::DisplayRole);
-
-#if QT_VERSION >= 0x050800
-    model->setData(model->index(ind, 2, parent), QDateTime::fromSecsSinceEpoch(Qrecord.record_start), Qt::DisplayRole);
-#else
-    model->setData(model->index(ind, 2, parent), QDateTime::fromTime_t(Qrecord.record_start), Qt::DisplayRole);
-#endif
-    model->setData(model->index(ind, 3, parent), n.addSecs(Qrecord.num_pages*10).toString("hh:mm:ss"), Qt::DisplayRole);
+    model->setData(model->index(ind, 2, parent), TimeT2QDateTime(Qrecord.record_start),Qt::DisplayRole);
+    model->setData(model->index(ind, 3, parent), nullTime.addSecs(Qrecord.num_pages*10).toString("hh:mm:ss"), Qt::DisplayRole);
     model->setData(model->index(ind, 4, parent), Qrecord.file_path, Qt::DisplayRole);
     model->setData(model->index(ind, 5, parent), Qrecord.recording_flag, Qt::DisplayRole);
     model->setData(model->index(ind, 6, parent), Qrecord.doctor, Qt::DisplayRole);
-
-    // if recording flag = 1 --> color the whole row red
-    //    if (Qrecord.recording_flag){
-    //        for (int i = 0;i < ncol;i++){
-    //            model->setData(model->index(ind, i, parent), QColor(Qt::red), Qt::ForegroundRole);
-    //        }
-    //    }
 
     QIcon *dvicon = new QIcon(":/images/DV_icon.png");
 
@@ -159,20 +164,30 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
     }
 }
 
+//QDateTime MainWindow::TimeT2QDateTime(time_t t){
+//    qDebug() << "here!";
+//#if QT_VERSION >= 0x050800
+//    QDateTime QnewTime = QDateTime::fromSecsSinceEpoch(t);
+//#else
+//    QDateTime QnewTime = QDateTime::fromTime_t(t);
+//#endif
+//    return QnewTime;
+//}
+
 void addQPatient2model(QAbstractItemModel *model, QString ID, QPatient Qpatient){
 
     // define patient
     model->insertRow(0);
-    model->setData(model->index(0, 0), ID);
-    model->setData(model->index(0, 1), Qpatient.name);
 
 #if QT_VERSION >= 0x050800
-    model->setData(model->index(0, 2), QDateTime::fromSecsSinceEpoch(Qpatient.last_record));
+    //model->setData(model->index(0, 2), QDateTime::fromSecsSinceEpoch(Qpatient.last_record));
 #else
-    model->setData(model->index(0, 2), QDateTime::fromTime_t(Qpatient.last_record));
+    //model->setData(model->index(0, 2), QDateTime::fromTime_t(Qpatient.last_record));
 #endif
 
-
+    model->setData(model->index(0, 0), ID);
+    model->setData(model->index(0, 1), Qpatient.name);
+    model->setData(model->index(0, 2), TimeT2QDateTime(Qpatient.last_record),Qt::DisplayRole);
     model->setData(model->index(0, 3), Qpatient.no, Qt::DisplayRole);
     model->setData(model->index(0, 3), Qt::AlignCenter, Qt::TextAlignmentRole);
 
@@ -183,21 +198,18 @@ void addQPatient2model(QAbstractItemModel *model, QString ID, QPatient Qpatient)
     int ncol = 7;
     model->insertColumns(0, ncol, parent); // adds a child to the previous item
 
-    QTime n(0, 0, 0);
+    //QTime nullTime(0, 0, 0);
 
     QMap<QString, QRecord>::iterator to = Qpatient.Qrecords_map.begin();
     for (Qpatient.Qrecords_map.begin();to!=Qpatient.Qrecords_map.end(); ++to){
-
         addQRecord2model(model, ind, parent, to.value(),1); // newRecord = 1 --> append new record
         ind++;
     }
 }
 
+QAbstractItemModel* MainWindow::createPatientTreeModel(){
 
-// make this part of separate class - TreeModel
-QAbstractItemModel *createPatientTreeModel(QObject *parent, QMap<QString, QPatient> patientMap)
-{
-    QStandardItemModel *model = new QStandardItemModel(0, 7, parent);
+    QStandardItemModel *model = new QStandardItemModel(0, 7, this);
 
     model->setHeaderData(0, Qt::Horizontal, QString::fromLocal8Bit("Rodné èíslo"));
     model->setHeaderData(1, Qt::Horizontal, QString::fromLocal8Bit("Jméno"));
@@ -207,24 +219,22 @@ QAbstractItemModel *createPatientTreeModel(QObject *parent, QMap<QString, QPatie
     model->setHeaderData(5, Qt::Horizontal, QString::fromLocal8Bit("Recorded"));
     model->setHeaderData(6, Qt::Horizontal, QString::fromLocal8Bit("Doctor"));
 
-    // iterate over patients using QMap
-    QMap<QString, QPatient>::iterator qit = patientMap.begin();
-    for (qit=patientMap.begin();qit!=patientMap.end();++qit){
-        addQPatient2model(model,qit.key(), qit.value());
+    while (!QpatientStack.isEmpty()){
+        // adds the patient to the model
+        QString patientID = QpatientStack.top().id;
+        addQPatient2model(model, patientID, QpatientStack.pop());
     }
+
     return model;
 }
 
 void MainWindow::buildTreeView(){
 
-    treeView = new QTreeView;
-
     //qDebug() << "creating source model";
-    sourceModel = createPatientTreeModel(this, patientMap); // create sourceModel
+    sourceModel = createPatientTreeModel(); // create sourceModel
     sourceModelLoaded = 1;
 
     proxyModel = new LeafFilterProxyModel(this); // use this custom FilterProxyModel
-
     proxyModel->setSourceModel(sourceModel);
 
 #if QT_VERSION >= 0x050A00
@@ -234,6 +244,7 @@ void MainWindow::buildTreeView(){
     proxyModel->setFilterKeyColumn(-1); // filter through all columns
     proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
 
+    treeView = new QTreeView;
     treeView->setModel(proxyModel); // or set SourceModel here for no filtering
     treeView->setColumnHidden(4,1); // hide path to EEG file
     treeView->setColumnHidden(5,1); // hide "being recorded"
@@ -243,49 +254,33 @@ void MainWindow::buildTreeView(){
     treeView->header()->setDefaultAlignment(Qt::AlignCenter); // align header labels to center
     treeView->header()->setStretchLastSection(false); // do not stretch last section
     treeView->header()->setFont(QFont("Sans Serif", 12, QFont::Bold)); // set header font
-    treeView->setEditTriggers(QAbstractItemView::NoEditTriggers); // turn off editing of existin data by user
+    treeView->setEditTriggers(QAbstractItemView::NoEditTriggers); // turn off editing of existing data by user
     treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
     treeView->setAlternatingRowColors(1);
     treeView->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
     treeView->setItemDelegate(new CustomDelegate); // set custom delegate
     treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
     //treeView->expand(proxyModel->index(1,0)); // expands also the second patient
+
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(double_click_tree(QModelIndex)));
 
     layout->addWidget(treeView);
 };
 
-void MainWindow::rebuildPatientTreeModel(){
-
-    // hardcore delete all rows
-    sourceModel->removeRows(0,sourceModel->rowCount());
-
-    // iterate over patients again using QMap
-    QMap<QString, QPatient>::iterator qit = patientMap.begin();
-    for (qit=patientMap.begin();qit!=patientMap.end();++qit){
-        addQPatient2model(sourceModel,qit.key(), qit.value());
-    }
-
-    treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
-
-}
-
-
 void MainWindow::updatePatientTreeModel(){
 
     while (!QpatientStack.isEmpty()){
-        // adds the patient to the model
+        // adds patients (that were not in the model already) from the stack to the model
         QString patientID = QpatientStack.top().id;
         addQPatient2model(sourceModel, patientID, QpatientStack.pop());
     }
 
     while (!QrecordStack.isEmpty()){
-        // finds patient with matching id and adds the record to it
+        // find patient with matching id and add records from the stack to it
         QString patientID = QrecordStack.top().id;
         QString recordID = QrecordStack.top().file_name;
         QModelIndexList parents = sourceModel->match(sourceModel->index(0,0), Qt::DisplayRole, patientID, 1, Qt::MatchExactly); // find matching row by patient ID, only one match is expected
         QModelIndex parentInd = parents.first();
-
 
         QModelIndexList childs = sourceModel->match(sourceModel->index(0,0,parentInd),Qt::DisplayRole, recordID,1,Qt::MatchExactly); // find matching row by file ID, only one match is expected
 
@@ -318,17 +313,6 @@ void MainWindow::updateParentTime(QModelIndex parentInd){
         sourceModel->setData(parentInd.sibling(parentInd.row(),2),QnewTime,Qt::DisplayRole);
     }
 }
-
-QDateTime MainWindow::TimeT2QDateTime(time_t){
-#if QT_VERSION >= 0x050800
-    QDateTime QnewTime = QDateTime::fromSecsSinceEpoch(QrecordStack.top().record_start);
-#else
-    QDateTime QnewTime = QDateTime::fromTime_t(QrecordStack.top().record_start);
-#endif
-
-    return QnewTime;
-}
-
 
 void MainWindow::double_click_tree(QModelIndex index){
     //qDebug() << index.data(); // data pod kurzorem
@@ -416,7 +400,6 @@ void MainWindow::AddFolderDialog(bool dynamic){
     //qDebug() << new_dir;
 
     // add the folder only when it is not in the list already
-
     if (dynamic){
         if(!dynamic_dirs.contains(new_dir)){
             dynamic_dirs << new_dir;
@@ -426,11 +409,10 @@ void MainWindow::AddFolderDialog(bool dynamic){
             static_dirs << new_dir;
         }
     }
-    loadData(new_dir,dynamic);
+    loadDataFromHDD(new_dir,dynamic);
     //loadData(new_dir);
     if(sourceModelLoaded){
         updatePatientTreeModel();
-        //rebuildPatientTreeModel();
     }
     else{
         buildTreeView();
@@ -480,7 +462,7 @@ void MainWindow::refreshDynamic(){
     if(!dynamic_dirs.isEmpty()){
         for (int j = 0; j < dynamic_dirs.size(); j++ ) {
             qDebug() << "loading data: " << dynamic_dirs.at(j);
-            loadData(dynamic_dirs.at(j),1);
+            loadDataFromHDD(dynamic_dirs.at(j),1);
         }
     }
     updateLastRefreshTime();
@@ -502,10 +484,10 @@ void MainWindow::refreshStatic(){
     else{
         if(!static_dirs.isEmpty()){
             for (int j = 0; j < static_dirs.size(); j++ ) {
-                loadData(static_dirs.at(j),0);
+                loadDataFromHDD(static_dirs.at(j),0);
             }
         }
-        buildTreeView();
+        updatePatientTreeModel();
         //rebuildPatientTreeModel();
     }
 }
@@ -642,7 +624,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     //    readSettings(); // read setting from .ini file
     //    buildFilterLine(); // build filter line - do it first if you want it on the top
-    //    initLoadData(); //load data and update patientMap
+    //    initLoadData(); //load data
     //    buildTreeView() // build tree view
     //    setUpQTimer();
     //    updateLastCheckTime();
@@ -794,9 +776,6 @@ void MainWindow::connectDb(){
         db.createTablePatients();   // Creates a table if it doesn't exist. Otherwise, it will use existing table.
         db.createTableRecords();
         db.createIndexPatients();
-        //db.printAllPersons();
-        db.selectPatient();
-
     }
     else
     {
@@ -851,7 +830,7 @@ int MainWindow::loadQMap(){
 
 MainWindow::~MainWindow()
 {
-    saveQMap();
+    //saveQMap();
     writeSettings(); //save setting in .ini file
 }
 
