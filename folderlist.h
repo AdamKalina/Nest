@@ -18,27 +18,38 @@ private:
     QDialog      *edit_folders_dialog,
     *dialog;
 
-    QListWidget  *folder_path_list,
+    QListWidget  *dfolder_path_list,
     *sfolder_path_list;
 
     QPushButton  *CloseButton,
+    *add_static_button,
+    *add_dynamic_button,
     *button1,
     *button2,
-    *button3;
+    *button3,
+    *button4;
 
-    QListWidgetItem *listItem;
+    QListWidgetItem *currentItem;
 
     QLabel *staticLabel,
     *dynamicLabel;
 
+    QMessageBox *duplicate_msgBox;
+
     int row;
+    bool currentMode;
+    void rowClicked(QListWidgetItem *, bool dynamic);
+    void add_folder(bool dynamic);
 
 
 private slots:
-
-    //void rowClicked(QListWidgetItem *);
-    //void adEntry();
-    //void removeEntry();
+    void rowClickedDynamic(QListWidgetItem *);
+    void rowClickedStatic(QListWidgetItem *);
+    void adEntry();
+    void removeEntry();
+    void refreshEntry();
+    void add_folder_dynamic();
+    void add_folder_static();
 
 };
 

@@ -3,6 +3,7 @@
 
 #include <QStyledItemDelegate>
 #include <QPainter>
+#include <QDebug>
 
 class CustomDelegate : public QStyledItemDelegate
 {

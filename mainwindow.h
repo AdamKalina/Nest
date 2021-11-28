@@ -2,43 +2,44 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QColor>
-#include <QDir>
-#include <QDebug>
-#include <QPainter>
-#include <QRect>
-#include <QTextDocument>
+#include <QSplashScreen>
 #include <QTextCodec>
+#include <QDebug>
+#include <QColor>
+//#include <QDir>
+//#include <QPainter>
+//#include <QRect>
+//#include <QTextDocument>
 #include <QScrollArea>
 #include <QVBoxLayout>
-#include <QTreeWidget>
-#include <QHeaderView>
+
 #include <QTimer>
+#include <QElapsedTimer>
 #include <QProcess>
 #include <QDirIterator>
+#include <QFile>
 #include <QSettings>
 #include <QLabel>
 #include <QMenuBar>
 #include <QFileDialog>
-#include <QDateTime>
+#include <QProgressDialog>
 #include <QMessageBox>
+
+#include <QDateTime>
+
 #include <QLineEdit>
-#include <QDate>
-#include <QTime>
+#include <QRegExp>
+#include <QHeaderView>
+#include <QTreeView>
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
-#include <QSizePolicy>
-#include <QElapsedTimer>
 #include <QDataStream>
-#include <QFile>
 #include <QShortcut>
-#include <QSplashScreen>
 #include <QStack>
+#include <QQueue>
 #include <QListWidget>
 #include <QPushButton>
-#include <QProgressDialog>
-#include <QProgressBar>
-#include <QQueue>
+
 #include "read_signal_file.h"
 #include "qpatient.h"
 #include "folderlist.h"
@@ -66,8 +67,10 @@ public:
     int refreshingPeriod = 15; // in minutes
     bool periodicRefreshingEnabled = false;
     bool workingHoursOnly = false;
+    bool boldParent = false;
     long no_files_loaded = 0;
     int periodicRefreshMode = 0;
+    int months2load = 24;
 
     // Qt variables
     QMap<QString, QPatient> patientMap;
@@ -93,6 +96,7 @@ public:
     void initLoadData();
     void loadDataFromDb();
     void loadDataFromHDD(QString path2load, bool dynamic);
+    void checkQPatient(QPatient qpatient);
     void updateLastRefreshTime();
     void setUpRefreshQTimer();
     void refreshQTimer();
@@ -120,6 +124,7 @@ public slots:
     void chooseExternalProgram1();
     void chooseExternalProgram2();
     void filter_text_changed(const QString & text);
+    void filter_return_pressed();
     void refreshDynamic();
     void refreshStatic();
     void notYetReady();

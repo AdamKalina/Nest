@@ -330,6 +330,30 @@ QVector<QString> DbManager::getPatientsIds(){
     return qpatientIds;
 }
 
+QVector<QString> DbManager::getPatientsIdsbyMonthsAgo(int months){
+
+    int longAgo = QDateTime::currentDateTimeUtc().addMonths(-months).toTime_t();
+    //qDebug()  << twoYearsAgo;
+
+    QVector<QString> qpatientIds;
+    QSqlQuery selectQuery;
+    selectQuery.prepare("SELECT id FROM patients WHERE last_record > :date");
+    selectQuery.bindValue(":date",longAgo);
+    //selectQuery.prepare("SELECT id FROM patients");
+
+    if(selectQuery.exec()){
+        while(selectQuery.next()){
+            qpatientIds.append(selectQuery.value("id").toString());
+            //qDebug() << selectQuery.value("id").toString();
+        }
+
+    }else{
+        qDebug() << "problem with selecting patients by ID and months ago" << selectQuery.lastError();
+    }
+
+    return qpatientIds;
+}
+
 
 bool DbManager::selectPatient(){
     bool success = false;
@@ -396,6 +420,38 @@ QPatient DbManager::selectPatientbyIdWithRecords(QString id){
         //qDebug() << "======" << qpatient.no;
     }else{
         qDebug() << "Problem with selecting record by ID" << selectRecordQuery.lastError();
+    }
+
+    return qpatient;
+}
+
+QPatient DbManager::selectPatientbyNameWithRecords(QString name){
+
+    QPatient qpatient;
+
+    QSqlQuery selectRecordQuery;
+    selectRecordQuery.prepare("SELECT file_name, id, name, record_start, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, num_pages FROM records WHERE name = (:name)");
+    selectRecordQuery.bindValue(":name",name);
+    selectRecordQuery.exec();
+
+    if(selectRecordQuery.exec()){
+        while (selectRecordQuery.next()){
+
+            QRecord qrecord;
+            qrecord.set_values_from_db(selectRecordQuery.record());
+
+            if(selectRecordQuery.at() == 0){
+                //qDebug() << "first";
+                qpatient.set_values(qrecord);
+                //qDebug() << qpatient.name;
+            }else{
+                qpatient.add_record(qrecord);
+            }
+            //qDebug() << "======" << qrecord.file_name;
+        }
+        //qDebug() << "======" << qpatient.no;
+    }else{
+        qDebug() << "Problem with selecting record by name" << selectRecordQuery.lastError();
     }
 
     return qpatient;

@@ -92,9 +92,14 @@ public:
 
     QVector<QString> getPatientsIds();
 
+    QVector<QString> getPatientsIdsbyMonthsAgo(int months);
+
     bool selectPatient();
 
     QPatient selectPatientbyIdWithRecords(QString id);
+
+
+    QPatient selectPatientbyNameWithRecords(QString name);
 
     // return QRecord selected by patient Id
     QRecord selectRecordById();

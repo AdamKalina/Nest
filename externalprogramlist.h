@@ -18,22 +18,20 @@ private:
     QDialog      *edit_program_dialog,
     *dialog;
 
-    QPushButton  *CloseButton,
-    *button1,
-    *button2,
-    *button3;
+    QPushButton  *cancelButton,
+    *saveButton,
+    *AddReaderButton,
+    *AddControlButton;
 
-    QLineEdit *scanEdit,
+    QLineEdit *readerEdit,
     *controlEdit;
-
-    int row;
+    void add_program(QString program);
 
 
 private slots:
-
-    //void rowClicked(QListWidgetItem *);
-    //void adEntry();
-    //void removeEntry();
+    void add_reader();
+    void add_control();
+    void saveAndClose();
 
 };
 

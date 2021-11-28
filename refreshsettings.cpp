@@ -76,7 +76,7 @@ refreshSettings::refreshSettings(QWidget *w_parent)
     usePeriodic->setFont(ff);
     usePeriodic->setChecked(periodicRefreshingEnabled);
 
-    useWorkingHours = new QCheckBox("Use in working hours only - not yet ready");
+    useWorkingHours = new QCheckBox("Use in working hours only");
     useWorkingHours->setFont(ff);
     useWorkingHours->setEnabled(periodicRefreshingEnabled);
     useWorkingHours->setChecked(workingHoursOnly);
@@ -85,8 +85,10 @@ refreshSettings::refreshSettings(QWidget *w_parent)
 
     cancelButton = new QPushButton;
     cancelButton->setText(tr("Cancel"));
+    cancelButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_DialogCancelButton));
     saveButton = new QPushButton;
     saveButton->setText(tr("Save"));
+    saveButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_DialogSaveButton));
 
 
     // ======== LAYOUT ORGANIZATION ========
@@ -182,6 +184,12 @@ void refreshSettings::saveAndClose(){
     //qDebug() << "usePeriodic" << periodicRefreshingEnabled;
 
     mainwindow->periodicRefreshMode = RefreshModeId;
+
+    // refreshing period should not be 0
+    if(refreshingPeriod == 0){
+        refreshingPeriod = 1;
+    }
+
     mainwindow->refreshingPeriod = refreshingPeriod;
     mainwindow->periodicRefreshingEnabled = periodicRefreshingEnabled;
     mainwindow->workingHoursOnly = workingHoursOnly;

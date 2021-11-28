@@ -1,9 +1,10 @@
 #include "customdelegate.h"
 
-// TO DO - make the CustomDelegate use tha same colors for MouseOver and Selected as QStyledItemDelegate
+// TO DO - make the CustomDelegate use the same colors for MouseOver and Selected as QStyledItemDelegate
 
 void CustomDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
+
 
     // if the file is still being recorded - color it red
     if (index.sibling(index.row(),5).data().toBool()) {
@@ -14,7 +15,6 @@ void CustomDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option
             //painter->fillRect(option.rect, QColor(204, 231, 254, 255));
             painter->setPen(Qt::white);
             painter->setBrush(option.palette.highlightedText());
-
         }
 
         if (option.state & QStyle::State_MouseOver)
