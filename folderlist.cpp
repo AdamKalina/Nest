@@ -222,8 +222,10 @@ void folderList::adEntry(){
         }
     }
     currentItem->setData(Qt::DisplayRole,new_dir);
+    dialog->close();
 }
 
 void folderList::refreshEntry(){
     mainwindow->loadDataFromHDD(currentItem->data(Qt::DisplayRole).toString(), currentMode);
+    dialog->close();
 }

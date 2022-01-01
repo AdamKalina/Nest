@@ -24,6 +24,7 @@
 #include <QFileDialog>
 #include <QProgressDialog>
 #include <QMessageBox>
+#include <QFileSystemWatcher>
 
 #include <QDateTime>
 
@@ -67,6 +68,7 @@ public:
     int refreshingPeriod = 15; // in minutes
     bool periodicRefreshingEnabled = false;
     bool workingHoursOnly = false;
+    bool loadStaticOnRefreshEnabled = true;
     bool boldParent = false;
     long no_files_loaded = 0;
     int periodicRefreshMode = 0;
@@ -112,9 +114,10 @@ public:
     void AddFolderDialog(bool dynamic);
     void buildFilterLine();
     void connectDb();
-    void saveQMap();
-    int loadQMap();
+    //void saveQMap();
+    //int loadQMap();
     //QDateTime TimeT2QDateTime(time_t);
+    void initSystemWatcher();
 
 
 public slots:
@@ -135,12 +138,14 @@ public slots:
     void editRefreshSettings();
     void isItWorkingHours();
     void isItTimeToRefresh();
+    void collapseAll();
+    void expandAll();
+    void showPath();
+    void watchedDirChanged(const QString & path);
 
 private:
     QMenuBar *menubar;
-    QMenu   *filemenu;
-    QMenu *setmenu;
-    QMenu *helpmenu;
+    QMenu   *filemenu, *setmenu, *helpmenu, *viewmenu;
     QBrush *ligh_grey_brush;
     QTreeView *treeView;
     QStandardItemModel *model;
@@ -149,9 +154,11 @@ private:
     QLineEdit *filter;
     QWidget *centralWidget;
     QVBoxLayout *layout;
-    QShortcut *refreshKey;
+    QShortcut *refreshKey, *helpKey;
     QTimer *timer;
     QTimer *whTimer;
+    QAction *showPathAction;
+    QFileSystemWatcher * watcher;
 
 };
 #endif // MAINWINDOW_H

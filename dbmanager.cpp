@@ -34,15 +34,8 @@ bool DbManager::isOpen() const
 
 bool DbManager::addRecord(QRecord qrecord){
 
-    // TO DO - redo this function
-    // 1) check if record exists
-    //  1a) record exists --> update record
-    //  1b) record does not exist --> insert as new record AND 2) check if patient exists
-    // 2a) patient exists --> update last_record
-    // 2b) patient does not exist --> create new patient
-
     if(recordExists(qrecord.file_name)){ // check if record exists
-        updateRecord(qrecord); // updating record - only class_code, protocol, doctor, recording_flag, video_flag, num_pages
+        updateRecord(qrecord); // updating record - only class_code, protocol, doctor, file_path, recording_flag, video_flag, num_pages
     }else{
         insertNewRecord(qrecord); // insert as new and update patient
         if(!patientExists(qrecord.id)){
@@ -51,18 +44,6 @@ bool DbManager::addRecord(QRecord qrecord){
             updatePatientLastRecord(qrecord);
         }
     }
-
-    //    if(!personExists(qrecord.id)){
-    //        addPerson(qrecord);
-    //        insertNewRecord(qrecord,0); // no need to update patient since this is the first entry
-    //    }else{
-    //        if(!recordExists(qrecord.file_name)){ // check if record exists
-    //            insertNewRecord(qrecord,1); // insert as new and update patient
-    //        }else{
-    //            updateRecord(qrecord); // updating record - only class_code, protocol, doctor, recording_flag, video_flag, num_pages
-    //        }
-    //    }
-
     return true;
 }
 

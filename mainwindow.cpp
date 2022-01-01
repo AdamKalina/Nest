@@ -5,7 +5,7 @@
 
 void MainWindow::loadDataFromDb(){
 
-    // get IDs of patients that had at least one recording in last 24 months
+    // get IDs of patients that had at least one recording in last x months
     QVector<QString> qpatientIds = db.getPatientsIdsbyMonthsAgo(months2load);
 
     QVectorIterator<QString> i(qpatientIds);
@@ -42,6 +42,9 @@ void MainWindow::loadDataFromHDD(QString path2load, bool dynamic){
     }
 
     // ======== PART TWO - go through file info and read file headers ========
+    // TO DO - split this part into separate methods?
+
+
     //Progress dialog - shows the progress on reading files
     QString ProgressLabel = QString("Refreshing data in folder %1").arg(path2load);
     QProgressDialog progress(ProgressLabel, "Abort", 0, fiQueue.size(), this);
@@ -77,18 +80,22 @@ void MainWindow::loadDataFromHDD(QString path2load, bool dynamic){
 
         db.addRecord(qrecord); // add this record into databse
 
-        // TO DO - add filter - so only qrecord fullfilling criteria (e.g. less than 2 years old) are commited
+
+        // skip loading files from static folders if that is enabled
+        if(!dynamic && !loadStaticOnRefreshEnabled){
+            //qDebug() << "skipping!";
+            continue;
+        }
 
         // using QMap
         QMap<QString, bool>::iterator qit = IdMap.find(qrecord.id);
         if (qit != IdMap.end()) {
-            // if the ID of QPatient is already loaded, add the record to QrecordStack (do not create new QPatient)
+            // if the ID of QPatient is already loaded, add the record to QrecordStack (does not create new QPatient)
             QrecordStack.push(qrecord); // add record to buffer
         }
         else{
-            // if QPatient does not exist, create it
-            QPatient Qpatient;
-            Qpatient.set_values(qrecord);
+            // if QPatient does not exist, load it from db - check if there are older records
+            QPatient Qpatient = db.selectPatientbyIdWithRecords(qrecord.id);
             QpatientStack.push(Qpatient); // add patient to buffer
             IdMap.insert(qrecord.id,1); // register patient to IDmap
         }
@@ -103,16 +110,49 @@ void MainWindow::initLoadData(){
         if (!dbLoaded){
             // only when there is no databse data to load it goes through the static folders
             for (int j = 0; j < static_dirs.size(); ++j) {
-                loadDataFromHDD(static_dirs.at(j),0);
+                loadDataFromHDD(static_dirs.at(j),false);
             }
         }
         // now go through dynamic folders
         for (int j = 0; j < dynamic_dirs.size(); j++ ) {
-            loadDataFromHDD(dynamic_dirs.at(j),1);
+            loadDataFromHDD(dynamic_dirs.at(j),true);
         }
         qDebug() << "total no of files processed: " << no_files_loaded;
     }
 }
+
+void MainWindow::initSystemWatcher(){
+    // construct QFileSystemWatcher and add dynamic dirs to it
+    watcher = new QFileSystemWatcher(dynamic_dirs, this);
+
+    qDebug() << "Directories being watched " << watcher->directories();
+
+    //connect(watcher, SIGNAL(fileChanged(QString)), this, SLOT(fileChanged(QString)));
+    connect(watcher, SIGNAL(directoryChanged(QString)), this, SLOT(watchedDirChanged(QString)));
+
+
+}
+
+void MainWindow::watchedDirChanged(const QString & path){
+    qDebug() << path << QDateTime::currentDateTime().toLocalTime();
+
+
+    QFile file("watcher.txt");
+          if(file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+          {
+              // We're going to streaming text to the file
+              QTextStream stream(&file);
+
+              stream << path << " " << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
+
+              file.close();
+              qDebug() << "Writing finished";
+          }
+
+
+}
+
+
 
 // ======== TREE MODEL ========
 // TO DO - make this part of separate class?
@@ -223,9 +263,9 @@ void MainWindow::buildTreeView(){
 
     treeView = new QTreeView;
     treeView->setModel(proxyModel); // or set SourceModel here for no filtering
-    treeView->setColumnHidden(4,1); // hide path to EEG file
-    treeView->setColumnHidden(5,1); // hide "being recorded"
-    treeView->setSortingEnabled(1); // enable sorting
+    treeView->setColumnHidden(4,true); // hide path to EEG file
+    treeView->setColumnHidden(5,true); // hide "being recorded"
+    treeView->setSortingEnabled(true); // enable sorting
     treeView->sortByColumn(2,Qt::DescendingOrder); //newest files first
     treeView->header()->setSectionsMovable(0); // disable moving columns by dragging
     treeView->header()->setDefaultAlignment(Qt::AlignCenter); // align header labels to center
@@ -428,7 +468,7 @@ void MainWindow::refreshDynamic(){
     if(!dynamic_dirs.isEmpty()){
         for (int j = 0; j < dynamic_dirs.size(); j++ ) {
             qDebug() << "loading data: " << dynamic_dirs.at(j);
-            loadDataFromHDD(dynamic_dirs.at(j),1);
+            loadDataFromHDD(dynamic_dirs.at(j),true);
         }
     }
     updateLastRefreshTime();
@@ -450,11 +490,10 @@ void MainWindow::refreshStatic(){
     else{
         if(!static_dirs.isEmpty()){
             for (int j = 0; j < static_dirs.size(); j++ ) {
-                loadDataFromHDD(static_dirs.at(j),0);
+                loadDataFromHDD(static_dirs.at(j),false);
             }
         }
         updatePatientTreeModel();
-        //rebuildPatientTreeModel();
     }
 }
 
@@ -482,6 +521,27 @@ void MainWindow::show_about_dialog()
     messagewindow.setInformativeText(aboutQString);
     messagewindow.setStyleSheet("QLabel{min-width: 700px;}");
     messagewindow.exec();
+}
+
+// ======= View ======
+
+void MainWindow::collapseAll(){
+    treeView->collapseAll();
+}
+
+void MainWindow::expandAll(){
+    treeView->expandAll();
+}
+
+void MainWindow::showPath(){
+    if(showPathAction->isChecked()){
+        qDebug() << "is checked!";
+        treeView->setColumnHidden(4,false);
+    }else{
+        qDebug() << "is not checked";
+        treeView->setColumnHidden(4,true);
+    }
+
 }
 
 // ======== NO FILE WARNING ========
@@ -593,6 +653,20 @@ MainWindow::MainWindow(QWidget *parent)
     setmenu->addAction(tr("Program list"), this, SLOT(editProgramList()));
     setmenu->addAction(tr("Refresh settings"), this, SLOT(editRefreshSettings()));
 
+    // ======= View ========
+    viewmenu = new QMenu(this);
+
+    showPathAction = new QAction(tr("Show paths"), this);
+    showPathAction->setCheckable(true);
+    showPathAction->setChecked(false);
+
+    viewmenu->setTitle(tr("&View"));
+    viewmenu->addAction(tr("Collapse all"),this, SLOT(collapseAll()));
+    viewmenu->addAction(tr("Expand all"),this, SLOT(expandAll()));
+    viewmenu->addAction(showPathAction);
+
+    connect(showPathAction,  SIGNAL(triggered()), this, SLOT(showPath()));
+
     // ======== Help & About ========
     helpmenu = new QMenu(this);
     helpmenu->setTitle(tr("&Help"));
@@ -602,11 +676,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     menubar->addMenu(filemenu);
     menubar->addMenu(setmenu);
+    menubar->addMenu(viewmenu);
     menubar->addMenu(helpmenu);
 
     // ====== SHORTCUTS ======
     refreshKey = new QShortcut(QKeySequence::Refresh, this);
     connect(refreshKey,  SIGNAL(activated()), this, SLOT(refreshDynamic()));
+
+    helpKey = new QShortcut(QKeySequence::HelpContents, this);
+    connect(helpKey, SIGNAL(activated()), this, SLOT(show_about_dialog()));
 
     // ====== LAYOUT =====
     //set the layout
@@ -691,6 +769,7 @@ void MainWindow::writeSettings()
     settings.setValue("defaultReaderFolder","D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/");
     settings.setValue("refreshing_period",refreshingPeriod);
     settings.setValue("periodic_refreshing_enabled", periodicRefreshingEnabled);
+    settings.setValue("load_static_on_refresh_enabled",loadStaticOnRefreshEnabled);
     settings.setValue("periodic_refreshing_in_working_hours_only",workingHoursOnly);
     settings.setValue("periodic_refresh_mode",periodicRefreshMode);
     settings.setValue("bold_parent",boldParent);
@@ -721,6 +800,7 @@ void MainWindow::readSettings()
     defaultReaderFolder = settings.value("defaultReaderFolder").toString();
     refreshingPeriod = settings.value("refreshing_period").toInt();
     periodicRefreshingEnabled = settings.value("periodic_refreshing_enabled").toBool();
+    loadStaticOnRefreshEnabled = settings.value("load_static_on_refresh_enabled").toBool();
     workingHoursOnly = settings.value("periodic_refreshing_in_working_hours_only").toBool();
     periodicRefreshMode = settings.value("periodic_refresh_mode").toInt();
     boldParent = settings.value("bold_parent").toBool();
@@ -766,53 +846,8 @@ void MainWindow::connectDb(){
 
 }
 
-
-// ======== WRITE and READ QMap ========
-
-void MainWindow::saveQMap(){
-    QMapFile = "patientMap.dat";
-    QFile myFile(QMapFile);
-    if (!myFile.open(QIODevice::WriteOnly))
-    {
-        qDebug() << "Could not write to file: " << QMapFile << "Error string:" << myFile.errorString();
-        return;
-    }
-
-    QDataStream out(&myFile);
-    out.setVersion(QDataStream::Qt_5_6);
-    out << (quint32)0xD0AD; // = 53421 = digit sum = 6
-    out << patientMap;
-}
-
-
-int MainWindow::loadQMap(){
-    //QString filename = "patientMap.dat";
-    QFile myFile(QMapFile);
-    if (!myFile.exists()){
-        qDebug() << "Could not read file: " << QMapFile << "Error string:" << myFile.errorString();
-        return 0;
-    }
-    myFile.open(QIODevice::ReadOnly);
-    QDataStream in(&myFile);
-
-    in.setVersion(QDataStream::Qt_5_6);
-
-    // Read and check the header
-    quint32 magic;
-    in >> magic;
-    //qDebug() << magic;
-    if (magic != 0xD0AD){
-        qDebug() << "Wrong data format";
-        return 0;
-    }
-
-    in >> patientMap;
-    return 1;
-}
-
 MainWindow::~MainWindow()
 {
     //saveQMap();
     writeSettings(); //save setting in .ini file
 }
-

@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     QFont sansFont("Century Gothic", 10);
     p.setFont(sansFont);
     p.setPen(Qt::black);
-    p.drawText(20, 60, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, "version 0.35");
+    p.drawText(20, 60, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, "version 0.4");
     p.drawText(20, 300, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, QString("build %1").arg(__DATE__));
 
     QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);
@@ -72,6 +72,7 @@ int main(int argc, char *argv[])
     w.setUpRefreshQTimer();
     w.setUpWorkingHoursQTimer();
     w.updateLastRefreshTime();
+    w.initSystemWatcher();
 
     // =================================
     // show mainwindow

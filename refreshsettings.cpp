@@ -62,7 +62,6 @@ refreshSettings::refreshSettings(QWidget *w_parent)
     }else{
         dialValue = refreshingPeriod + 30;
     }
-
     hourDial->setValue(dialValue);
     hourDial->setWrapping(1);
     hourDial->setNotchesVisible(1);
@@ -81,6 +80,16 @@ refreshSettings::refreshSettings(QWidget *w_parent)
     useWorkingHours->setEnabled(periodicRefreshingEnabled);
     useWorkingHours->setChecked(workingHoursOnly);
 
+    // ======== REFRESH STATIC ========
+
+    QLabel *staticLabel = new QLabel(tr("Periodic refreshing setting"));
+    staticLabel->setFont(b);
+
+    QCheckBox *loadStaticOnRefresh = new QCheckBox("Load static data on refresh");
+    loadStaticOnRefresh->setFont(ff);
+    loadStaticOnRefresh->setChecked(loadStaticOnRefreshEnabled);
+
+
     // ======== BUTTONS ========
 
     cancelButton = new QPushButton;
@@ -97,6 +106,9 @@ refreshSettings::refreshSettings(QWidget *w_parent)
     //bottomLeft->setSpacing(4);
     bottomLeft->addWidget(usePeriodic);
     bottomLeft->addWidget(useWorkingHours);
+    bottomLeft->addSpacing(10);
+    bottomLeft->addWidget(staticLabel);
+    bottomLeft->addWidget(loadStaticOnRefresh);
     bottomLeft->addStretch();
 
     QVBoxLayout *bottomRight = new QVBoxLayout;
@@ -133,6 +145,7 @@ refreshSettings::refreshSettings(QWidget *w_parent)
     connect(hourDial, SIGNAL(valueChanged(int)), this, SLOT(hourDialValueChanged(int)));
     connect(usePeriodic, SIGNAL(toggled(bool)), this, SLOT(enablePeriodicRefreshing(bool)));
     connect(useWorkingHours, SIGNAL(toggled(bool)), this, SLOT(enableWorkingHoursOnly(bool)));
+    connect(loadStaticOnRefresh, SIGNAL(toggled(bool)), this, SLOT(enableLoadStaticOnRefresh(bool)));
     connect(cancelButton,   SIGNAL(clicked()), edit_refresh_settings, SLOT(close()));
     connect(saveButton,   SIGNAL(clicked()), this, SLOT(saveAndClose()));
 
@@ -145,6 +158,7 @@ void refreshSettings::loadSettingsFromMainWindow(){
     refreshingPeriod = mainwindow->refreshingPeriod;
     periodicRefreshingEnabled = mainwindow->periodicRefreshingEnabled;
     workingHoursOnly = mainwindow->workingHoursOnly;
+    loadStaticOnRefreshEnabled = mainwindow->loadStaticOnRefreshEnabled;
 }
 
 void refreshSettings::modeButtonClicked(int value){
@@ -153,7 +167,7 @@ void refreshSettings::modeButtonClicked(int value){
 
 void refreshSettings::hourDialValueChanged(int value){
 
-    //qDebug() << value;
+    //qDebug() << "value " << value;
 
     if (value > 30){
         refreshingPeriod = value -30;
@@ -161,6 +175,8 @@ void refreshSettings::hourDialValueChanged(int value){
     else{
         refreshingPeriod = value + 30;
     }
+
+    //qDebug() << "refreshing period " << refreshingPeriod;
     timeLabel->setText(QString("Refresh every %1 minutes").arg(refreshingPeriod));
     //timeLabel->update();
 
@@ -175,6 +191,11 @@ void refreshSettings::enablePeriodicRefreshing(bool checked){
 
 void refreshSettings::enableWorkingHoursOnly(bool checked){
     workingHoursOnly = checked;
+    qDebug() << checked;
+}
+
+void refreshSettings::enableLoadStaticOnRefresh(bool checked){
+    loadStaticOnRefreshEnabled = checked;
     qDebug() << checked;
 }
 
@@ -193,10 +214,12 @@ void refreshSettings::saveAndClose(){
     mainwindow->refreshingPeriod = refreshingPeriod;
     mainwindow->periodicRefreshingEnabled = periodicRefreshingEnabled;
     mainwindow->workingHoursOnly = workingHoursOnly;
+    mainwindow->loadStaticOnRefreshEnabled = loadStaticOnRefreshEnabled;
     mainwindow->refreshQTimer();
     mainwindow->workingHoursQTimer();
 
     //qDebug() << "Save and Close";
     qDebug() << "Refresh mode: " << RefreshModeId;
+    qDebug() << "Load static on refresh: " << loadStaticOnRefreshEnabled;
     edit_refresh_settings->close();
 }

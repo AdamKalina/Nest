@@ -18,6 +18,7 @@ public:
     int RefreshModeId;
     bool periodicRefreshingEnabled;
     bool workingHoursOnly;
+    bool loadStaticOnRefreshEnabled;
 
     // Qt
     MainWindow *mainwindow;
@@ -34,8 +35,9 @@ public:
 
 public slots:
     void hourDialValueChanged(int value);
-    void enablePeriodicRefreshing(bool state);
-    void enableWorkingHoursOnly(bool state);
+    void enablePeriodicRefreshing(bool checked);
+    void enableWorkingHoursOnly(bool checked);
+    void enableLoadStaticOnRefresh(bool checked);
     void saveAndClose();
     void modeButtonClicked(int value);
 };
