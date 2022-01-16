@@ -57,7 +57,7 @@ bool DbManager::insertNewRecord(QRecord qrecord){
     query.bindValue(":file_name", qrecord.file_name);
     query.bindValue(":id", qrecord.id);
     query.bindValue(":name", qrecord.name);
-    query.bindValue(":record_start", qrecord.record_start);
+    query.bindValue(":record_start", qrecord.record_start.toTime_t());
     query.bindValue(":sex", qrecord.sex);
     query.bindValue(":class_code", qrecord.class_code);
     query.bindValue(":protocol",qrecord.protocol);
@@ -65,7 +65,7 @@ bool DbManager::insertNewRecord(QRecord qrecord){
     query.bindValue(":file_path",qrecord.file_path);
     query.bindValue(":recording_flag",qrecord.recording_flag);
     query.bindValue(":video_flag",qrecord.video_flag);
-    query.bindValue(":num_pages",qrecord.video_flag);
+    query.bindValue(":num_pages",qrecord.num_pages);
 
     if (!query.exec())
     {
@@ -113,10 +113,10 @@ bool DbManager::updatePatientLastRecord(QRecord qrecord){
     selectQuery.next();
     time_t old_time = selectQuery.value("last_record").toInt();
 
-    if(old_time < qrecord.record_start){
+    if(old_time < qrecord.record_start.toTime_t()){
         QSqlQuery updateQuery;
         updateQuery.prepare("UPDATE patients SET last_record=:last_record WHERE id =:id");
-        updateQuery.bindValue(":last_record",qrecord.record_start);
+        updateQuery.bindValue(":last_record",qrecord.record_start.toTime_t());
         updateQuery.bindValue(":id",qrecord.id);
 
         if (!updateQuery.exec())
@@ -187,7 +187,7 @@ bool DbManager::addPerson(QRecord qrecord){
     queryAdd.bindValue(":id", qrecord.id);
     queryAdd.bindValue(":name", qrecord.name);
     queryAdd.bindValue(":sex", qrecord.sex);
-    queryAdd.bindValue(":last_record", qrecord.record_start);
+    queryAdd.bindValue(":last_record", qrecord.record_start.toTime_t());
 
     if(queryAdd.exec())
     {
@@ -348,7 +348,7 @@ bool DbManager::selectPatient(){
         QPatient qpatient;
         qpatient.set_values_from_db(selectQuery.record());
 
-        qDebug() << "===" << qpatient.id << "===" << qpatient.name << "===" << QDateTime::fromTime_t(qpatient.last_record);
+        qDebug() << "===" << qpatient.id << "===" << qpatient.name << "===" << qpatient.last_record;
 
         QSqlQuery selectRecordQuery;
         selectRecordQuery.prepare("SELECT file_name, id, name, record_start, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, num_pages FROM records WHERE id = (:id)");

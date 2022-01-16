@@ -2,8 +2,12 @@
 
 // function definitions
 
-time_t decode_date_time(long date, long time)
+QDateTime decode_date_time(long date, long time)
 {
+    //cout << "date: " << date << endl;
+    //cout << "time: " << time << endl;
+
+    //date = days since BC
     int y = floor(date / (31 * 12));
     int m = floor(date / 31);
     m = m % 12;
@@ -23,6 +27,8 @@ time_t decode_date_time(long date, long time)
     }
     //cout << y << " " << m << " " << d <<endl;
 
+    // time = ms since midnight
+
     int h = floor(time / (60 * 60 * 1000));
     int min = floor(time / (60 * 1000));
     min = min % 60;
@@ -31,32 +37,13 @@ time_t decode_date_time(long date, long time)
     int ms = time % 1000;
     //cout << h << " " << min << " " << s << " " << ms <<endl;
 
-    struct tm tm
-    {
-        0
-    };
 
-    tm.tm_year = y - 1900;
-    tm.tm_mon = m - 1;
-    tm.tm_mday = d;
-    tm.tm_hour = h;
-    tm.tm_min = min;
-    tm.tm_sec = s;
-    time_t t = mktime(&tm);
-    return t;
+    QDate startDate(y, m, d);
+    QTime startTime(h, min, s, ms);
+    QDateTime startDateTime = QDateTime(startDate,startTime).toLocalTime();
+
+    return startDateTime;
 };
-
-void decode_time(long time)
-{
-    int h = floor(time / (60 * 60 * 1000));
-    int min = floor(time / (60 * 1000));
-    min = min % 60;
-    int s = floor(time / 1000);
-    s = s % 60;
-    int ms = time % 1000;
-
-    cout << h << ":" << min << ":" << s << "." << ms << endl;
-}
 
 template <typename T>
 vector<T> readChannel(T tch, fstream &file, int nch)
@@ -118,7 +105,7 @@ data_table.signal_info = Block{dt[14], dt[15], dt[16]};
 return data_table;
 }
 
-Measurement read_measurement(fstream &file, long offset, long size)
+Measurement read_measurement(fstream &file, long offset)
 {
     Measurement measurement;
     file.seekg(offset);
@@ -153,7 +140,7 @@ Measurement read_measurement(fstream &file, long offset, long size)
     return measurement;
 }
 
-RecorderMontageInfo read_recorder_info(fstream &file, long offset, long size)
+RecorderMontageInfo read_recorder_info(fstream &file, long offset)
 {
     RecorderMontageInfo recorder_info;
     file.seekg(offset);
@@ -234,13 +221,9 @@ RecorderMontageInfo read_recorder_info(fstream &file, long offset, long size)
 
 QRecord read_signal_file(QString file_path){
 
-    // GET THE FILE SIZE
-    ifstream myfile(file_path.toLocal8Bit(), ios::binary);
-    const auto begin = myfile.tellg();
-    myfile.seekg(0, ios::end);
-    const auto end = myfile.tellg();
-    const auto file_size = (end - begin);
-    //cout << "File size: " << file_size << " bytes" << endl;
+    // get file size
+    QFileInfo fileInfo(file_path);
+    const long long file_size = fileInfo.size();
 
     // Signal struct
     SignalFile signal;
@@ -270,10 +253,10 @@ QRecord read_signal_file(QString file_path){
 
     //whereAmI(file); // should be 80
     // Measurement
-    signal.measurement = read_measurement(file, signal.data_table.measurement_info.offset, signal.data_table.measurement_info.size);
+    signal.measurement = read_measurement(file, signal.data_table.measurement_info.offset);
 
     //Recorder info
-    signal.recorder_info = read_recorder_info(file, signal.data_table.recorder_montage_info.offset, signal.data_table.recorder_montage_info.size);
+    signal.recorder_info = read_recorder_info(file, signal.data_table.recorder_montage_info.offset);
 
     file.close();
 

@@ -22,7 +22,7 @@ void QRecord::set_values_from_db(QSqlRecord rec){
     file_name = rec.value("file_name").toString();
     id = rec.value("id").toString();
     name = rec.value("name").toString();
-    record_start = rec.value("record_start").toInt();
+    record_start = TimeT2QDateTime(rec.value("record_start").toInt());
     sex = rec.value("sex").toInt();
     class_code = rec.value("class_code").toString();
     protocol = rec.value("protocol").toString();
@@ -34,6 +34,16 @@ void QRecord::set_values_from_db(QSqlRecord rec){
 }
 
 // TO DO - make Time_t --> QDateTime conversion part of QRecord constructor ?
+
+QDateTime TimeT2QDateTime(time_t t){ // no need to be part of MainWindow
+    // special implementation for XP and Win10 builds
+#if QT_VERSION >= 0x050800
+    QDateTime QnewTime = QDateTime::fromSecsSinceEpoch(t);
+#else
+    QDateTime QnewTime = QDateTime::fromTime_t(t);
+#endif
+    return QnewTime;
+}
 
 void QPatient::set_values(QRecord qrecord){
     id = qrecord.id;
@@ -47,7 +57,7 @@ void QPatient::set_values(QRecord qrecord){
 void QPatient::set_values_from_db(QSqlRecord rec){
     id = rec.value("id").toString();
     name = rec.value("name").toString();
-    last_record = rec.value("last_record").toInt();
+    last_record = TimeT2QDateTime(rec.value("last_record").toInt());
     sex = rec.value("sex").toInt();
 }
 
@@ -56,7 +66,7 @@ void QPatient::add_record(QRecord Qrecord){
     Qrecords_map.insert(Qrecord.file_name,Qrecord);
 
     // compares start of recordings and uses later
-    if (difftime(last_record, Qrecord.record_start) < 0){
+    if (Qrecord.record_start > last_record){
         last_record = Qrecord.record_start;
     };
 
@@ -65,7 +75,7 @@ void QPatient::add_record(QRecord Qrecord){
 
 QDataStream & operator<<(QDataStream & out, const QPatient & Qpatient)
 {
-    out << Qpatient.id << (qint32)Qpatient.last_record << Qpatient.name << Qpatient.sex << (qint16)Qpatient.no << Qpatient.Qrecords_map;
+    out << Qpatient.id << Qpatient.last_record << Qpatient.name << Qpatient.sex << (qint16)Qpatient.no << Qpatient.Qrecords_map;
     //qDebug() << "no out:" << Qpatient.no;
     return out;
 }

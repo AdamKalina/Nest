@@ -226,6 +226,6 @@ void folderList::adEntry(){
 }
 
 void folderList::refreshEntry(){
-    mainwindow->loadDataFromHDD(currentItem->data(Qt::DisplayRole).toString(), currentMode);
+    mainwindow->checkDataOnHDD(currentItem->data(Qt::DisplayRole).toString(), currentMode);
     dialog->close();
 }

@@ -9,6 +9,7 @@
 #include <string>
 #include <time.h>
 
+QDateTime TimeT2QDateTime(time_t t);
 
 class QRecord{
 public:
@@ -16,7 +17,7 @@ public:
     long file_size;
     QString id;
     QString name;
-    time_t record_start;
+    QDateTime record_start;
     int sex;
     QString class_code;
     QString protocol;
@@ -37,7 +38,7 @@ public:
     QString name;
     int sex;
     int no; // no of records
-    time_t last_record; // date of last EEG
+    QDateTime last_record; // date of last EEG
     QMap<QString, QRecord> Qrecords_map;
     void set_values(QRecord);
     void add_record(QRecord);

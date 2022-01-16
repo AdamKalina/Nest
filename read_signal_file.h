@@ -18,6 +18,9 @@
 #include <functional>
 #include <algorithm>
 //#include <QString>
+#include <QFileInfo>
+#include <QDateTime>
+
 #include "qpatient.h"
 
 
@@ -191,7 +194,7 @@ struct SignalFile
     vector<SignalPage> signal_pages;
 };
 
-time_t decode_date_time(long date, long time);
+QDateTime decode_date_time(long date, long time);
 
 QRecord read_signal_file(QString file_name);
 

@@ -77,8 +77,9 @@ public:
     // Qt variables
     QMap<QString, QPatient> patientMap;
     QMap<QString,bool> IdMap;
-    QStack<QRecord> QrecordStack;
-    QStack<QPatient> QpatientStack;
+    QQueue<QRecord> QrecordQueue;
+    QQueue<QPatient> QpatientQueue;
+    QQueue<QFileInfo> fiQueue; // queue for filesInfo
     QStringList static_dirs;
     QStringList dynamic_dirs;
     QString externalProgram1; // for regular files, scan.exe. in XP "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
@@ -97,7 +98,8 @@ public:
     void writeSettings();
     void initLoadData();
     void loadDataFromDb();
-    void loadDataFromHDD(QString path2load, bool dynamic);
+    void checkDataOnHDD(QString path2load, bool dynamic);
+    void readDataOnHDD(QString path2load, bool dynamic);
     void checkQPatient(QPatient qpatient);
     void updateLastRefreshTime();
     void setUpRefreshQTimer();
@@ -106,6 +108,7 @@ public:
     void workingHoursQTimer();
     void buildTreeView();
     QAbstractItemModel* createPatientTreeModel();
+    QRecord prepareQRecord(QFileInfo fileInfo);
     void rebuildPatientTreeModel();
     void updatePatientTreeModel();
     void incrementParentNo(QModelIndex parentInd);
@@ -118,6 +121,8 @@ public:
     //int loadQMap();
     //QDateTime TimeT2QDateTime(time_t);
     void initSystemWatcher();
+    void double_click_patient(QModelIndex index);
+    void double_click_record(QModelIndex index);
 
 
 public slots:
@@ -142,6 +147,7 @@ public slots:
     void expandAll();
     void showPath();
     void watchedDirChanged(const QString & path);
+    void recordedFileChanged(const QString & path);
 
 private:
     QMenuBar *menubar;
@@ -157,8 +163,8 @@ private:
     QShortcut *refreshKey, *helpKey;
     QTimer *timer;
     QTimer *whTimer;
-    QAction *showPathAction;
-    QFileSystemWatcher * watcher;
+    QAction *showPathAction, *refreshDynamicAction;
+    QFileSystemWatcher * watcher, * recordingFileWatcher;
 
 };
 #endif // MAINWINDOW_H
