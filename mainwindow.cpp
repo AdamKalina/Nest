@@ -21,7 +21,7 @@ QRecord MainWindow::prepareQRecord(QFileInfo fileInfo){
 
     // read the data header
     // this function returns only the data needed - maybe rename it
-    QRecord qrecord = read_signal_file(fileInfo.filePath());
+    QRecord qrecord = read_signal_file(fileInfo);
 
     // check if .LOG file with same name exists - and if it does, flag the record as still being recorded
     // TO DO - is this the best way? There is lot of data in the header of recorded file, search for "TEMP" instead?
@@ -56,7 +56,7 @@ void MainWindow::checkDataOnHDD(QString path2load, bool dynamic){
     readDataOnHDD(path2load, dynamic);
 }
 
-    // ======== Go through fileinfo and read file headers ========
+// ======== Go through fileinfo and read file headers ========
 void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
 
     //Progress dialog - shows the progress on reading files
@@ -87,7 +87,7 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
 
         // if this record is still being recorded then add it to watcher
         if(qrecord.recording_flag == 1){
-            recordingFileWatcher->addPath(fid.filePath());
+            recordingFileWatcher->addPath(fid.path());
             qDebug() << qrecord.recording_flag;
         }
 
@@ -97,8 +97,6 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
             //qDebug() << "skipping!";
             continue;
         }
-
-
 
         // using QMap
         QMap<QString, bool>::iterator qit = IdMap.find(qrecord.id);
@@ -116,6 +114,10 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
 }
 
 void MainWindow::initLoadData(){
+
+    // new version should go
+    // no db --> go through static and dynamic folders
+    // no folders --> ask for one
 
     if(static_dirs.isEmpty() && dynamic_dirs.isEmpty()){ // if there is no path to data it will ask for it right away
         AddFolderDialog(0);
@@ -136,11 +138,10 @@ void MainWindow::initLoadData(){
 }
 
 void MainWindow::initSystemWatcher(){
+
     // construct QFileSystemWatcher and add dynamic dirs to it
     watcher = new QFileSystemWatcher(dynamic_dirs, this);
-
     qDebug() << "Directories being watched " << watcher->directories();
-
     connect(watcher, SIGNAL(directoryChanged(QString)), this, SLOT(watchedDirChanged(QString)));
 
     // QFileSystemWatcher for files being recorded
@@ -153,18 +154,16 @@ void MainWindow::watchedDirChanged(const QString & path){
 
 
     QFile file("watcher.txt");
-          if(file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
-          {
-              // We're going to stream text to the file
-              QTextStream stream(&file);
+    if(file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+    {
+        // We're going to stream text to the file
+        QTextStream stream(&file);
 
-              stream << path << " " << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
+        stream << path << " " << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
 
-              file.close();
-              //qDebug() << "Writing finished";
-          }
-
-
+        file.close();
+        //qDebug() << "Writing finished";
+    }
 }
 
 void MainWindow::recordedFileChanged(const QString & path){
@@ -172,7 +171,12 @@ void MainWindow::recordedFileChanged(const QString & path){
 
     QFileInfo fi(path);
 
+    // if this takes too much time move it to thread
+    QElapsedTimer timer;
+    timer.start();
+
     QRecord qrecord = prepareQRecord(fi);
+    const long long timeInfo = timer.elapsed();
 
     if(qrecord.recording_flag == 1){
         //check it is still in the watcher
@@ -186,18 +190,17 @@ void MainWindow::recordedFileChanged(const QString & path){
     if(qrecord.recording_flag == 0){
         // write to file that the file has finished recording
         QFile file("watcher.txt");
-              if(file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
-              {
-                  // We're going to stream text to the file
-                  QTextStream stream(&file);
-
-                  stream << "file " << path << " has finished recording " << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
-
-                  file.close();
-                  //qDebug() << "Writing finished";
-              }
+        if(file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+        {
+            QTextStream stream(&file);
+            stream << "file " << path << " has finished recording " << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
+            stream << "reading this file from HDD took " << timeInfo <<  "milliseconds";
+            file.close();
+        }
 
         // add it to queue for loading to treeView
+        //QrecordQueue.enqueue(qrecord);
+        //updatePatientTreeModel();
         // remove it from watcher
         recordingFileWatcher->removePath(path);
     }
@@ -211,8 +214,6 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
     QTime n(0, 0, 0);
     QTime t;
     t = n.addSecs(Qrecord.num_pages*10);
-
-    qDebug() << t;
 
     QString Qinfo;
 
@@ -271,7 +272,6 @@ void addQPatient2model(QAbstractItemModel *model, QPatient Qpatient, bool boldPa
     for (Qpatient.Qrecords_map.begin();to!=Qpatient.Qrecords_map.end(); ++to){
         addQRecord2model(model, ind, parent, to.value(),1); // newRecord = 1 --> append new record
         ind++;
-        qDebug() << "addQpatient2model" << to.value().num_pages;
     }
 }
 
@@ -346,8 +346,6 @@ void MainWindow::updatePatientTreeModel(){
         // find patient with matching id in the model and add records from the stack to it
         QString patientID = QrecordQueue.head().id;
         QString recordID = QrecordQueue.head().file_name;
-
-        qDebug() << "updatePatientTreeModel " << QrecordQueue.head().num_pages;
 
         QModelIndexList parents = sourceModel->match(sourceModel->index(0,0), Qt::DisplayRole, patientID, 1, Qt::MatchExactly); // find matching row by patient ID, only one match is expected
         QModelIndex parentInd = parents.first();
@@ -610,10 +608,8 @@ void MainWindow::expandAll(){
 
 void MainWindow::showPath(){
     if(showPathAction->isChecked()){
-        qDebug() << "is checked!";
         treeView->setColumnHidden(4,false);
     }else{
-        qDebug() << "is not checked";
         treeView->setColumnHidden(4,true);
     }
 

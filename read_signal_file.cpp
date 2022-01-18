@@ -4,13 +4,19 @@
 
 QDateTime decode_date_time(long date, long time)
 {
-    //cout << "date: " << date << endl;
-    //cout << "time: " << time << endl;
-
-    //date = days since BC
+    //date = days since BC - but with some constraints to account for year with 31*12 days (and 31 days in month)
     int y = floor(date / (31 * 12));
     int m = floor(date / 31);
+    int d = date % 31;
     m = m % 12;
+
+    //qDebug() << y << " " << m << " " << d;
+
+    if (d == 0)
+    {
+        d = 31;
+        m--;
+    }
 
     if (m == 0)
     {
@@ -18,14 +24,7 @@ QDateTime decode_date_time(long date, long time)
         y--;
     }
 
-    int d = date % 31;
-
-    if (d == 0)
-    {
-        d = 31;
-        m--;
-    }
-    //cout << y << " " << m << " " << d <<endl;
+    //qDebug() << y << " " << m << " " << d;
 
     // time = ms since midnight
 
@@ -35,7 +34,7 @@ QDateTime decode_date_time(long date, long time)
     int s = floor(time / 1000);
     s = s % 60;
     int ms = time % 1000;
-    //cout << h << " " << min << " " << s << " " << ms <<endl;
+    //qDebug() << h << " " << min << " " << s << " " << ms;
 
 
     QDate startDate(y, m, d);
@@ -46,9 +45,9 @@ QDateTime decode_date_time(long date, long time)
 };
 
 template <typename T>
-vector<T> readChannel(T tch, fstream &file, int nch)
+std::vector<T> readChannel(T tch, std::fstream &file, int nch)
 {
-    vector<T> x;
+    std::vector<T> x;
     for (int i = 0; i < nch; i++)
     {
         file.read(reinterpret_cast<char *>(&tch), sizeof(tch));
@@ -60,9 +59,9 @@ vector<T> readChannel(T tch, fstream &file, int nch)
 }
 
 template <typename ByteArray>
-vector<string> readChannelChar(ByteArray &a, fstream &file, int nch)
+std::vector<std::string> readChannelChar(ByteArray &a, std::fstream &file, int nch)
 {
-    vector<string> x;
+    std::vector<std::string> x;
     for (int i = 0; i < nch; i++)
     {
         file.read(reinterpret_cast<char *>(&a), sizeof(a));
@@ -71,15 +70,15 @@ vector<string> readChannelChar(ByteArray &a, fstream &file, int nch)
     return x;
 }
 
-void whereAmI(fstream &file)
+void whereAmI(std::fstream &file)
 {
     int testing = 1;
     if(testing){
-        cout << "Position in file: " << file.tellg() << endl;
+        std::cout << "Position in file: " << file.tellg() << std::endl;
     }
 }
 
-SignalHeader read_signal_header(fstream &file)
+SignalHeader read_signal_header(std::fstream &file)
 {
     SignalHeader stud;
     file.read(reinterpret_cast<char *>(&stud.program_id), sizeof(stud.program_id));
@@ -89,11 +88,11 @@ SignalHeader read_signal_header(fstream &file)
     return stud;
 }
 
-DataTable read_data_table(fstream &file)
+DataTable read_data_table(std::fstream &file)
 {
     DataTable data_table;
     long y = 0;
-    vector<long> dt = readChannel(y, file, 17);
+    std::vector<long> dt = readChannel(y, file, 17);
     data_table.measurement_info = Block{dt[0], dt[1], 0};
 data_table.recorder_montage_info = Block{dt[2], dt[3],0};
 data_table.events_info = Block{dt[4], dt[5],0};
@@ -105,7 +104,7 @@ data_table.signal_info = Block{dt[14], dt[15], dt[16]};
 return data_table;
 }
 
-Measurement read_measurement(fstream &file, long offset)
+Measurement read_measurement(std::fstream &file, long offset)
 {
     Measurement measurement;
     file.seekg(offset);
@@ -140,7 +139,7 @@ Measurement read_measurement(fstream &file, long offset)
     return measurement;
 }
 
-RecorderMontageInfo read_recorder_info(fstream &file, long offset)
+RecorderMontageInfo read_recorder_info(std::fstream &file, long offset)
 {
     RecorderMontageInfo recorder_info;
     file.seekg(offset);
@@ -179,20 +178,20 @@ RecorderMontageInfo read_recorder_info(fstream &file, long offset)
     char st[9];
     char stth[13];
 
-    vector<unsigned short> sampling_rate = readChannel(H, file, nch);
-    vector<string> signal_type = readChannelChar(st, file, nch);
-    vector<string> signal_sub_type = readChannelChar(st, file, nch);
-    vector<string> channel_desc = readChannelChar(stth, file, nch);
-    vector<unsigned short> sensitivity_index = readChannel(H, file, nch);
-    vector<unsigned short> low_filter_index = readChannel(H, file, nch);
-    vector<unsigned short> high_filter_index = readChannel(H, file, nch);
-    vector<unsigned short> delay = readChannel(H, file, nch);
-    vector<string> unit = readChannelChar(uch, file, nch);
-    vector<short> artefact_level = readChannel(h, file, nch);
-    vector<short> cal_type = readChannel(h, file, nch);
-    vector<float> cal_factor = readChannel(z, file, nch);
-    vector<float> cal_offset = readChannel(z, file, nch);
-    vector<unsigned short> save_buffer_size = readChannel(H, file, nch);
+    std::vector<unsigned short> sampling_rate = readChannel(H, file, nch);
+    std::vector<std::string> signal_type = readChannelChar(st, file, nch);
+    std::vector<std::string> signal_sub_type = readChannelChar(st, file, nch);
+    std::vector<std::string> channel_desc = readChannelChar(stth, file, nch);
+    std::vector<unsigned short> sensitivity_index = readChannel(H, file, nch);
+    std::vector<unsigned short> low_filter_index = readChannel(H, file, nch);
+    std::vector<unsigned short> high_filter_index = readChannel(H, file, nch);
+    std::vector<unsigned short> delay = readChannel(H, file, nch);
+    std::vector<std::string> unit = readChannelChar(uch, file, nch);
+    std::vector<short> artefact_level = readChannel(h, file, nch);
+    std::vector<short> cal_type = readChannel(h, file, nch);
+    std::vector<float> cal_factor = readChannel(z, file, nch);
+    std::vector<float> cal_offset = readChannel(z, file, nch);
+    std::vector<unsigned short> save_buffer_size = readChannel(H, file, nch);
 
 
     for (int i = 0; i < nch; i++)
@@ -219,10 +218,9 @@ RecorderMontageInfo read_recorder_info(fstream &file, long offset)
     return recorder_info;
 }
 
-QRecord read_signal_file(QString file_path){
+QRecord read_signal_file(QFileInfo fileInfo){
 
     // get file size
-    QFileInfo fileInfo(file_path);
     const long long file_size = fileInfo.size();
 
     // Signal struct
@@ -230,12 +228,11 @@ QRecord read_signal_file(QString file_path){
     QRecord qrecord;
 
     // READ THE FILE
-    streampos fileSize;
-    fstream file(file_path.toLocal8Bit(), ios::in | ios::out | ios::binary);
+    std::fstream file(fileInfo.filePath().toLocal8Bit(), std::ios::in | std::ios::out | std::ios::binary);
 
     if (file.fail())
     {
-        cout << "ERROR: Cannot open the file..." << endl;
+        qDebug() << "ERROR: Cannot open the file...";
         return qrecord;
     }
 
@@ -262,7 +259,7 @@ QRecord read_signal_file(QString file_path){
 
     // or make special constructor for this? - but class QRecord does not know struct measurement
     qrecord.setID(signal.measurement.id);
-    qrecord.setPath(file_path);
+    qrecord.setPath(fileInfo.filePath());
     qrecord.name = QString::fromLocal8Bit(signal.measurement.name);
     qrecord.class_code = QString::fromLocal8Bit(signal.measurement.class_code);
     qrecord.doctor = QString::fromLocal8Bit(signal.measurement.doctor);

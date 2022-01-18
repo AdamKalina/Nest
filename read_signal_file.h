@@ -23,9 +23,6 @@
 
 #include "qpatient.h"
 
-
-using namespace std;
-
 // structs definitions
 
 struct SignalPage
@@ -36,8 +33,8 @@ struct SignalPage
 
 struct Spages
 {
-    vector<vector<double>> esignals;
-    vector<SignalPage> pages;
+    std::vector<std::vector<double>> esignals;
+    std::vector<SignalPage> pages;
 };
 
 struct Event
@@ -62,8 +59,8 @@ struct EventDesc
 
     //DT_DICT = {DT_MEASURE: "DT_MEASURE", DT_EXTERNAL: "DT_EXTERNAL", DT_SCAN: "DT_SCAN"}
 
-    string desc;
-    string label;
+    std::string desc;
+    std::string label;
     int d_type;
     int value;
 };
@@ -131,14 +128,14 @@ struct DataTable
 struct Channel
 {
     double sampling_rate;
-    string signal_type;
-    string signal_sub_type;
-    string channel_desc;
+    std::string signal_type;
+    std::string signal_sub_type;
+    std::string channel_desc;
     float sensitivity_index;
     float low_filter_index;
     float high_filter_index;
     double delay;
-    string unit;
+    std::string unit;
     short artefact_level;
     short cal_type;
     float cal_factor;
@@ -159,26 +156,26 @@ struct RecorderMontageInfo
     unsigned short nSensitivities;
     unsigned short nLowFilters;
     unsigned short nHighFilters;
-    vector<float> sensitivity; // vector of 20 floats
-    vector<float> lowFilter;
-    vector<float> highFilter;
+    std::vector<float> sensitivity; // vector of 20 floats
+    std::vector<float> lowFilter;
+    std::vector<float> highFilter;
     char montageName[33];
     int numberOfChannelsUsed;
     int globalSens;
     short epochLengthInSamples;
     unsigned short highestRate;
-    vector<Channel> channels;
+    std::vector<Channel> channels;
     int parameter = 0; // from here - not used?
-    string displayMontageName = "";
-    string dispCh;
-    string dispChScale;
-    string electrode = "";
-    string lead;
+    std::string displayMontageName = "";
+    std::string dispCh;
+    std::string dispChScale;
+    std::string electrode = "";
+    std::string lead;
     int gain;
     int offset;
     int nChannelsOnDisplay = 0;
     int sampleMap;
-    string dummy = "";
+    std::string dummy = "";
 };
 
 struct SignalFile
@@ -187,15 +184,15 @@ struct SignalFile
     DataTable data_table;
     Measurement measurement;
     RecorderMontageInfo recorder_info;
-    vector<Event> events;
-    vector<EventDesc> events_desc;
+    std::vector<Event> events;
+    std::vector<EventDesc> events_desc;
     int store_events;
-    vector<vector<double>> signal_data;
-    vector<SignalPage> signal_pages;
+    std::vector<std::vector<double>> signal_data;
+    std::vector<SignalPage> signal_pages;
 };
 
 QDateTime decode_date_time(long date, long time);
 
-QRecord read_signal_file(QString file_name);
+QRecord read_signal_file(QFileInfo fileInfo);
 
 #endif

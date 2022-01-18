@@ -57,6 +57,7 @@ int main(int argc, char *argv[])
     w.connectDb();
 
     splash.showMessage("Loading data", Qt::AlignHCenter | Qt::AlignBottom);
+    w.initSystemWatcher(); // initiate watchers before loading data - duh
     w.loadDataFromDb();
     w.initLoadData(); //load data
 
@@ -72,7 +73,6 @@ int main(int argc, char *argv[])
     w.setUpRefreshQTimer();
     w.setUpWorkingHoursQTimer();
     w.updateLastRefreshTime();
-    w.initSystemWatcher();
 
     // =================================
     // show mainwindow
