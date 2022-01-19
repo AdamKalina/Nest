@@ -87,8 +87,9 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
 
         // if this record is still being recorded then add it to watcher
         if(qrecord.recording_flag == 1){
-            recordingFileWatcher->addPath(fid.path());
-            qDebug() << qrecord.recording_flag;
+            recordingFileWatcher->addPath(fid.filePath());
+            //qDebug() << "file "<< fid.filePath() << "is being recorded = " << qrecord.recording_flag;
+
         }
 
 
@@ -167,7 +168,7 @@ void MainWindow::watchedDirChanged(const QString & path){
 }
 
 void MainWindow::recordedFileChanged(const QString & path){
-    qDebug() << path;
+    qDebug() << "file " << path << " has changed " << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
 
     QFileInfo fi(path);
 
