@@ -5,16 +5,18 @@
 
 void MainWindow::loadDataFromDb(){
 
-    // get IDs of patients that had at least one recording in last x months
-    QVector<QString> qpatientIds = db.getPatientsIdsbyMonthsAgo(months2load);
+    if(db.isOpen()){
+        // get IDs of patients that had at least one recording in last x months
+        QVector<QString> qpatientIds = db.getPatientsIdsbyMonthsAgo(months2load);
 
-    QVectorIterator<QString> i(qpatientIds);
-    while (i.hasNext()){
-        QPatient qpatient = db.selectPatientbyIdWithRecords(i.next());
-        QpatientQueue.enqueue(qpatient);
-        IdMap.insert(qpatient.id,1);
+        QVectorIterator<QString> i(qpatientIds);
+        while (i.hasNext()){
+            QPatient qpatient = db.selectPatientbyIdWithRecords(i.next());
+            QpatientQueue.enqueue(qpatient);
+            IdMap.insert(qpatient.id,1);
+        }
+        dbLoaded = true;
     }
-    dbLoaded = true;
 }
 
 QRecord MainWindow::prepareQRecord(QFileInfo fileInfo){
@@ -88,8 +90,7 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
         // if this record is still being recorded then add it to watcher
         if(qrecord.recording_flag == 1){
             recordingFileWatcher->addPath(fid.filePath());
-            //qDebug() << "file "<< fid.filePath() << "is being recorded = " << qrecord.recording_flag;
-
+            qDebug() << "file "<< fid.filePath() << "is being recorded = " << qrecord.recording_flag;
         }
 
 
@@ -116,25 +117,20 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
 
 void MainWindow::initLoadData(){
 
-    // new version should go
     // no db --> go through static and dynamic folders
     // no folders --> ask for one
 
-    if(static_dirs.isEmpty() && dynamic_dirs.isEmpty()){ // if there is no path to data it will ask for it right away
-        AddFolderDialog(0);
-    }
-    else{
-        if (!dbLoaded){
-            // only when there is no database data to load it goes through the static folders
-            for (int j = 0; j < static_dirs.size(); ++j) {
-                checkDataOnHDD(static_dirs.at(j),false);
-            }
+    if(!dbLoaded){
+        if(static_dirs.isEmpty() && dynamic_dirs.isEmpty()){ // if there is no path to data it will ask for it right away
+            AddFolderDialog(0);
+        }else{
+            checkFolders(static_dirs, false);
+            checkFolders(dynamic_dirs, true);
+            //qDebug() << "total no of files processed: " << no_files_loaded;
         }
-        // now go through dynamic folders
-        for (int j = 0; j < dynamic_dirs.size(); j++ ) {
-            checkDataOnHDD(dynamic_dirs.at(j),true);
-        }
-        //qDebug() << "total no of files processed: " << no_files_loaded;
+
+    }else{
+        //checkFolders(dynamic_dirs, true);
     }
 }
 
@@ -147,6 +143,7 @@ void MainWindow::initSystemWatcher(){
 
     // QFileSystemWatcher for files being recorded
     recordingFileWatcher = new QFileSystemWatcher(this);
+    //recordingFileWatcher->addPath("D:/Dropbox/Scripts/Cpp/EEGLEnest/data_test/dynamic_data_test/S0023497.SIG");
     connect(recordingFileWatcher, SIGNAL(fileChanged(QString)), this, SLOT(recordedFileChanged(QString)));
 }
 
@@ -172,12 +169,18 @@ void MainWindow::recordedFileChanged(const QString & path){
 
     QFileInfo fi(path);
 
-    // if this takes too much time move it to thread
+    //some editors might emit two signals when changing file and the first one points to file with zero size
+    // https://stackoverflow.com/questions/59754532/why-does-qfilesystemwatcher-emit-multiple-signals-and-qfileinfo-for-the-first-t
+    if(fi.size() == 0){
+        return;
+    }
+
     QElapsedTimer timer;
-    timer.start();
+        timer.start();
 
     QRecord qrecord = prepareQRecord(fi);
-    const long long timeInfo = timer.elapsed();
+
+    const long long tt = timer.elapsed();
 
     if(qrecord.recording_flag == 1){
         //check it is still in the watcher
@@ -195,13 +198,13 @@ void MainWindow::recordedFileChanged(const QString & path){
         {
             QTextStream stream(&file);
             stream << "file " << path << " has finished recording " << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
-            stream << "reading this file from HDD took " << timeInfo <<  "milliseconds";
+            stream << "prepareQrecord took" << tt << "milliseconds";
             file.close();
         }
 
         // add it to queue for loading to treeView
-        //QrecordQueue.enqueue(qrecord);
-        //updatePatientTreeModel();
+        QrecordQueue.enqueue(qrecord);
+        updatePatientTreeModel();
         // remove it from watcher
         recordingFileWatcher->removePath(path);
     }
@@ -539,12 +542,7 @@ void MainWindow::chooseExternalProgram2(){
 
 void MainWindow::refreshDynamic(){
 
-    if(!dynamic_dirs.isEmpty()){
-        for (int j = 0; j < dynamic_dirs.size(); j++ ) {
-            qDebug() << "loading data: " << dynamic_dirs.at(j);
-            checkDataOnHDD(dynamic_dirs.at(j),true);
-        }
-    }
+    checkFolders(dynamic_dirs,true);
     updateLastRefreshTime();
     updatePatientTreeModel();
 }
@@ -562,12 +560,18 @@ void MainWindow::refreshStatic(){
         return;
     }
     else{
-        if(!static_dirs.isEmpty()){
-            for (int j = 0; j < static_dirs.size(); j++ ) {
-                checkDataOnHDD(static_dirs.at(j),false);
-            }
-        }
+        checkFolders(static_dirs,false);
         updatePatientTreeModel();
+    }
+}
+
+void MainWindow::checkFolders(const QStringList dirs, bool dynamic){
+    // generic function - goes through list of folders and loads FileInfo into queue (inside checkDataOnHDD)
+    if(!dirs.isEmpty()){
+        for(const auto& i : dirs){
+            qDebug() << "loading data: " << i;
+            checkDataOnHDD(i,dynamic);
+        }
     }
 }
 
@@ -707,10 +711,11 @@ MainWindow::MainWindow(QWidget *parent)
     // ======== Main Menu ========
     menubar = menuBar();
 
-
     // ====== refresh action
     refreshDynamicAction = new QAction(tr("Refresh Dynamic"),this);
     refreshDynamicAction->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+    refreshDynamicAction->setToolTip("test");
+    refreshDynamicAction->setWhatsThis("test");
     connect(refreshDynamicAction, SIGNAL(triggered()), this, SLOT(refreshDynamic()));
 
     // ======== File menu ========

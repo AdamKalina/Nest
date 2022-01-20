@@ -241,7 +241,7 @@ QRecord read_signal_file(QFileInfo fileInfo){
 
     // check if it is BrainLab *.SIG file
     if (signal.header.program_id != 1096045395){
-        //cout << file_path << " is not valid BrainLab file, skipping" << endl;
+        qDebug() << fileInfo.filePath() << " is not valid BrainLab file, skipping";
         return qrecord;
     }
 

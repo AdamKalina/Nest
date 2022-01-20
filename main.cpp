@@ -72,7 +72,8 @@ int main(int argc, char *argv[])
 
     w.setUpRefreshQTimer();
     w.setUpWorkingHoursQTimer();
-    w.updateLastRefreshTime();
+    w.refreshDynamic(); // did not really work when part of initLoadData
+    //w.updateLastRefreshTime();
 
     // =================================
     // show mainwindow

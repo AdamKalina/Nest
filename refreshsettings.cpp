@@ -6,8 +6,10 @@ refreshSettings::refreshSettings(QWidget *w_parent)
 
     loadSettingsFromMainWindow();
 
-    QFont b( "Arial", 10, QFont::Bold);
-    QFont ff( "Arial", 10);
+    QFont b("Arial", 10, QFont::Bold);
+    QFont ff("Arial", 10);
+    QFont ii("Arial", 10, QFont::StyleItalic);
+    ii.setItalic(true);
 
     edit_refresh_settings = new QDialog;
     edit_refresh_settings->setMinimumSize(800, 265);
@@ -17,7 +19,7 @@ refreshSettings::refreshSettings(QWidget *w_parent)
 
 
     //======== FILES SETTINGS ========
-    QLabel *filesLabel = new QLabel(tr("Files setting - not yet ready"));
+    QLabel *filesLabel = new QLabel(tr("Files setting"));
     filesLabel->setFont(b);
 
     // Choose what files should be refreshed every time
@@ -42,6 +44,9 @@ refreshSettings::refreshSettings(QWidget *w_parent)
     buttonGroup->setExclusive(true);
 
     buttonGroup->button(RefreshModeId)->setChecked(1);
+
+    QLabel *filesInfo = new QLabel(tr("To save time during refresh you can constrain which files are checked to files modified in given period."));
+    filesInfo->setFont(ii);
 
     //======== PERIODIC REFRESHING SETTINGS ========
     QLabel *dialLabel = new QLabel(tr("Periodic refreshing setting"));
@@ -74,20 +79,26 @@ refreshSettings::refreshSettings(QWidget *w_parent)
     QCheckBox *usePeriodic = new QCheckBox("Use periodic refreshing");
     usePeriodic->setFont(ff);
     usePeriodic->setChecked(periodicRefreshingEnabled);
+    QLabel *usePeriodicInfo = new QLabel(tr("If checked it will perform refresh of dynamic folders in interval set on the dial."));
+    usePeriodicInfo->setFont(ii);
 
     useWorkingHours = new QCheckBox("Use in working hours only");
     useWorkingHours->setFont(ff);
     useWorkingHours->setEnabled(periodicRefreshingEnabled);
     useWorkingHours->setChecked(workingHoursOnly);
+    QLabel *useWorkingHoursInfo = new QLabel(tr("If it will perform periodic refresh in working hours only - set from 7 AM to 17 PM"));
+    useWorkingHoursInfo->setFont(ii);
 
     // ======== REFRESH STATIC ========
 
-    QLabel *staticLabel = new QLabel(tr("Periodic refreshing setting"));
+    QLabel *staticLabel = new QLabel(tr("Static folders setting"));
     staticLabel->setFont(b);
 
     QCheckBox *loadStaticOnRefresh = new QCheckBox("Load static data on refresh");
     loadStaticOnRefresh->setFont(ff);
     loadStaticOnRefresh->setChecked(loadStaticOnRefreshEnabled);
+    QLabel *staticLabelInfo = new QLabel(tr("If checked it will load data from refreshed static folders into model.\nIf unchecked it will only refresh database entries."));
+    staticLabelInfo->setFont(ii);
 
 
     // ======== BUTTONS ========
@@ -105,10 +116,14 @@ refreshSettings::refreshSettings(QWidget *w_parent)
    // bottomLeft->addStretch();
     //bottomLeft->setSpacing(4);
     bottomLeft->addWidget(usePeriodic);
+    bottomLeft->addWidget(usePeriodicInfo);
+    bottomLeft->addSpacing(10);
     bottomLeft->addWidget(useWorkingHours);
+    bottomLeft->addWidget(useWorkingHoursInfo);
     bottomLeft->addSpacing(10);
     bottomLeft->addWidget(staticLabel);
     bottomLeft->addWidget(loadStaticOnRefresh);
+    bottomLeft->addWidget(staticLabelInfo);
     bottomLeft->addStretch();
 
     QVBoxLayout *bottomRight = new QVBoxLayout;
@@ -131,6 +146,7 @@ refreshSettings::refreshSettings(QWidget *w_parent)
     mainLayout->addWidget(refreshMonth);
     mainLayout->addWidget(refreshWeek);
     mainLayout->addWidget(refreshToday);
+    mainLayout->addWidget(filesInfo);
     mainLayout->addSpacing(20);
     //mainLayout->addSpacerItem()
     mainLayout->addWidget(dialLabel);

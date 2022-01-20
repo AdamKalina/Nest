@@ -98,6 +98,7 @@ public:
     void writeSettings();
     void initLoadData();
     void loadDataFromDb();
+    void checkFolders(const QStringList dirs, bool dynamic);
     void checkDataOnHDD(QString path2load, bool dynamic);
     void readDataOnHDD(QString path2load, bool dynamic);
     void checkQPatient(QPatient qpatient);
