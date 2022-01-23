@@ -89,6 +89,9 @@ public:
     QString defaultDataFolder;
     QString defaultReaderFolder;
     QString path2db = "records.db";
+    QString brainLabDrive = "S:\\";
+    QStringList usedDrives;
+    QStringList batchFiles;
     QDateTime lastRefreshTime;
     QIcon dvicon;
     DbManager db;
@@ -124,6 +127,8 @@ public:
     void initSystemWatcher();
     void double_click_patient(QModelIndex index);
     void double_click_record(QModelIndex index);
+    void openBrainLabControl(QString path);
+    void runBatchFile(QString batchFile);
 
 
 public slots:

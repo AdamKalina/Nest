@@ -165,7 +165,6 @@ void MainWindow::watchedDirChanged(const QString & path){
 }
 
 void MainWindow::recordedFileChanged(const QString & path){
-    qDebug() << "file " << path << " has changed " << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
 
     QFileInfo fi(path);
 
@@ -175,12 +174,7 @@ void MainWindow::recordedFileChanged(const QString & path){
         return;
     }
 
-    QElapsedTimer timer;
-        timer.start();
-
     QRecord qrecord = prepareQRecord(fi);
-
-    const long long tt = timer.elapsed();
 
     if(qrecord.recording_flag == 1){
         //check it is still in the watcher
@@ -198,13 +192,14 @@ void MainWindow::recordedFileChanged(const QString & path){
         {
             QTextStream stream(&file);
             stream << "file " << path << " has finished recording " << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
-            stream << "prepareQrecord took" << tt << "milliseconds";
             file.close();
         }
 
         // add it to queue for loading to treeView
         QrecordQueue.enqueue(qrecord);
         updatePatientTreeModel();
+        // advice from here https://stackoverflow.com/questions/53589796/repaint-qtreewidget
+        treeView->viewport()->update();
         // remove it from watcher
         recordingFileWatcher->removePath(path);
     }
@@ -400,11 +395,15 @@ void MainWindow::double_click_tree(QModelIndex index){
 }
 
 void MainWindow::double_click_record(QModelIndex index){
-    QVariant path = index.sibling(index.row(),4).data();
+    // forking for recorded and still recording files only makes sense in BrainLab environment
+    // on Win 10 it should be removed
+
+    QString path = index.sibling(index.row(),4).data().toString();
     QVariant recording_flag = index.sibling(index.row(),5).data();
 
     // TO DO - check if the path exists?
 
+    // TO DO - make a constructor for this messagebox elsewhere?
     QMessageBox setProgram;
     setProgram.setIcon(QMessageBox::Question);
     setProgram.setText(tr("EEG reader is not set"));
@@ -415,9 +414,8 @@ void MainWindow::double_click_record(QModelIndex index){
 
     QProcess *myProcess = new QProcess(nullptr);
     QStringList arguments;
-    arguments << path.toString();
+    arguments << path;
     myProcess->setArguments(arguments);
-
 
     if (recording_flag.toBool()){
         if(externalProgram2.isEmpty()){
@@ -429,7 +427,7 @@ void MainWindow::double_click_record(QModelIndex index){
                 return;
             }
         }
-        myProcess->setProgram(this->externalProgram2);
+        openBrainLabControl(path);
     }
     else{
         if(externalProgram1.isEmpty()){
@@ -442,9 +440,36 @@ void MainWindow::double_click_record(QModelIndex index){
             }
         }
         myProcess->setProgram(this->externalProgram1);
+        myProcess->start();
     }
-    myProcess->start();
+}
 
+void MainWindow::openBrainLabControl(QString path){
+    QFileInfo fi(path);
+    //qDebug() << fi.fileName();
+
+    // check if the file is in the folder loaded as drive S:
+    if(!QFileInfo::exists(brainLabDrive + fi.fileName())){
+        qDebug() << "the file is not on the path";
+        qDebug() << fi.path();
+        // if the right drive is not loaded then look for correct batch file
+        int ind = dynamic_dirs.indexOf(fi.path());
+        if (ind != -1){
+            // if there is batch file mapped to it - use it
+            QString batchFile = batchFiles.at(ind);
+            qDebug() << batchFile;
+            runBatchFile(batchFile);
+        }
+    }else{
+        qDebug() << "the file is on the path";
+    }
+
+    QProcess *myProcess = new QProcess(nullptr);
+    QStringList arguments;
+    arguments << path;
+    myProcess->setArguments(arguments);
+    myProcess->setProgram(this->externalProgram2);
+    myProcess->start();
 }
 
 
@@ -453,7 +478,7 @@ void MainWindow::double_click_patient(QModelIndex index){
     QModelIndex parent;
 
     // when I reimplement this for the parent index, it stops working when it is double clicked
-    // so this function reimplements double click for all non-parent siblings
+    // so this function reimplements double click only for all non-parent siblings
     if(index.column() != 0){
         parent = index.sibling(index.row(),0);
     }
@@ -503,17 +528,21 @@ void MainWindow::AddFolderDialog(bool dynamic){
 };
 
 void MainWindow::connect2storage(){
+    runBatchFile("connect.bat");
+};
+
+void MainWindow::runBatchFile(QString batchFile){
     // runs the batch command for storage connection
     QProcess connectProcess;
     connectProcess.setProgram("cmd.exe");
-    QStringList arguments =  (QStringList() << "/C" << "connect.bat");
+    QStringList arguments =  (QStringList() << "/C" << batchFile);
     connectProcess.setArguments(arguments);
     connectProcess.setWorkingDirectory(QDir::currentPath());
     connectProcess.start();
-    connectProcess.waitForFinished(-1);
+    connectProcess.waitForFinished();
     qDebug() << connectProcess.readAllStandardOutput();
     qDebug() << connectProcess.readAllStandardError();
-};
+}
 
 
 void MainWindow::chooseExternalProgram1(){
@@ -871,7 +900,6 @@ void MainWindow::writeSettings()
         settings.setValue("path", dynamic_dirs.at(i));
     }
     settings.endArray();
-
 }
 
 void MainWindow::readSettings()
@@ -905,6 +933,24 @@ void MainWindow::readSettings()
         settings.setArrayIndex(i);
         QString new_dyn_dir = settings.value("path").toString();
         dynamic_dirs.append(new_dyn_dir);
+    }
+    settings.endArray();
+
+    // load array of used drives - not used
+    size = settings.beginReadArray("used_drives");
+    for (int i = 0; i < size; ++i) {
+        settings.setArrayIndex(i);
+        QString usedDrive = settings.value("path").toString();
+        usedDrives.append(usedDrive);
+    }
+    settings.endArray();
+
+    // load array of batch files - paired with used drives
+    size = settings.beginReadArray("batch_files");
+    for (int i = 0; i < size; ++i) {
+        settings.setArrayIndex(i);
+        QString batchFile = settings.value("path").toString();
+        batchFiles.append(batchFile);
     }
     settings.endArray();
 }
