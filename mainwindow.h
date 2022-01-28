@@ -82,6 +82,7 @@ public:
     QQueue<QFileInfo> fiQueue; // queue for filesInfo
     QStringList static_dirs;
     QStringList dynamic_dirs;
+    QStringList next_files;
     QString externalProgram1; // for regular files, scan.exe. in XP "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
     QString externalProgram2;// for files being recorded - control.exe in XP
     QString new_dir;
@@ -129,6 +130,9 @@ public:
     void double_click_record(QModelIndex index);
     void openBrainLabControl(QString path);
     void runBatchFile(QString batchFile);
+    QString getNextFileInFolder(QString path);
+    QString getNextFileName(QString lastFile);
+    void writeWatcherLog(QString log);
 
 
 public slots:

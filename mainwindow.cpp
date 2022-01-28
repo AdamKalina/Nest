@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 
 
-// ======== LOAD DATA ========
+// ======== DATA LOADING ========
 
 void MainWindow::loadDataFromDb(){
 
@@ -35,6 +35,7 @@ QRecord MainWindow::prepareQRecord(QFileInfo fileInfo){
 }
 
 // ======== Go through files and collect fileInfo ========
+// this is separate function because there is no way to tell how long it will take so QProgressDialog could not be made
 void MainWindow::checkDataOnHDD(QString path2load, bool dynamic){
 
     QDateTime now = QDateTime::currentDateTime();
@@ -117,6 +118,13 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
 
 void MainWindow::initLoadData(){
 
+    // look for "next files" before initializing watchers
+    foreach (const QString &str, dynamic_dirs) {
+        next_files.push_back(getNextFileInFolder(str));
+    }
+
+    qDebug() << "next files are " << next_files;
+
     // no db --> go through static and dynamic folders
     // no folders --> ask for one
 
@@ -134,6 +142,9 @@ void MainWindow::initLoadData(){
     }
 }
 
+
+// ====== WATCHERS ======
+
 void MainWindow::initSystemWatcher(){
 
     // construct QFileSystemWatcher and add dynamic dirs to it
@@ -148,20 +159,80 @@ void MainWindow::initSystemWatcher(){
 }
 
 void MainWindow::watchedDirChanged(const QString & path){
+    // empty log
+    QString log;
     qDebug() << path << QDateTime::currentDateTime().toLocalTime();
 
+    // check if there is appropriate next files in folder that just changes
+    // get the right next file
+    int ind = dynamic_dirs.indexOf(path);
+    QString nextFile = next_files.at(ind);
+    QString nextFilePath = path + "/" + nextFile;
+    //check if it exists
+    if(QFile::exists(nextFilePath)){
+        qDebug() << "new file detected";
+        qDebug() << nextFilePath;
+        // if the new file exists check if it is oky
+        QFileInfo fi(nextFilePath);
+        QRecord qrecord = prepareQRecord(fi);
 
-    QFile file("watcher.txt");
-    if(file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
-    {
-        // We're going to stream text to the file
-        QTextStream stream(&file);
-
-        stream << path << " " << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
-
-        file.close();
-        //qDebug() << "Writing finished";
+        if (qrecord.check_flag == 1){
+            //if it is oky, add id to db
+            db.addRecord(qrecord);
+            //load it to treeview
+            QrecordQueue.enqueue(qrecord);
+            updatePatientTreeModel();
+            treeView->viewport()->update();
+            // add it to watcher
+            recordingFileWatcher->addPath(nextFilePath);
+            // and get new name for next file
+            next_files.replace(ind,getNextFileName(nextFile));
+            qDebug() << next_files.at(ind);
+            log = log + nextFilePath + " started recording" + QDateTime::currentDateTime().toLocalTime().toString() +"\n";
+        }
     }
+
+    log = log + path + " " + QDateTime::currentDateTime().toLocalTime().toString() + "\n";
+    writeWatcherLog(log);
+}
+
+
+QString MainWindow::getNextFileInFolder(QString path){
+    QDir dir(path);
+
+    // get list of files in folder
+    QStringList list = dir.entryList(QStringList() << "*.SIG" << "*.sig", QDir::Files, QDir::Name | QDir::Reversed);
+
+    qDebug() << "This is the list " << path;
+
+    // get the last one
+    QString lastFile = list.first();
+    qDebug() << "last file is" << lastFile;
+    QString nextFile = getNextFileName(lastFile);
+    qDebug() << "next file is" << nextFile;
+    return(nextFile);
+}
+
+QString MainWindow::getNextFileName(QString lastFile){
+    // get the name of not-yet-existing record
+
+    QRegExp rx;
+    rx.setPattern("\\d+");
+    rx.indexIn(lastFile);
+    //find numbers in file name
+    QStringList matches = rx.capturedTexts();
+    QString next_temp = matches.first(); // only one match is expected
+
+    // extract int and increase it by one
+    int next = next_temp.toInt();
+    next++;
+
+    // turn it back to filename
+    QString str;
+    str = QString::number(next).rightJustified(7,'0');
+    QString nextFile = "S"+str+".SIG";
+
+    return(nextFile);
 }
 
 void MainWindow::recordedFileChanged(const QString & path){
@@ -186,14 +257,8 @@ void MainWindow::recordedFileChanged(const QString & path){
     }
 
     if(qrecord.recording_flag == 0){
-        // write to file that the file has finished recording
-        QFile file("watcher.txt");
-        if(file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
-        {
-            QTextStream stream(&file);
-            stream << "file " << path << " has finished recording " << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
-            file.close();
-        }
+        QString log = "file " + path + " has finished recording " + QDateTime::currentDateTime().toLocalTime().toString() + "\n";
+        writeWatcherLog(log);
 
         // add it to queue for loading to treeView
         QrecordQueue.enqueue(qrecord);
@@ -202,6 +267,18 @@ void MainWindow::recordedFileChanged(const QString & path){
         treeView->viewport()->update();
         // remove it from watcher
         recordingFileWatcher->removePath(path);
+    }
+}
+
+void MainWindow::writeWatcherLog(QString log){
+    // write to file that the file has finished recording
+    QFile file("watcher.txt");
+    if(file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+    {
+        QTextStream stream(&file);
+        //stream << "file " << path << " has finished recording " << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
+        stream << log;
+        file.close();
     }
 }
 
@@ -698,6 +775,7 @@ void MainWindow::filter_return_pressed(){
     }
 }
 
+// check if the patient entered via filterline is already loaded in treemodel
 void MainWindow::checkQPatient(QPatient qpatient){
     QMap<QString, bool>::iterator qit = IdMap.find(qpatient.id);
     if (qit != IdMap.end()) {
@@ -710,6 +788,8 @@ void MainWindow::checkQPatient(QPatient qpatient){
     }
     updatePatientTreeModel();
 }
+
+// ======== MENU ========
 
 void MainWindow::notYetReady(){
     QMessageBox msgBox;
@@ -936,7 +1016,7 @@ void MainWindow::readSettings()
     }
     settings.endArray();
 
-    // load array of used drives - not used
+    // load array of used drives (not used)
     size = settings.beginReadArray("used_drives");
     for (int i = 0; i < size; ++i) {
         settings.setArrayIndex(i);

@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     splash.showMessage("Loading data", Qt::AlignHCenter | Qt::AlignBottom);
     w.initSystemWatcher(); // initiate watchers before loading data - duh
     w.loadDataFromDb();
-    w.initLoadData(); //load data
+    w.initLoadData(); //load data, init next_files
 
 
     if (w.IdMap.size() == 0){
