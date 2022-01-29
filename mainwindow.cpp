@@ -19,7 +19,7 @@ void MainWindow::loadDataFromDb(){
     }
 }
 
-QRecord MainWindow::prepareQRecord(QFileInfo fileInfo){
+QRecord MainWindow::getQRecord(QFileInfo fileInfo){
 
     // read the data header
     // this function returns only the data needed - maybe rename it
@@ -75,44 +75,58 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
     while (!fiQueue.isEmpty()){
 
         QFileInfo fid = fiQueue.dequeue(); // take the next fileinfo from queue
-        QRecord qrecord = prepareQRecord(fid);
+        prepareQRecord(fid, dynamic);
 
         // update progress dialog
         ii++;
         progress.setValue(ii);
+    }
+}
 
-        // if something is wrong with this file, skip it
-        if (qrecord.check_flag == 0){
-            continue;
-        }
 
+QRecord MainWindow::prepareQRecord(QFileInfo fileInfo, bool dynamic){
+
+    QRecord qrecord = getQRecord(fileInfo);
+
+    // if something is wrong with this file, skip it
+    if (qrecord.check_flag == 1){
         db.addRecord(qrecord); // add this record into database
 
         // if this record is still being recorded then add it to watcher
         if(qrecord.recording_flag == 1){
-            recordingFileWatcher->addPath(fid.filePath());
-            qDebug() << "file "<< fid.filePath() << "is being recorded = " << qrecord.recording_flag;
+            recordingFileWatcher->addPath(fileInfo.filePath());
+            qDebug() << "file "<< fileInfo.filePath() << "is being recorded = " << qrecord.recording_flag;
         }
-
-
         // skip loading files from static folders if that is enabled
         if(!dynamic && !loadStaticOnRefreshEnabled){
             //qDebug() << "skipping!";
-            continue;
+            return qrecord;
         }
+        checkQrecordInQMap(qrecord);
+    }
+    return qrecord;
+}
 
-        // using QMap
-        QMap<QString, bool>::iterator qit = IdMap.find(qrecord.id);
-        if (qit != IdMap.end()) {
-            // if the ID of QPatient is already loaded, add the record to QrecordQueue (does not create new QPatient)
-            QrecordQueue.enqueue(qrecord); // add record to queue
-        }
-        else{
-            // if QPatient is not loaded, check if there are older records in db
-            QPatient Qpatient = db.selectPatientbyIdWithRecords(qrecord.id);
-            QpatientQueue.enqueue(Qpatient); // add patient to queue
-            IdMap.insert(qrecord.id,1); // register patient to IDmap
-        }
+void MainWindow::checkQMap(){
+    if(IdMap.size()==0){
+        stackedLayout->setCurrentWidget(noDataWidget);
+    }else{
+        stackedLayout->setCurrentWidget(dataWidget);
+    }
+}
+
+void MainWindow::checkQrecordInQMap(QRecord qrecord){
+    // using QMap - checks if the QPatient is already loaded
+    QMap<QString, bool>::iterator qit = IdMap.find(qrecord.id);
+    if (qit != IdMap.end()) {
+        // if the ID of QPatient is already loaded, add the record to QrecordQueue (does not create new QPatient)
+        QrecordQueue.enqueue(qrecord); // add record to queue
+    }
+    else{
+        // if QPatient is not loaded, check if there are older records in db
+        QPatient Qpatient = db.selectPatientbyIdWithRecords(qrecord.id);
+        QpatientQueue.enqueue(Qpatient); // add patient to queue
+        IdMap.insert(qrecord.id,1); // register patient to IDmap
     }
 }
 
@@ -174,21 +188,16 @@ void MainWindow::watchedDirChanged(const QString & path){
         qDebug() << nextFilePath;
         // if the new file exists check if it is oky
         QFileInfo fi(nextFilePath);
-        QRecord qrecord = prepareQRecord(fi);
+        QRecord qrecord = prepareQRecord(fi, true);
 
         if (qrecord.check_flag == 1){
-            //if it is oky, add id to db
-            db.addRecord(qrecord);
-            //load it to treeview
-            QrecordQueue.enqueue(qrecord);
+            // if the record was oky than update treeview
             updatePatientTreeModel();
             treeView->viewport()->update();
-            // add it to watcher
-            recordingFileWatcher->addPath(nextFilePath);
             // and get new name for next file
             next_files.replace(ind,getNextFileName(nextFile));
-            qDebug() << next_files.at(ind);
             log = log + nextFilePath + " started recording" + QDateTime::currentDateTime().toLocalTime().toString() +"\n";
+            qDebug() << next_files.at(ind);
         }
     }
 
@@ -245,7 +254,7 @@ void MainWindow::recordedFileChanged(const QString & path){
         return;
     }
 
-    QRecord qrecord = prepareQRecord(fi);
+    QRecord qrecord = getQRecord(fi);
 
     if(qrecord.recording_flag == 1){
         //check it is still in the watcher
@@ -373,9 +382,8 @@ QAbstractItemModel* MainWindow::createPatientTreeModel(){
 
 void MainWindow::buildTreeView(){
 
-    //qDebug() << "creating source model";
+    qDebug() << "creating source model";
     sourceModel = createPatientTreeModel(); // create sourceModel
-    sourceModelLoaded = 1;
 
     proxyModel = new LeafFilterProxyModel(this); // use this custom FilterProxyModel
     proxyModel->setSourceModel(sourceModel);
@@ -407,7 +415,8 @@ void MainWindow::buildTreeView(){
 
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(double_click_tree(QModelIndex)));
 
-    layout->addWidget(treeView);
+    //layout->addWidget(treeView);
+    dataLayout->addWidget(treeView);
 };
 
 void MainWindow::updatePatientTreeModel(){
@@ -440,6 +449,7 @@ void MainWindow::updatePatientTreeModel(){
             addQRecord2model(sourceModel, tempInd, parentInd, QrecordQueue.dequeue(),0); // 0 = newRecord --> update existing
         }
     }
+    treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
 }
 
 void MainWindow::incrementParentNo(QModelIndex parentInd){
@@ -596,12 +606,8 @@ void MainWindow::AddFolderDialog(bool dynamic){
         }
     }
     checkDataOnHDD(new_dir,dynamic);
-    if(sourceModelLoaded){
-        updatePatientTreeModel();
-    }
-    else{
-        buildTreeView();
-    }
+    updatePatientTreeModel();
+    checkQMap();
 };
 
 void MainWindow::connect2storage(){
@@ -728,27 +734,29 @@ void MainWindow::showPath(){
 
 // ======== NO FILE WARNING ========
 
-void MainWindow::showNoFileWarning(){
+void MainWindow::buildNoFileWarning(){
     QFont warning( "Arial", 10, QFont::Bold);
-    QLabel *label = new QLabel(this);
+    QLabel *label = new QLabel();
     label->setFont(warning);
     label->setMargin(5);
     QString noFiles = QString::fromLocal8Bit("Žádné soubory k naètení, vyberte složku, ve které se nacházejí *.sig sobory pomocí 'Data --> Add Folder'");
     label->setText(noFiles);
     label->setAlignment(Qt::AlignCenter);
-    setCentralWidget(label);
+    noDataLayout->addWidget(label);
 };
 
 // ======== FILTER LINE ========
 
 void MainWindow::buildFilterLine(){
     // text line for filtering
-    filter = new QLineEdit(centralWidget);
+    filter = new QLineEdit();
     filter->setPlaceholderText(QString::fromLocal8Bit("jméno, rodné èíslo, datum yyyy-mm-dd"));
     filter->setClearButtonEnabled(1);
     connect(filter, SIGNAL(textChanged(QString)), this, SLOT(filter_text_changed(QString)));
     connect(filter, SIGNAL(returnPressed()), this, SLOT(filter_return_pressed()));
-    layout->addWidget(filter);
+    //filter->setParent(dataWidget);
+    //stackedLayout->addWidget(filter);
+    dataLayout->addWidget(filter);
 }
 
 void MainWindow::filter_text_changed(const QString & text){
@@ -880,14 +888,27 @@ MainWindow::MainWindow(QWidget *parent)
     connect(helpKey, SIGNAL(activated()), this, SLOT(show_about_dialog()));
 
     // ====== LAYOUT =====
+
     //set the layout
-    centralWidget = new QWidget(this);
-    setCentralWidget(centralWidget);
+    // stacked layout - one when there are data and one for empty data
+    stackedLayout = new QStackedLayout;
+    dataWidget = new QWidget;
+    noDataWidget = new QWidget;
+    dataLayout = new QVBoxLayout;
+    noDataLayout = new QVBoxLayout;
+    dataWidget->setLayout(dataLayout);
+    noDataWidget->setLayout(noDataLayout);
+    stackedLayout->addWidget(dataWidget);
+    stackedLayout->addWidget(noDataWidget);
+    auto central = new QWidget;
+    central->setLayout(stackedLayout);
+    setCentralWidget(central);
 
-    layout = new QVBoxLayout(centralWidget);
 
-    // Filter line
+    // build parts of layout
     buildFilterLine(); // build filter line - do it first if you want it on the top
+    buildNoFileWarning();
+    buildTreeView();
 }
 
 

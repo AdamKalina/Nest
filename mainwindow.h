@@ -12,6 +12,7 @@
 //#include <QTextDocument>
 #include <QScrollArea>
 #include <QVBoxLayout>
+#include <QStackedLayout>
 
 #include <QTimer>
 #include <QElapsedTimer>
@@ -106,6 +107,8 @@ public:
     void checkDataOnHDD(QString path2load, bool dynamic);
     void readDataOnHDD(QString path2load, bool dynamic);
     void checkQPatient(QPatient qpatient);
+    void checkQMap();
+    void checkQrecordInQMap(QRecord qrecord);
     void updateLastRefreshTime();
     void setUpRefreshQTimer();
     void refreshQTimer();
@@ -113,12 +116,13 @@ public:
     void workingHoursQTimer();
     void buildTreeView();
     QAbstractItemModel* createPatientTreeModel();
-    QRecord prepareQRecord(QFileInfo fileInfo);
+    QRecord prepareQRecord(QFileInfo fileInfo, bool dynamic);
+    QRecord getQRecord(QFileInfo fileInfo);
     void rebuildPatientTreeModel();
     void updatePatientTreeModel();
     void incrementParentNo(QModelIndex parentInd);
     void updateParentTime(QModelIndex parentInd);
-    void showNoFileWarning();
+    void buildNoFileWarning();
     void AddFolderDialog(bool dynamic);
     void buildFilterLine();
     void connectDb();
@@ -170,6 +174,11 @@ private:
     QLineEdit *filter;
     QWidget *centralWidget;
     QVBoxLayout *layout;
+    QVBoxLayout *dataLayout;
+    QVBoxLayout *noDataLayout;
+    QStackedLayout *stackedLayout;
+    QWidget * dataWidget;
+    QWidget *noDataWidget;
     QShortcut *refreshKey, *helpKey;
     QTimer *timer;
     QTimer *whTimer;

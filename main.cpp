@@ -59,24 +59,18 @@ int main(int argc, char *argv[])
     splash.showMessage("Loading data", Qt::AlignHCenter | Qt::AlignBottom);
     w.initSystemWatcher(); // initiate watchers before loading data - duh
     w.loadDataFromDb();
-    w.initLoadData(); //load data, init next_files
-
-
-    if (w.IdMap.size() == 0){
-        w.showNoFileWarning(); // show warning that there are no files to load
-    }else{
-        splash.showMessage("Building tree model", Qt::AlignHCenter | Qt::AlignBottom);
-        w.buildTreeView();
-    }
-    splash.clearMessage();
+    w.initLoadData(); //load data if there is no db, init next_files
 
     w.setUpRefreshQTimer();
     w.setUpWorkingHoursQTimer();
+    splash.showMessage("Looking for new data", Qt::AlignHCenter | Qt::AlignBottom);
     w.refreshDynamic(); // did not really work when part of initLoadData
-    //w.updateLastRefreshTime();
+
+    splash.clearMessage();
 
     // =================================
     // show mainwindow
+    w.checkQMap(); // if IdMap is empty, it will show warning, otherwise it will show treeview
     w.show();
     return a.exec();
 }
