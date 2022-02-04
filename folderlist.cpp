@@ -227,5 +227,6 @@ void folderList::adEntry(){
 
 void folderList::refreshEntry(){
     mainwindow->checkDataOnHDD(currentItem->data(Qt::DisplayRole).toString(), currentMode);
+    mainwindow->updatePatientTreeModel();
     dialog->close();
 }

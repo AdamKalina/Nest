@@ -101,14 +101,11 @@ public:
     // functions
     void readSettings();
     void writeSettings();
-    void initLoadData();
     void loadDataFromDb();
     void checkFolders(const QStringList dirs, bool dynamic);
     void checkDataOnHDD(QString path2load, bool dynamic);
     void readDataOnHDD(QString path2load, bool dynamic);
     void checkQPatient(QPatient qpatient);
-    void checkQMap();
-    void checkQrecordInQMap(QRecord qrecord);
     void updateLastRefreshTime();
     void setUpRefreshQTimer();
     void refreshQTimer();
@@ -160,7 +157,6 @@ public slots:
     void collapseAll();
     void expandAll();
     void showPath();
-    void watchedDirChanged(const QString & path);
     void recordedFileChanged(const QString & path);
 
 private:
@@ -174,11 +170,6 @@ private:
     QLineEdit *filter;
     QWidget *centralWidget;
     QVBoxLayout *layout;
-    QVBoxLayout *dataLayout;
-    QVBoxLayout *noDataLayout;
-    QStackedLayout *stackedLayout;
-    QWidget * dataWidget;
-    QWidget *noDataWidget;
     QShortcut *refreshKey, *helpKey;
     QTimer *timer;
     QTimer *whTimer;

@@ -56,21 +56,19 @@ int main(int argc, char *argv[])
     splash.showMessage("Connecting to database", Qt::AlignHCenter | Qt::AlignBottom);
     w.connectDb();
 
-    splash.showMessage("Loading data", Qt::AlignHCenter | Qt::AlignBottom);
+    splash.showMessage("Loading data from database", Qt::AlignHCenter | Qt::AlignBottom);
     w.initSystemWatcher(); // initiate watchers before loading data - duh
     w.loadDataFromDb();
-    w.initLoadData(); //load data if there is no db, init next_files
 
     w.setUpRefreshQTimer();
     w.setUpWorkingHoursQTimer();
     splash.showMessage("Looking for new data", Qt::AlignHCenter | Qt::AlignBottom);
-    w.refreshDynamic(); // did not really work when part of initLoadData
+    w.refreshDynamic();
 
     splash.clearMessage();
 
     // =================================
     // show mainwindow
-    w.checkQMap(); // if IdMap is empty, it will show warning, otherwise it will show treeview
     w.show();
     return a.exec();
 }

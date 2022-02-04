@@ -50,7 +50,7 @@ void MainWindow::checkDataOnHDD(QString path2load, bool dynamic){
         // if this is dynamic folder and periodicRefreshMode != 0 --> decide whether to put the file in queue
         if(dynamic && periodicRefreshMode != 0){
             if(fi.lastModified().daysTo(now) > periodicRefreshMode){
-                //qDebug() << "This files is too old - skipping";
+                qDebug() << "This file is too old - skipping";
                 continue;
             }
         }
@@ -81,6 +81,7 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
         ii++;
         progress.setValue(ii);
     }
+    qDebug() << "reading data from " << path2load << " finished";
 }
 
 
@@ -99,149 +100,33 @@ QRecord MainWindow::prepareQRecord(QFileInfo fileInfo, bool dynamic){
         }
         // skip loading files from static folders if that is enabled
         if(!dynamic && !loadStaticOnRefreshEnabled){
-            //qDebug() << "skipping!";
+            qDebug() << "static folder - skipping adding to queue!";
             return qrecord;
         }
-        checkQrecordInQMap(qrecord);
+        // using QMap - checks if the QPatient is already loaded
+        QMap<QString, bool>::iterator qit = IdMap.find(qrecord.id);
+        if (qit != IdMap.end()) {
+            // if the ID of QPatient is already loaded, add the record to QrecordQueue (does not create new QPatient)
+            QrecordQueue.enqueue(qrecord); // add record to queue
+        }
+        else{
+            // if QPatient is not loaded, check if there are older records in db
+            QPatient Qpatient = db.selectPatientbyIdWithRecords(qrecord.id);
+            QpatientQueue.enqueue(Qpatient); // add patient to queue
+            IdMap.insert(qrecord.id,1); // register patient to IDmap
+        }
     }
     return qrecord;
 }
-
-void MainWindow::checkQMap(){
-    if(IdMap.size()==0){
-        stackedLayout->setCurrentWidget(noDataWidget);
-    }else{
-        stackedLayout->setCurrentWidget(dataWidget);
-    }
-}
-
-void MainWindow::checkQrecordInQMap(QRecord qrecord){
-    // using QMap - checks if the QPatient is already loaded
-    QMap<QString, bool>::iterator qit = IdMap.find(qrecord.id);
-    if (qit != IdMap.end()) {
-        // if the ID of QPatient is already loaded, add the record to QrecordQueue (does not create new QPatient)
-        QrecordQueue.enqueue(qrecord); // add record to queue
-    }
-    else{
-        // if QPatient is not loaded, check if there are older records in db
-        QPatient Qpatient = db.selectPatientbyIdWithRecords(qrecord.id);
-        QpatientQueue.enqueue(Qpatient); // add patient to queue
-        IdMap.insert(qrecord.id,1); // register patient to IDmap
-    }
-}
-
-void MainWindow::initLoadData(){
-
-    // look for "next files" before initializing watchers
-    foreach (const QString &str, dynamic_dirs) {
-        next_files.push_back(getNextFileInFolder(str));
-    }
-
-    qDebug() << "next files are " << next_files;
-
-    // no db --> go through static and dynamic folders
-    // no folders --> ask for one
-
-    if(!dbLoaded){
-        if(static_dirs.isEmpty() && dynamic_dirs.isEmpty()){ // if there is no path to data it will ask for it right away
-            AddFolderDialog(0);
-        }else{
-            checkFolders(static_dirs, false);
-            checkFolders(dynamic_dirs, true);
-            //qDebug() << "total no of files processed: " << no_files_loaded;
-        }
-
-    }else{
-        //checkFolders(dynamic_dirs, true);
-    }
-}
-
 
 // ====== WATCHERS ======
 
 void MainWindow::initSystemWatcher(){
 
-    // construct QFileSystemWatcher and add dynamic dirs to it
-    watcher = new QFileSystemWatcher(dynamic_dirs, this);
-    qDebug() << "Directories being watched " << watcher->directories();
-    connect(watcher, SIGNAL(directoryChanged(QString)), this, SLOT(watchedDirChanged(QString)));
-
     // QFileSystemWatcher for files being recorded
     recordingFileWatcher = new QFileSystemWatcher(this);
     //recordingFileWatcher->addPath("D:/Dropbox/Scripts/Cpp/EEGLEnest/data_test/dynamic_data_test/S0023497.SIG");
     connect(recordingFileWatcher, SIGNAL(fileChanged(QString)), this, SLOT(recordedFileChanged(QString)));
-}
-
-void MainWindow::watchedDirChanged(const QString & path){
-    // empty log
-    QString log;
-    qDebug() << path << QDateTime::currentDateTime().toLocalTime();
-
-    // check if there is appropriate next files in folder that just changes
-    // get the right next file
-    int ind = dynamic_dirs.indexOf(path);
-    QString nextFile = next_files.at(ind);
-    QString nextFilePath = path + "/" + nextFile;
-    //check if it exists
-    if(QFile::exists(nextFilePath)){
-        qDebug() << "new file detected";
-        qDebug() << nextFilePath;
-        // if the new file exists check if it is oky
-        QFileInfo fi(nextFilePath);
-        QRecord qrecord = prepareQRecord(fi, true);
-
-        if (qrecord.check_flag == 1){
-            // if the record was oky than update treeview
-            updatePatientTreeModel();
-            treeView->viewport()->update();
-            // and get new name for next file
-            next_files.replace(ind,getNextFileName(nextFile));
-            log = log + nextFilePath + " started recording" + QDateTime::currentDateTime().toLocalTime().toString() +"\n";
-            qDebug() << next_files.at(ind);
-        }
-    }
-
-    log = log + path + " " + QDateTime::currentDateTime().toLocalTime().toString() + "\n";
-    writeWatcherLog(log);
-}
-
-
-QString MainWindow::getNextFileInFolder(QString path){
-    QDir dir(path);
-
-    // get list of files in folder
-    QStringList list = dir.entryList(QStringList() << "*.SIG" << "*.sig", QDir::Files, QDir::Name | QDir::Reversed);
-
-    qDebug() << "This is the list " << path;
-
-    // get the last one
-    QString lastFile = list.first();
-    qDebug() << "last file is" << lastFile;
-    QString nextFile = getNextFileName(lastFile);
-    qDebug() << "next file is" << nextFile;
-    return(nextFile);
-}
-
-QString MainWindow::getNextFileName(QString lastFile){
-    // get the name of not-yet-existing record
-
-    QRegExp rx;
-    rx.setPattern("\\d+");
-    rx.indexIn(lastFile);
-    //find numbers in file name
-    QStringList matches = rx.capturedTexts();
-    QString next_temp = matches.first(); // only one match is expected
-
-    // extract int and increase it by one
-    int next = next_temp.toInt();
-    next++;
-
-    // turn it back to filename
-    QString str;
-    str = QString::number(next).rightJustified(7,'0');
-    QString nextFile = "S"+str+".SIG";
-
-    return(nextFile);
 }
 
 void MainWindow::recordedFileChanged(const QString & path){
@@ -295,6 +180,8 @@ void MainWindow::writeWatcherLog(QString log){
 // TO DO - make this part of separate class?
 
 void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QRecord Qrecord, bool newRecord){
+    qDebug() << "start addQRecord2model";
+    qDebug() << Qrecord.file_name;
     // add int ncol for the old way of coloring red
     QTime n(0, 0, 0);
     QTime t;
@@ -327,6 +214,7 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
 }
 
 void addQPatient2model(QAbstractItemModel *model, QPatient Qpatient, bool boldParent){
+    qDebug() << "start addQPatient2model";
 
     // define patient
     model->insertRow(0);
@@ -415,11 +303,12 @@ void MainWindow::buildTreeView(){
 
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(double_click_tree(QModelIndex)));
 
-    //layout->addWidget(treeView);
-    dataLayout->addWidget(treeView);
+    layout->addWidget(treeView);
 };
 
 void MainWindow::updatePatientTreeModel(){
+
+    qDebug() << "start updatePatientTreeModel";
 
     // add new Qpatients from stack
     while (!QpatientQueue.isEmpty()){
@@ -429,8 +318,11 @@ void MainWindow::updatePatientTreeModel(){
 
     while (!QrecordQueue.isEmpty()){
         // find patient with matching id in the model and add records from the stack to it
+
         QString patientID = QrecordQueue.head().id;
         QString recordID = QrecordQueue.head().file_name;
+
+        qDebug() << recordID;
 
         QModelIndexList parents = sourceModel->match(sourceModel->index(0,0), Qt::DisplayRole, patientID, 1, Qt::MatchExactly); // find matching row by patient ID, only one match is expected
         QModelIndex parentInd = parents.first();
@@ -490,7 +382,7 @@ void MainWindow::double_click_record(QModelIndex index){
 
     // TO DO - check if the path exists?
 
-    // TO DO - make a constructor for this messagebox elsewhere?
+    // TO DO - make a constructor for this messagebox somewhere else?
     QMessageBox setProgram;
     setProgram.setIcon(QMessageBox::Question);
     setProgram.setText(tr("EEG reader is not set"));
@@ -607,7 +499,6 @@ void MainWindow::AddFolderDialog(bool dynamic){
     }
     checkDataOnHDD(new_dir,dynamic);
     updatePatientTreeModel();
-    checkQMap();
 };
 
 void MainWindow::connect2storage(){
@@ -729,21 +620,7 @@ void MainWindow::showPath(){
     }else{
         treeView->setColumnHidden(4,true);
     }
-
 }
-
-// ======== NO FILE WARNING ========
-
-void MainWindow::buildNoFileWarning(){
-    QFont warning( "Arial", 10, QFont::Bold);
-    QLabel *label = new QLabel();
-    label->setFont(warning);
-    label->setMargin(5);
-    QString noFiles = QString::fromLocal8Bit("Žádné soubory k naètení, vyberte složku, ve které se nacházejí *.sig sobory pomocí 'Data --> Add Folder'");
-    label->setText(noFiles);
-    label->setAlignment(Qt::AlignCenter);
-    noDataLayout->addWidget(label);
-};
 
 // ======== FILTER LINE ========
 
@@ -756,7 +633,7 @@ void MainWindow::buildFilterLine(){
     connect(filter, SIGNAL(returnPressed()), this, SLOT(filter_return_pressed()));
     //filter->setParent(dataWidget);
     //stackedLayout->addWidget(filter);
-    dataLayout->addWidget(filter);
+    layout->addWidget(filter);
 }
 
 void MainWindow::filter_text_changed(const QString & text){
@@ -828,7 +705,7 @@ MainWindow::MainWindow(QWidget *parent)
     // ======== Main Menu ========
     menubar = menuBar();
 
-    // ====== refresh action
+    // ====== refresh dynamic action
     refreshDynamicAction = new QAction(tr("Refresh Dynamic"),this);
     refreshDynamicAction->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
     refreshDynamicAction->setToolTip("test");
@@ -889,25 +766,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     // ====== LAYOUT =====
 
+    // ====== LAYOUT =====
     //set the layout
-    // stacked layout - one when there are data and one for empty data
-    stackedLayout = new QStackedLayout;
-    dataWidget = new QWidget;
-    noDataWidget = new QWidget;
-    dataLayout = new QVBoxLayout;
-    noDataLayout = new QVBoxLayout;
-    dataWidget->setLayout(dataLayout);
-    noDataWidget->setLayout(noDataLayout);
-    stackedLayout->addWidget(dataWidget);
-    stackedLayout->addWidget(noDataWidget);
-    auto central = new QWidget;
-    central->setLayout(stackedLayout);
-    setCentralWidget(central);
+    centralWidget = new QWidget(this);
+    setCentralWidget(centralWidget);
 
+    layout = new QVBoxLayout(centralWidget);
 
     // build parts of layout
     buildFilterLine(); // build filter line - do it first if you want it on the top
-    buildNoFileWarning();
     buildTreeView();
 }
 
@@ -978,7 +845,6 @@ void MainWindow::writeSettings()
     QSettings settings("settings.ini",QSettings::IniFormat);
     settings.setValue("external_program_reader", externalProgram1);
     settings.setValue("external_program_control", externalProgram2);
-    settings.setValue("path2QMap",QMapFile);
     settings.setValue("defaultDataFolder","D:/Dropbox/Scripts/Cpp/");
     settings.setValue("defaultReaderFolder","D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/");
     settings.setValue("refreshing_period",refreshingPeriod);
@@ -1008,7 +874,6 @@ void MainWindow::readSettings()
     QSettings settings("settings.ini",QSettings::IniFormat);
     externalProgram1 = settings.value("external_program_reader").toString();
     externalProgram2 = settings.value("external_program_control").toString();
-    QMapFile = settings.value("path2QMap").toString();
     defaultDataFolder = settings.value("defaultDataFolder").toString();
     defaultReaderFolder = settings.value("defaultReaderFolder").toString();
     refreshingPeriod = settings.value("refreshing_period").toInt();
@@ -1079,6 +944,5 @@ void MainWindow::connectDb(){
 
 MainWindow::~MainWindow()
 {
-    //saveQMap();
     writeSettings(); //save setting in .ini file
 }
