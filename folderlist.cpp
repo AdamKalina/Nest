@@ -18,7 +18,7 @@ folderList::folderList(QWidget *w_parent)
     dynamicLabel->setFont(f);
     dfolder_path_list = new QListWidget;
     dfolder_path_list->setSelectionBehavior(QAbstractItemView::SelectRows);
-    dfolder_path_list->setSelectionMode(QAbstractItemView::SingleSelection);
+    dfolder_path_list->setSelectionMode(QAbstractItemView::ExtendedSelection);
     dfolder_path_list->setSpacing(1);
 
     for(i=0; i < mainwindow->dynamic_dirs.size(); i++)
@@ -35,7 +35,7 @@ folderList::folderList(QWidget *w_parent)
     staticLabel->setFont(f);
     sfolder_path_list = new QListWidget;
     sfolder_path_list->setSelectionBehavior(QAbstractItemView::SelectRows);
-    sfolder_path_list->setSelectionMode(QAbstractItemView::SingleSelection);
+    sfolder_path_list->setSelectionMode(QAbstractItemView::ExtendedSelection);
     sfolder_path_list->setSpacing(1);
 
     for(i=0; i < mainwindow->static_dirs.size(); i++)
@@ -48,14 +48,27 @@ folderList::folderList(QWidget *w_parent)
     add_static_button->setMinimumWidth(180);
     add_static_button->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
 
+    refresh_sel_static_button = new QPushButton;
+    refresh_sel_static_button->setText(tr("Refresh selected"));
+    refresh_sel_static_button->setMinimumWidth(180);
+    refresh_sel_static_button->setIcon(mainwindow->style()->standardIcon(QStyle::SP_BrowserReload));
+
     CloseButton = new QPushButton;
     CloseButton->setText("Close");
     CloseButton->setMinimumWidth(180);
     CloseButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_DialogCloseButton));
 
+    QLabel *helpLabel = new QLabel(tr("Double click on item for context menu"));
+    helpLabel->setFont(f);
+
     QHBoxLayout *hlayout1 = new QHBoxLayout;
     hlayout1->addStretch(1000);
     hlayout1->addWidget(CloseButton);
+
+    QHBoxLayout *hlayoutStatic = new QHBoxLayout;
+    hlayoutStatic->addWidget(refresh_sel_static_button, Qt::AlignLeft);
+    hlayoutStatic->addStretch(1000);
+    hlayoutStatic->addWidget(add_static_button, Qt::AlignRight);
 
     QVBoxLayout *vlayout1 = new QVBoxLayout;
     vlayout1->addWidget(dynamicLabel);
@@ -63,7 +76,8 @@ folderList::folderList(QWidget *w_parent)
     vlayout1->addWidget(add_dynamic_button, 1000, Qt::AlignRight);
     vlayout1->addWidget(staticLabel);
     vlayout1->addWidget(sfolder_path_list, 1000);
-    vlayout1->addWidget(add_static_button, 1000, Qt::AlignRight);
+    vlayout1->addLayout(hlayoutStatic);
+    vlayout1->addWidget(helpLabel);
     vlayout1->addSpacing(20);
     vlayout1->addLayout(hlayout1);
 
@@ -74,6 +88,8 @@ folderList::folderList(QWidget *w_parent)
     connect(sfolder_path_list, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(rowClickedStatic(QListWidgetItem *)));
     connect(add_dynamic_button,SIGNAL(clicked()), this, SLOT(add_folder_dynamic()));
     connect(add_static_button,SIGNAL(clicked()), this, SLOT(add_folder_static()));
+    connect(refresh_sel_static_button,SIGNAL(clicked()), this, SLOT(refresh_sel_static()));
+
 
     edit_folders_dialog->exec();
 }
@@ -93,6 +109,14 @@ void folderList::add_folder_dynamic(){
 
 void folderList::add_folder_static(){
     add_folder(false);
+}
+
+void folderList::refresh_sel_static(){
+
+    for(int i = 0; i<sfolder_path_list->count(); i++){
+        mainwindow->checkDataOnHDD(sfolder_path_list->selectedItems().at(i)->text(), false);
+    }
+    mainwindow->updatePatientTreeModel();
 }
 
 // TO DO simplify adding new folder, make some method for refreshing QWidgetItemList

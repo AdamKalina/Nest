@@ -41,6 +41,14 @@ QDateTime decode_date_time(long date, long time)
     QTime startTime(h, min, s, ms);
     QDateTime startDateTime = QDateTime(startDate,startTime).toLocalTime();
 
+    // this is kinda hack - old BrainLab does not account for time transition to daylight saving time, I need to correct it manually
+    // works fine on my computer
+    //if(startDateTime.isDaylightTime()){
+        //qDebug() << "before " << startDateTime;
+      //  startDateTime = startDateTime.addSecs(3600);
+        //qDebug() << "after " << startDateTime;
+    //}
+
     return startDateTime;
 };
 
@@ -229,6 +237,8 @@ QRecord read_signal_file(QFileInfo fileInfo){
 
     // READ THE FILE
     std::fstream file(fileInfo.filePath().toLocal8Bit(), std::ios::in | std::ios::out | std::ios::binary);
+
+    //qDebug() << fileInfo.filePath();
 
     if (file.fail())
     {

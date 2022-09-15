@@ -35,7 +35,7 @@ QRecord MainWindow::getQRecord(QFileInfo fileInfo){
 }
 
 // ======== Go through files and collect fileInfo ========
-// this is separate function because there is no way to tell how long it will take so QProgressDialog could not be made
+// this is separate function because there is no way to tell how long it will take so QProgressDialog can not be used
 void MainWindow::checkDataOnHDD(QString path2load, bool dynamic){
 
     QDateTime now = QDateTime::currentDateTime();
@@ -100,7 +100,7 @@ QRecord MainWindow::prepareQRecord(QFileInfo fileInfo, bool dynamic){
         }
         // skip loading files from static folders if that is enabled
         if(!dynamic && !loadStaticOnRefreshEnabled){
-            qDebug() << "static folder - skipping adding to queue!";
+            qDebug() << "static folder - not adding to queue!";
             return qrecord;
         }
         // using QMap - checks if the QPatient is already loaded
@@ -180,8 +180,7 @@ void MainWindow::writeWatcherLog(QString log){
 // TO DO - make this part of separate class?
 
 void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QRecord Qrecord, bool newRecord){
-    qDebug() << "start addQRecord2model";
-    qDebug() << Qrecord.file_name;
+
     // add int ncol for the old way of coloring red
     QTime n(0, 0, 0);
     QTime t;
@@ -214,7 +213,6 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
 }
 
 void addQPatient2model(QAbstractItemModel *model, QPatient Qpatient, bool boldParent){
-    qDebug() << "start addQPatient2model";
 
     // define patient
     model->insertRow(0);
@@ -270,7 +268,7 @@ QAbstractItemModel* MainWindow::createPatientTreeModel(){
 
 void MainWindow::buildTreeView(){
 
-    qDebug() << "creating source model";
+    //qDebug() << "creating source model";
     sourceModel = createPatientTreeModel(); // create sourceModel
 
     proxyModel = new LeafFilterProxyModel(this); // use this custom FilterProxyModel
@@ -308,8 +306,6 @@ void MainWindow::buildTreeView(){
 
 void MainWindow::updatePatientTreeModel(){
 
-    qDebug() << "start updatePatientTreeModel";
-
     // add new Qpatients from stack
     while (!QpatientQueue.isEmpty()){
         // adds patients (that were not in the model already) from the stack to the model
@@ -321,8 +317,6 @@ void MainWindow::updatePatientTreeModel(){
 
         QString patientID = QrecordQueue.head().id;
         QString recordID = QrecordQueue.head().file_name;
-
-        qDebug() << recordID;
 
         QModelIndexList parents = sourceModel->match(sourceModel->index(0,0), Qt::DisplayRole, patientID, 1, Qt::MatchExactly); // find matching row by patient ID, only one match is expected
         QModelIndex parentInd = parents.first();
@@ -642,6 +636,7 @@ void MainWindow::filter_text_changed(const QString & text){
 }
 
 void MainWindow::filter_return_pressed(){
+    // TO DO - load only IDs at first and look for record only when the patient is not already loaded
     // if text = at least 6 numbers + X --> search ID
 
     QRegExp reId("\\d{6,}X{0,1}$");  // six or more digits (\d), with zero-to-one X on the end ($)
@@ -655,7 +650,13 @@ void MainWindow::filter_return_pressed(){
         if(reName.exactMatch(filter->text())){
             qDebug() << filter->text() << " is probably name";
             QPatient qpatient = db.selectPatientbyNameWithRecords(filter->text());
-            checkQPatient(qpatient);
+            if(qpatient.name.isEmpty()){
+                fullTextSearch(filter->text());
+            }else{
+                checkQPatient(qpatient);
+            }
+        }else{
+            fullTextSearch(filter->text());
         }
     }
 }
@@ -672,6 +673,31 @@ void MainWindow::checkQPatient(QPatient qpatient){
         IdMap.insert(qpatient.id,1); // register patient to IDmap
     }
     updatePatientTreeModel();
+}
+
+// makes query from db using LIKE in selected columns
+void MainWindow::fullTextSearch(QString query){
+    QVector<QString> qpatientIds = db.getPatientsIdbyTextNote(query);
+    qDebug() << qpatientIds;
+
+    // now iterate over the IDs and load only those not already in the treeview
+    QVectorIterator<QString> i(qpatientIds);
+    while (i.hasNext()){
+        QString qpatientID = i.next();
+        QMap<QString, bool>::iterator qit = IdMap.find(qpatientID);
+        if (qit != IdMap.end()) {
+            // if the ID of QPatient is already loaded, do nothing
+            qDebug() << "This patient is already loaded!";
+        }
+        else{
+            QPatient qpatient = db.selectPatientbyIdWithRecords(qpatientID);
+            QpatientQueue.enqueue(qpatient); // add patient to buffer
+            IdMap.insert(qpatient.id,1); // register patient to IDmap
+        }
+    }
+    updatePatientTreeModel();
+    treeView->viewport()->update(); //refresh the model
+    proxyModel->setFilterFixedString(query); //also refresh the view
 }
 
 // ======== MENU ========
@@ -835,6 +861,23 @@ void MainWindow::isItWorkingHours(){
     }
     refreshQTimer();
 }
+
+// ======== Close event ========
+
+void MainWindow::closeEvent (QCloseEvent *event)
+{
+    QMessageBox::StandardButton resBtn = QMessageBox::question( this, "EEGLE Nest",
+                                                                tr("Are you sure you want to close EEGLE Nest?\nIt takes rather long time to start again.\n"),
+                                                                QMessageBox::No | QMessageBox::Yes,
+                                                                QMessageBox::No);
+    if (resBtn != QMessageBox::Yes) {
+        event->ignore();
+    } else {
+        event->accept();
+    }
+}
+
+
 
 
 // ======== Write and Read Settings ========

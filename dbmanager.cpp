@@ -81,7 +81,8 @@ bool DbManager::updateRecord(QRecord qrecord){
 
     // UPDATE TABLE records
     QSqlQuery query;
-    query.prepare("UPDATE records SET class_code=:class_code, protocol=:protocol, doctor=:doctor, file_path=:file_path, recording_flag=:recording_flag, video_flag=:video_flag, num_pages=:num_pages WHERE file_name =:file_name");
+    query.prepare("UPDATE records SET record_start=:record_start, class_code=:class_code, protocol=:protocol, doctor=:doctor, file_path=:file_path, recording_flag=:recording_flag, video_flag=:video_flag, num_pages=:num_pages WHERE file_name =:file_name");
+    query.bindValue(":record_start", qrecord.record_start.toTime_t());
     query.bindValue(":class_code", qrecord.class_code);
     query.bindValue(":protocol",qrecord.protocol);
     query.bindValue(":doctor", qrecord.doctor);
@@ -332,6 +333,47 @@ QVector<QString> DbManager::getPatientsIdsbyMonthsAgo(int months){
         qDebug() << "problem with selecting patients by ID and months ago" << selectQuery.lastError();
     }
 
+    return qpatientIds;
+}
+
+QVector<QString> DbManager::getPatientsIdbyTextNote(QString query){
+    QVector<QString> qpatientIds;
+    QStringList cols;
+    cols << "name" << "class_code" << "doctor";
+    //qDebug() << cols;
+
+    //now run "like" sql query in given cols
+    for (int i = 0; i < cols.size(); ++i){
+        qpatientIds.append(getPatientsIdByTextNoteFromCol(cols.at(i), query));
+    }
+
+
+    // unique only? but it is already checked in mainwindow
+
+    return qpatientIds;
+}
+
+QVector<QString> DbManager::getPatientsIdByTextNoteFromCol(QString col, QString query){
+    //qDebug() << "now searching " << col << " for " << query;
+
+    QString query_string = "SELECT id FROM records WHERE ";
+    query_string += col;
+    query_string += " LIKE :query";
+
+    //qDebug() << query_string;
+
+    QVector<QString> qpatientIds;
+    QSqlQuery selectQuery;
+    selectQuery.prepare(query_string);
+    selectQuery.bindValue(":query", ("%" + query + "%"));
+    if(selectQuery.exec()){
+        while(selectQuery.next()){
+            qpatientIds.append(selectQuery.value("id").toString());
+            //qDebug() << selectQuery.value("id").toString();
+        }
+    }else{
+        qDebug() << "problem with selecting records in field: " << col << selectQuery.lastError();
+    }
     return qpatientIds;
 }
 

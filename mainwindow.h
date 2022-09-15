@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QCloseEvent>
 #include <QSplashScreen>
 #include <QTextCodec>
 #include <QDebug>
@@ -12,7 +13,6 @@
 //#include <QTextDocument>
 #include <QScrollArea>
 #include <QVBoxLayout>
-#include <QStackedLayout>
 
 #include <QTimer>
 #include <QElapsedTimer>
@@ -26,7 +26,7 @@
 #include <QProgressDialog>
 #include <QMessageBox>
 #include <QFileSystemWatcher>
-
+#include <QLockFile>
 #include <QDateTime>
 
 #include <QLineEdit>
@@ -134,6 +134,8 @@ public:
     QString getNextFileInFolder(QString path);
     QString getNextFileName(QString lastFile);
     void writeWatcherLog(QString log);
+    void closeEvent(QCloseEvent *event);
+    void fullTextSearch(QString query);
 
 
 public slots:

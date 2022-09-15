@@ -23,6 +23,7 @@ private:
 
     QPushButton  *CloseButton,
     *add_static_button,
+    *refresh_sel_static_button,
     *add_dynamic_button,
     *button1,
     *button2,
@@ -32,7 +33,8 @@ private:
     QListWidgetItem *currentItem;
 
     QLabel *staticLabel,
-    *dynamicLabel;
+    *dynamicLabel,
+    *helpLabel;
 
     QMessageBox *duplicate_msgBox;
 
@@ -50,6 +52,7 @@ private slots:
     void refreshEntry();
     void add_folder_dynamic();
     void add_folder_static();
+    void refresh_sel_static();
 
 };
 

@@ -5,6 +5,24 @@ int main(int argc, char *argv[])
 {
     setlocale(LC_ALL, "czech");
     QApplication a(argc, argv);
+
+
+    // use this for single instance application - from here https://evileg.com/en/post/147/
+    QLockFile lockFile(QDir::temp().absoluteFilePath("brainlab42.lock"));
+
+    /* Trying to close the Lock File, if the attempt is unsuccessful for 100 milliseconds,
+         * then there is a Lock File already created by another process.
+         / Therefore, we throw a warning and close the program
+         * */
+    if(!lockFile.tryLock(100)){
+        QMessageBox msgBox;
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.setText("The application is already running.\n"
+                           "Switch to the opened Nest instance.");
+        msgBox.exec();
+        return 1;
+    }
+
     QApplication::setWindowIcon(QIcon(":/images/nest_icon.png"));
 
     //Set Stylesheet

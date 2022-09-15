@@ -101,6 +101,10 @@ public:
 
     QPatient selectPatientbyNameWithRecords(QString name);
 
+    QVector<QString> getPatientsIdbyTextNote(QString query);
+
+    QVector<QString> getPatientsIdByTextNoteFromCol(QString field, QString query);
+
     // return QRecord selected by patient Id
     QRecord selectRecordById();
 
