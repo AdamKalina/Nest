@@ -14,11 +14,11 @@ externalprogramlist::externalprogramlist(QWidget *w_parent)
 
     QLabel *readerLabel = new QLabel(tr("EEG reader"));
     readerLabel->setFont(f);
-    readerEdit = new QLineEdit(mainwindow->externalProgram1);
+    readerEdit = new QLineEdit(mainwindow->nestOptions.externalProgram1);
 
     QLabel *controlLabel = new QLabel(tr("EEG reader for recorded files (control)"));
     controlLabel->setFont(f);
-    controlEdit = new QLineEdit(mainwindow->externalProgram2);
+    controlEdit = new QLineEdit(mainwindow->nestOptions.externalProgram2);
 
     cancelButton = new QPushButton;
     cancelButton->setText(tr("Cancel"));
@@ -103,7 +103,7 @@ void externalprogramlist::add_control(){
 
 void externalprogramlist::add_program(QString program){
 
-    QString temp = QFileDialog::getOpenFileName(0, tr("Choose EEG"), mainwindow->defaultReaderFolder, tr("BrainLab(*.exe)"));
+    QString temp = QFileDialog::getOpenFileName(0, tr("Choose EEG reader"), mainwindow->nestOptions.defaultReaderFolder, tr("BrainLab(*.exe)"));
 
     if(temp.isEmpty()){
         return;
@@ -120,7 +120,7 @@ void externalprogramlist::add_program(QString program){
 
 void externalprogramlist::saveAndClose(){
     // TO DO - path validator
-    mainwindow->externalProgram1 = readerEdit->text();
-    mainwindow->externalProgram2 = controlEdit->text();
+    mainwindow->nestOptions.externalProgram1 = readerEdit->text();
+    mainwindow->nestOptions.externalProgram2 = controlEdit->text();
     edit_program_dialog->close();
 }

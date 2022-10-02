@@ -56,6 +56,7 @@ set(PROJECT_SOURCES
         folderlist.cpp
         externalprogramlist.cpp
         refreshsettings.cpp
+        options_dialog.cpp
         customdelegate.cpp
         dbmanager.cpp
         resources.qrc

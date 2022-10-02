@@ -170,11 +170,11 @@ refreshSettings::refreshSettings(QWidget *w_parent)
 }
 
 void refreshSettings::loadSettingsFromMainWindow(){
-    RefreshModeId = mainwindow->periodicRefreshMode;
-    refreshingPeriod = mainwindow->refreshingPeriod;
-    periodicRefreshingEnabled = mainwindow->periodicRefreshingEnabled;
-    workingHoursOnly = mainwindow->workingHoursOnly;
-    loadStaticOnRefreshEnabled = mainwindow->loadStaticOnRefreshEnabled;
+    RefreshModeId = mainwindow->nestOptions.periodicRefreshMode;
+    refreshingPeriod = mainwindow->nestOptions.refreshingPeriod;
+    periodicRefreshingEnabled = mainwindow->nestOptions.periodicRefreshingEnabled;
+    workingHoursOnly = mainwindow->nestOptions.workingHoursOnly;
+    loadStaticOnRefreshEnabled = mainwindow->nestOptions.loadStaticOnRefreshEnabled;
 }
 
 void refreshSettings::modeButtonClicked(int value){
@@ -220,17 +220,17 @@ void refreshSettings::saveAndClose(){
     //qDebug() << "period" << refreshingPeriod;
     //qDebug() << "usePeriodic" << periodicRefreshingEnabled;
 
-    mainwindow->periodicRefreshMode = RefreshModeId;
+    mainwindow->nestOptions.periodicRefreshMode = RefreshModeId;
 
     // refreshing period should not be 0
     if(refreshingPeriod == 0){
         refreshingPeriod = 1;
     }
 
-    mainwindow->refreshingPeriod = refreshingPeriod;
-    mainwindow->periodicRefreshingEnabled = periodicRefreshingEnabled;
-    mainwindow->workingHoursOnly = workingHoursOnly;
-    mainwindow->loadStaticOnRefreshEnabled = loadStaticOnRefreshEnabled;
+    mainwindow->nestOptions.refreshingPeriod = refreshingPeriod;
+    mainwindow->nestOptions.periodicRefreshingEnabled = periodicRefreshingEnabled;
+    mainwindow->nestOptions.workingHoursOnly = workingHoursOnly;
+    mainwindow->nestOptions.loadStaticOnRefreshEnabled = loadStaticOnRefreshEnabled;
     mainwindow->refreshQTimer();
     mainwindow->workingHoursQTimer();
 

@@ -7,7 +7,7 @@ void MainWindow::loadDataFromDb(){
 
     if(db.isOpen()){
         // get IDs of patients that had at least one recording in last x months
-        QVector<QString> qpatientIds = db.getPatientsIdsbyMonthsAgo(months2load);
+        QVector<QString> qpatientIds = db.getPatientsIdsbyMonthsAgo(nestOptions.months2load);
 
         QVectorIterator<QString> i(qpatientIds);
         while (i.hasNext()){
@@ -48,8 +48,8 @@ void MainWindow::checkDataOnHDD(QString path2load, bool dynamic){
         QFileInfo fi(Qpath);
 
         // if this is dynamic folder and periodicRefreshMode != 0 --> decide whether to put the file in queue
-        if(dynamic && periodicRefreshMode != 0){
-            if(fi.lastModified().daysTo(now) > periodicRefreshMode){
+        if(dynamic && nestOptions.periodicRefreshMode != 0){
+            if(fi.lastModified().daysTo(now) > nestOptions.periodicRefreshMode){
                 qDebug() << "This file is too old - skipping";
                 continue;
             }
@@ -99,7 +99,7 @@ QRecord MainWindow::prepareQRecord(QFileInfo fileInfo, bool dynamic){
             qDebug() << "file "<< fileInfo.filePath() << "is being recorded = " << qrecord.recording_flag;
         }
         // skip loading files from static folders if that is enabled
-        if(!dynamic && !loadStaticOnRefreshEnabled){
+        if(!dynamic && !nestOptions.loadStaticOnRefreshEnabled){
             qDebug() << "static folder - not adding to queue!";
             return qrecord;
         }
@@ -260,7 +260,7 @@ QAbstractItemModel* MainWindow::createPatientTreeModel(){
 
     while (!QpatientQueue.isEmpty()){
         // adds the patient to the model
-        addQPatient2model(model, QpatientQueue.dequeue(), boldParent);
+        addQPatient2model(model, QpatientQueue.dequeue(), nestOptions.boldParent);
     }
 
     return model;
@@ -298,8 +298,10 @@ void MainWindow::buildTreeView(){
     treeView->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
     treeView->setItemDelegate(new CustomDelegate); // set custom delegate
     treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
+    treeView->setContextMenuPolicy(Qt::CustomContextMenu); // allow context menu
 
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(double_click_tree(QModelIndex)));
+    connect(treeView, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(ShowContextMenu(const QPoint &)));
 
     layout->addWidget(treeView);
 };
@@ -309,7 +311,7 @@ void MainWindow::updatePatientTreeModel(){
     // add new Qpatients from stack
     while (!QpatientQueue.isEmpty()){
         // adds patients (that were not in the model already) from the stack to the model
-        addQPatient2model(sourceModel, QpatientQueue.dequeue(), boldParent);
+        addQPatient2model(sourceModel, QpatientQueue.dequeue(), nestOptions.boldParent);
     }
 
     while (!QrecordQueue.isEmpty()){
@@ -367,6 +369,22 @@ void MainWindow::double_click_tree(QModelIndex index){
     }
 }
 
+void MainWindow::ShowContextMenu(const QPoint & pos){
+
+    QModelIndex index = treeView->indexAt(pos);
+    QVariant path = index.sibling(index.row(),4).data();
+
+    if(path.isValid()){
+        //qDebug() << path;
+        QMenu contextMenu(tr("Context menu"), this);
+        QAction action1(tr("Export to EDF"), this);
+        action1.setData(path);
+        connect(&action1, SIGNAL(triggered()), this, SLOT(exportToEDF()));
+        contextMenu.addAction(&action1);
+        contextMenu.exec(treeView->mapToGlobal(pos));
+    }
+}
+
 void MainWindow::double_click_record(QModelIndex index){
     // forking for recorded and still recording files only makes sense in BrainLab environment
     // on Win 10 it should be removed
@@ -391,7 +409,7 @@ void MainWindow::double_click_record(QModelIndex index){
     myProcess->setArguments(arguments);
 
     if (recording_flag.toBool()){
-        if(externalProgram2.isEmpty()){
+        if(nestOptions.externalProgram2.isEmpty()){
             int ret = setProgram.exec();
             if (ret == QMessageBox::Yes){
                 chooseExternalProgram2();
@@ -403,7 +421,7 @@ void MainWindow::double_click_record(QModelIndex index){
         openBrainLabControl(path);
     }
     else{
-        if(externalProgram1.isEmpty()){
+        if(nestOptions.externalProgram1.isEmpty()){
             int ret = setProgram.exec();
             if (ret == QMessageBox::Yes){
                 chooseExternalProgram1();
@@ -412,7 +430,7 @@ void MainWindow::double_click_record(QModelIndex index){
                 return;
             }
         }
-        myProcess->setProgram(this->externalProgram1);
+        myProcess->setProgram(this->nestOptions.externalProgram1);
         myProcess->start();
     }
 }
@@ -441,8 +459,51 @@ void MainWindow::openBrainLabControl(QString path){
     QStringList arguments;
     arguments << path;
     myProcess->setArguments(arguments);
-    myProcess->setProgram(this->externalProgram2);
+    myProcess->setProgram(this->nestOptions.externalProgram2);
     myProcess->start();
+}
+
+void MainWindow::exportToEDF(){
+    qDebug() << "Here!";
+    //using thi: https://stackoverflow.com/questions/28646914/qaction-with-custom-parameter
+    // TO DO: is there a canon way?, maybe https://forum.qt.io/topic/101448/argument-in-connect/4
+    QAction *act = qobject_cast<QAction *>(sender());
+    QVariant v = act->data();
+    qDebug() << v.toString();
+
+    // check if exporter is set
+    QMessageBox setProgram;
+    setProgram.setIcon(QMessageBox::Question);
+    setProgram.setText(tr("EEG exporter is not set"));
+    setProgram.setInformativeText(tr("Do you want to set it now?"));
+    setProgram.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    setProgram.setDefaultButton(QMessageBox::Yes);
+
+    if(nestOptions.exportProgram.isEmpty()){
+        int ret = setProgram.exec();
+        if (ret == QMessageBox::Yes){
+            chooseExternalProgram2(); //
+        }
+        else{
+            return;
+        }
+    }else{
+        // TO DO - set anonymize
+        QProcess *myProcess = new QProcess(nullptr);
+        QStringList arguments;
+        arguments << v.toString();
+
+        if(!nestOptions.exportPath.isEmpty()){
+            QFileInfo fi(v.toString());
+            QString str = nestOptions.exportPath + "/" + fi.baseName() + ".EDF";
+            arguments << str;
+            qDebug() << arguments;
+        }
+
+        myProcess->setArguments(arguments);
+        myProcess->setProgram(this->nestOptions.exportProgram);
+        myProcess->start();
+    }
 }
 
 
@@ -475,7 +536,7 @@ void MainWindow::AddDynamicFolderDialog(){
 
 void MainWindow::AddFolderDialog(bool dynamic){
 
-    new_dir = QFileDialog::getExistingDirectory(this, tr("Choose directory"), defaultDataFolder);
+    new_dir = QFileDialog::getExistingDirectory(this, tr("Choose directory"), nestOptions.defaultDataFolder);
     if(new_dir.isEmpty()){
         return;
     }
@@ -515,25 +576,37 @@ void MainWindow::runBatchFile(QString batchFile){
 
 void MainWindow::chooseExternalProgram1(){
 
-    QString temp = QFileDialog::getOpenFileName(this, tr("Choose EEG reader"), defaultReaderFolder, tr("BrainLab reader (*.exe)"));
+    QString temp = QFileDialog::getOpenFileName(this, tr("Choose EEG reader"), nestOptions.defaultReaderFolder, tr("BrainLab reader (*.exe)"));
 
     if(temp.isEmpty()){
         return;
     }
     else{
-        externalProgram1 = temp;
+        nestOptions.externalProgram1 = temp;
     }
 };
 
 void MainWindow::chooseExternalProgram2(){
 
-    QString temp = QFileDialog::getOpenFileName(this, tr("Choose EEG reader for control"), defaultReaderFolder, tr("BrainLab control (*.exe)"));
+    QString temp = QFileDialog::getOpenFileName(this, tr("Choose EEG reader for control"), nestOptions.defaultReaderFolder, tr("BrainLab control (*.exe)"));
 
     if(temp.isEmpty()){
         return;
     }
     else{
-        externalProgram2 = temp;
+        nestOptions.externalProgram2 = temp;
+    }
+};
+
+void MainWindow::chooseExportProgram(){
+
+    QString temp = QFileDialog::getOpenFileName(0, tr("Choose EDF exporter"), "", tr("Cuculus(*.exe)"));
+
+    if(temp.isEmpty()){
+        return;
+    }
+    else{
+        nestOptions.exportProgram = temp;
     }
 };
 
@@ -724,6 +797,10 @@ void MainWindow::editRefreshSettings()
     refreshSettings(this);
 }
 
+void MainWindow::editTabOptions(){
+    OptionsDialog(this);
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -752,9 +829,10 @@ MainWindow::MainWindow(QWidget *parent)
     setmenu->setTitle(tr("&Settings"));
     setmenu->addAction(tr("Add Reader"), this, SLOT(chooseExternalProgram1()));
     setmenu->addAction(tr("Add Control"), this, SLOT(chooseExternalProgram2()));
-    setmenu->addAction(tr("Folder list"), this, SLOT(editFolderList()));
-    setmenu->addAction(tr("Program list"), this, SLOT(editProgramList()));
-    setmenu->addAction(tr("Refresh settings"), this, SLOT(editRefreshSettings()));
+    setmenu->addAction(tr("Folders"), this, SLOT(editFolderList()));
+    //setmenu->addAction(tr("Program list"), this, SLOT(editProgramList()));
+    //setmenu->addAction(tr("Refresh settings"), this, SLOT(editRefreshSettings()));
+    setmenu->addAction(tr("Options"), this, SLOT(editTabOptions()));
 
     // ======= View ========
     viewmenu = new QMenu(this);
@@ -819,11 +897,11 @@ void MainWindow::setUpRefreshQTimer(){
 
 void MainWindow::refreshQTimer(){
 
-    qDebug() << "refreshing period: " << refreshingPeriod << " minutes";
-    qDebug() << "periodic Refreshing Enabled: " << periodicRefreshingEnabled;
+    qDebug() << "refreshing period: " << nestOptions.refreshingPeriod << " minutes";
+    qDebug() << "periodic Refreshing Enabled: " << nestOptions.periodicRefreshingEnabled;
 
-    if (periodicRefreshingEnabled){
-        timer->start(refreshingPeriod*60*1000); // in ms (from minutes)
+    if (nestOptions.periodicRefreshingEnabled){
+        timer->start(nestOptions.refreshingPeriod*60*1000); // in ms (from minutes)
     }else{
         timer->stop();
     }
@@ -831,7 +909,7 @@ void MainWindow::refreshQTimer(){
 
 // do not refresh automatically if it less then "refreshingPeriod" since last manual refresh
 void MainWindow::isItTimeToRefresh(){
-    if (lastRefreshTime.secsTo(QDateTime::currentDateTime()) > refreshingPeriod*60){
+    if (lastRefreshTime.secsTo(QDateTime::currentDateTime()) > nestOptions.refreshingPeriod*60){
         refreshDynamic();
     }
 
@@ -844,7 +922,7 @@ void MainWindow::setUpWorkingHoursQTimer(){
 }
 
 void MainWindow::workingHoursQTimer(){ // fires every hour to check if it working hours
-    if (workingHoursOnly){
+    if (nestOptions.workingHoursOnly){
         whTimer->start(1000*3600); // one hour
     }else{
         whTimer->stop();
@@ -854,10 +932,10 @@ void MainWindow::workingHoursQTimer(){ // fires every hour to check if it workin
 void MainWindow::isItWorkingHours(){
     int now = QTime::currentTime().hour();
     if(now > 7 && now < 17){
-        periodicRefreshingEnabled = true;
+        nestOptions.periodicRefreshingEnabled = true;
     }else
     {
-        periodicRefreshingEnabled = false;
+        nestOptions.periodicRefreshingEnabled = false;
     }
     refreshQTimer();
 }
@@ -886,16 +964,20 @@ void MainWindow::writeSettings()
 {
     //QSettings settings("PuffinSoft", "EEGle Nest");
     QSettings settings("settings.ini",QSettings::IniFormat);
-    settings.setValue("external_program_reader", externalProgram1);
-    settings.setValue("external_program_control", externalProgram2);
+    settings.setValue("external_program_reader", nestOptions.externalProgram1);
+    settings.setValue("external_program_control", nestOptions.externalProgram2);
     settings.setValue("defaultDataFolder","D:/Dropbox/Scripts/Cpp/");
     settings.setValue("defaultReaderFolder","D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/");
-    settings.setValue("refreshing_period",refreshingPeriod);
-    settings.setValue("periodic_refreshing_enabled", periodicRefreshingEnabled);
-    settings.setValue("load_static_on_refresh_enabled",loadStaticOnRefreshEnabled);
-    settings.setValue("periodic_refreshing_in_working_hours_only",workingHoursOnly);
-    settings.setValue("periodic_refresh_mode",periodicRefreshMode);
-    settings.setValue("bold_parent",boldParent);
+    settings.setValue("refreshing_period",nestOptions.refreshingPeriod);
+    settings.setValue("periodic_refreshing_enabled", nestOptions.periodicRefreshingEnabled);
+    settings.setValue("load_static_on_refresh_enabled",nestOptions.loadStaticOnRefreshEnabled);
+    settings.setValue("periodic_refreshing_in_working_hours_only",nestOptions.workingHoursOnly);
+    settings.setValue("periodic_refresh_mode",nestOptions.periodicRefreshMode);
+    settings.setValue("bold_parent",nestOptions.boldParent);
+    settings.setValue("anonymize_export",nestOptions.anonymizeExport);
+    settings.setValue("export_program",nestOptions.exportProgram);
+    settings.setValue("export_path",nestOptions.exportPath);
+
 
     settings.beginWriteArray("static_dirs");
     for (int i = 0; i < static_dirs.size(); ++i) {
@@ -915,16 +997,19 @@ void MainWindow::writeSettings()
 void MainWindow::readSettings()
 {
     QSettings settings("settings.ini",QSettings::IniFormat);
-    externalProgram1 = settings.value("external_program_reader").toString();
-    externalProgram2 = settings.value("external_program_control").toString();
-    defaultDataFolder = settings.value("defaultDataFolder").toString();
-    defaultReaderFolder = settings.value("defaultReaderFolder").toString();
-    refreshingPeriod = settings.value("refreshing_period").toInt();
-    periodicRefreshingEnabled = settings.value("periodic_refreshing_enabled").toBool();
-    loadStaticOnRefreshEnabled = settings.value("load_static_on_refresh_enabled").toBool();
-    workingHoursOnly = settings.value("periodic_refreshing_in_working_hours_only").toBool();
-    periodicRefreshMode = settings.value("periodic_refresh_mode").toInt();
-    boldParent = settings.value("bold_parent").toBool();
+    nestOptions.externalProgram1 = settings.value("external_program_reader").toString();
+    nestOptions.externalProgram2 = settings.value("external_program_control").toString();
+    nestOptions.defaultDataFolder = settings.value("defaultDataFolder").toString();
+    nestOptions.defaultReaderFolder = settings.value("defaultReaderFolder").toString();
+    nestOptions.refreshingPeriod = settings.value("refreshing_period").toInt();
+    nestOptions.periodicRefreshingEnabled = settings.value("periodic_refreshing_enabled").toBool();
+    nestOptions.loadStaticOnRefreshEnabled = settings.value("load_static_on_refresh_enabled").toBool();
+    nestOptions.workingHoursOnly = settings.value("periodic_refreshing_in_working_hours_only").toBool();
+    nestOptions.periodicRefreshMode = settings.value("periodic_refresh_mode").toInt();
+    nestOptions.boldParent = settings.value("bold_parent").toBool();
+    nestOptions.anonymizeExport = settings.value("anonymize_export").toBool();
+    nestOptions.exportProgram = settings.value("export_program").toString();
+    nestOptions.exportPath = settings.value("export_path").toString();
 
     // load array of static folders
     int size = settings.beginReadArray("static_dirs");

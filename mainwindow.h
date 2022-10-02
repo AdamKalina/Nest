@@ -7,10 +7,6 @@
 #include <QTextCodec>
 #include <QDebug>
 #include <QColor>
-//#include <QDir>
-//#include <QPainter>
-//#include <QRect>
-//#include <QTextDocument>
 #include <QScrollArea>
 #include <QVBoxLayout>
 
@@ -48,6 +44,7 @@
 #include "externalprogramlist.h"
 #include "leaffilterproxymodel.h"
 #include "refreshsettings.h"
+#include "options_dialog.h"
 #include "customdelegate.h"
 #include "dbmanager.h"
 #include <stdio.h>
@@ -66,14 +63,15 @@ public:
     // std variables
     bool sourceModelLoaded = false;
     bool dbLoaded = false;
-    int refreshingPeriod = 15; // in minutes
-    bool periodicRefreshingEnabled = false;
-    bool workingHoursOnly = false;
-    bool loadStaticOnRefreshEnabled = true;
-    bool boldParent = false;
     long no_files_loaded = 0;
-    int periodicRefreshMode = 0;
-    int months2load = 24;
+    //    int refreshingPeriod = 15; // in minutes
+    //    bool periodicRefreshingEnabled = false;
+    //    bool workingHoursOnly = false;
+    //    bool loadStaticOnRefreshEnabled = true;
+    //    bool boldParent = false;
+
+    //    int periodicRefreshMode = 0;
+    //    int months2load = 24;
 
     // Qt variables
     QMap<QString, QPatient> patientMap;
@@ -84,12 +82,8 @@ public:
     QStringList static_dirs;
     QStringList dynamic_dirs;
     QStringList next_files;
-    QString externalProgram1; // for regular files, scan.exe. in XP "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
-    QString externalProgram2;// for files being recorded - control.exe in XP
     QString new_dir;
     QString QMapFile;
-    QString defaultDataFolder;
-    QString defaultReaderFolder;
     QString path2db = "records.db";
     QString brainLabDrive = "S:\\";
     QStringList usedDrives;
@@ -97,6 +91,7 @@ public:
     QDateTime lastRefreshTime;
     QIcon dvicon;
     DbManager db;
+    n_options nestOptions;
 
     // functions
     void readSettings();
@@ -144,6 +139,7 @@ public slots:
     void AddStaticFolderDialog();
     void chooseExternalProgram1();
     void chooseExternalProgram2();
+    void chooseExportProgram();
     void filter_text_changed(const QString & text);
     void filter_return_pressed();
     void refreshDynamic();
@@ -154,12 +150,15 @@ public slots:
     void editFolderList();
     void editProgramList();
     void editRefreshSettings();
+    void editTabOptions();
     void isItWorkingHours();
     void isItTimeToRefresh();
     void collapseAll();
     void expandAll();
     void showPath();
     void recordedFileChanged(const QString & path);
+    void ShowContextMenu(const QPoint &);
+    void exportToEDF();
 
 private:
     QMenuBar *menubar;

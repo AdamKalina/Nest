@@ -50,4 +50,32 @@ QDataStream & operator<<(QDataStream & out, const QRecord & Qrecord);
 QDataStream & operator>>(QDataStream & in, QRecord & Qrecord);
 QDataStream & operator>>(QDataStream & in, QPatient & Qpatient);
 
+class n_options{
+
+public:
+    // general
+    int months2load = 24;
+    bool boldParent = false;
+
+    // refreshing settings
+    int refreshingPeriod = 15; // in minutes
+    bool periodicRefreshingEnabled = false;
+    bool workingHoursOnly = false;
+    bool loadStaticOnRefreshEnabled = true;
+    int periodicRefreshMode = 0;
+
+    // EEG reader
+    QString externalProgram1; // for regular files, scan.exe. in XP "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
+    QString externalProgram2; // for files being recorded - control.exe in XP
+    QString defaultReaderFolder;
+
+    // EDF export
+    QString exportProgram;
+    QString exportPath;
+    bool anonymizeExport = false;
+
+    // EEG folders
+    QString defaultDataFolder;
+};
+
 #endif // QPATIENT_H

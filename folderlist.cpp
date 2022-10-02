@@ -113,7 +113,7 @@ void folderList::add_folder_static(){
 
 void folderList::refresh_sel_static(){
 
-    for(int i = 0; i<sfolder_path_list->count(); i++){
+    for(int i = 0; i<sfolder_path_list->selectedItems().count(); i++){
         mainwindow->checkDataOnHDD(sfolder_path_list->selectedItems().at(i)->text(), false);
     }
     mainwindow->updatePatientTreeModel();
@@ -128,7 +128,7 @@ void folderList::add_folder(bool dynamic){
     duplicate_msgBox->setText(tr("Duplicate folder detected"));
     duplicate_msgBox->setInformativeText(tr("Returning withou action"));
 
-    QString new_dir = QFileDialog::getExistingDirectory(0, tr("Choose directory"), mainwindow->defaultDataFolder);
+    QString new_dir = QFileDialog::getExistingDirectory(0, tr("Choose directory"), mainwindow->nestOptions.defaultDataFolder);
     if(new_dir.isEmpty()){
         return;
     }
@@ -218,7 +218,7 @@ void folderList::adEntry(){
     duplicate_msgBox->setText(tr("Duplicate folder detected"));
     duplicate_msgBox->setInformativeText(tr("Returning withou action"));
 
-    QString new_dir = QFileDialog::getExistingDirectory(0, tr("Choose directory"), mainwindow->defaultDataFolder);
+    QString new_dir = QFileDialog::getExistingDirectory(0, tr("Choose directory"), mainwindow->nestOptions.defaultDataFolder);
     if(new_dir.isEmpty()){
         return;
     }
