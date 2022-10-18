@@ -374,7 +374,7 @@ void MainWindow::ShowContextMenu(const QPoint & pos){
     QModelIndex index = treeView->indexAt(pos);
     QVariant path = index.sibling(index.row(),4).data();
 
-    if(path.isValid()){
+    if(path.isValid() && nestOptions.allowExport){
         //qDebug() << path;
         QMenu contextMenu(tr("Context menu"), this);
         QAction action1(tr("Export to EDF"), this);
@@ -488,8 +488,7 @@ void MainWindow::exportToEDF(){
             return;
         }
     }else{
-        // TO DO - set anonymize
-        QProcess *myProcess = new QProcess(nullptr);
+        QProcess *exportProcess = new QProcess(nullptr);
         QStringList arguments;
         arguments << v.toString();
 
@@ -497,12 +496,28 @@ void MainWindow::exportToEDF(){
             QFileInfo fi(v.toString());
             QString str = nestOptions.exportPath + "/" + fi.baseName() + ".EDF";
             arguments << str;
-            qDebug() << arguments;
         }
 
-        myProcess->setArguments(arguments);
-        myProcess->setProgram(this->nestOptions.exportProgram);
-        myProcess->start();
+        if(nestOptions.anonymizeExport){
+            arguments << "-a";
+        }
+
+        if(nestOptions.shortenExport){
+            arguments << "-s";
+        }
+
+        exportProcess->setArguments(arguments);
+        exportProcess->setProgram(this->nestOptions.exportProgram);
+        exportProcess->start();
+
+        // prepared for debugging, maybe can I can also create slots to catch errors later and show them to user
+//        exportProcess->waitForFinished(-1);
+
+//        QString output(exportProcess->readAllStandardOutput());
+//        qDebug() << output;
+
+//        QString code(exportProcess->exitCode());
+//        qDebug() << code;
     }
 }
 
@@ -787,15 +802,15 @@ void MainWindow::editFolderList()
     folderList(this);
 }
 
-void MainWindow::editProgramList()
-{
-    externalprogramlist(this);
-}
+//void MainWindow::editProgramList()
+//{
+//    externalprogramlist(this);
+//}
 
-void MainWindow::editRefreshSettings()
-{
-    refreshSettings(this);
-}
+//void MainWindow::editRefreshSettings()
+//{
+//    refreshSettings(this);
+//}
 
 void MainWindow::editTabOptions(){
     OptionsDialog(this);
@@ -977,6 +992,8 @@ void MainWindow::writeSettings()
     settings.setValue("anonymize_export",nestOptions.anonymizeExport);
     settings.setValue("export_program",nestOptions.exportProgram);
     settings.setValue("export_path",nestOptions.exportPath);
+    settings.setValue("allow_export",nestOptions.allowExport);
+    settings.setValue("shorten_export",nestOptions.shortenExport);
 
 
     settings.beginWriteArray("static_dirs");
@@ -1010,6 +1027,8 @@ void MainWindow::readSettings()
     nestOptions.anonymizeExport = settings.value("anonymize_export").toBool();
     nestOptions.exportProgram = settings.value("export_program").toString();
     nestOptions.exportPath = settings.value("export_path").toString();
+    nestOptions.allowExport = settings.value("allow_export").toBool();
+    nestOptions.shortenExport = settings.value("shorten_export").toBool();
 
     // load array of static folders
     int size = settings.beginReadArray("static_dirs");

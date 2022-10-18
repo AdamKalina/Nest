@@ -148,8 +148,8 @@ public slots:
     void show_about_dialog();
     void connect2storage();
     void editFolderList();
-    void editProgramList();
-    void editRefreshSettings();
+    //void editProgramList();
+    //void editRefreshSettings();
     void editTabOptions();
     void isItWorkingHours();
     void isItTimeToRefresh();

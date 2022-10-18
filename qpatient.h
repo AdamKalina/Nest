@@ -73,6 +73,8 @@ public:
     QString exportProgram;
     QString exportPath;
     bool anonymizeExport = false;
+    bool allowExport = true;
+    bool shortenExport = false;
 
     // EEG folders
     QString defaultDataFolder;

@@ -43,14 +43,19 @@ private:
     *tab6,
     *tab7;
 
-    QLabel *dialLabel, *timeLabel;
-    QCheckBox *usePeriodic, *useWorkingHours;
+    QLabel *dialLabel, *timeLabel, *exportLabel, *exportPathLabel;
+    QCheckBox *usePeriodic,
+    *useWorkingHours,
+    *anonymizeCheckBox,
+    *shortenCheckBox,
+    *systemEventsCheckBox,
+    *enableDebugModeCheckBox;
     QDial *hourDial;
 
     QLineEdit *readerEdit,
     *controlEdit,
     *exportEdit,
-    *pathLabelEdit;
+    *exportPathEdit;
 
     void add_program(QString program);
     void loadSettingsFromMainWindow();
@@ -67,6 +72,8 @@ public slots:
     void add_exporter();
     void add_path2export();
     void enableAnonymize(bool checked);
+    void enableShorten(bool checked);
+    void enableExport(bool checked);
 };
 
 

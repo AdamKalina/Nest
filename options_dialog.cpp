@@ -93,7 +93,7 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     useWorkingHours->setFont(ff);
     useWorkingHours->setEnabled(mainwindow->nestOptions.periodicRefreshingEnabled);
     useWorkingHours->setChecked(mainwindow->nestOptions.workingHoursOnly);
-    QLabel *useWorkingHoursInfo = new QLabel(tr("If it will perform periodic refresh in working hours only - set from 7 AM to 17 PM"));
+    QLabel *useWorkingHoursInfo = new QLabel(tr("If checked it will perform periodic refresh in working hours only - set from 7 AM to 17 PM"));
     useWorkingHoursInfo->setFont(ii);
 
     // ======== REFRESH STATIC ========
@@ -187,35 +187,59 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     /////////////////////////////////////// tab 3 EDF export ///////////////////////////////////////////////////////////////////////
     tab3 = new QWidget;
 
+    QCheckBox *allowExportCheckBox = new QCheckBox("Allow export");
+    allowExportCheckBox->setFont(ff);
+    allowExportCheckBox->setChecked(mainwindow->nestOptions.allowExport);
+
     QLabel *exportLabel = new QLabel(tr("EDF exporter"));
     exportLabel->setFont(b);
     exportEdit = new QLineEdit(mainwindow->nestOptions.exportProgram);
+    exportEdit->setEnabled(mainwindow->nestOptions.allowExport);
 
     changeExportProgramButton = new QPushButton;
     changeExportProgramButton->setText(tr("Choose Export Program"));
     changeExportProgramButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+    changeExportProgramButton->setEnabled(mainwindow->nestOptions.allowExport);
 
     QLabel *exportPathLabel = new QLabel(tr("Path to exported files"));
     exportPathLabel->setFont(b);
-    pathLabelEdit = new QLineEdit(mainwindow->nestOptions.exportPath);
+    exportPathEdit = new QLineEdit(mainwindow->nestOptions.exportPath);
+    exportPathEdit->setEnabled(mainwindow->nestOptions.allowExport);
 
     changeExportPathButton = new QPushButton;
     changeExportPathButton->setText(tr("Choose export path"));
     changeExportPathButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+    changeExportPathButton->setEnabled(mainwindow->nestOptions.allowExport);
 
-    QCheckBox *anonymizeCheckBox = new QCheckBox("Anonymize");
+    anonymizeCheckBox = new QCheckBox(tr("Anonymize"));
     anonymizeCheckBox->setFont(ff);
     anonymizeCheckBox->setChecked(mainwindow->nestOptions.anonymizeExport);
+    anonymizeCheckBox->setEnabled(mainwindow->nestOptions.allowExport);
+
+    shortenCheckBox = new QCheckBox(tr("Shorten event labels"));
+    shortenCheckBox->setFont(ff);
+    shortenCheckBox->setChecked(mainwindow->nestOptions.shortenExport);
+    shortenCheckBox->setEnabled(mainwindow->nestOptions.allowExport);
+
+    systemEventsCheckBox = new QCheckBox(tr("Enable export of system events - not yet ready"));
+    systemEventsCheckBox->setFont(ff);
+    //systemEventsCheckBox->setChecked(mainwindow->nestOptions.shortenExport);
+    systemEventsCheckBox->setEnabled(false);
+
+    enableDebugModeCheckBox = new QCheckBox(tr("Enable debug mode for export - not yet ready"));
+    enableDebugModeCheckBox->setFont(ff);
+    enableDebugModeCheckBox->setEnabled(false);
 
     QHBoxLayout *hlayout_export_program = new QHBoxLayout;
     hlayout_export_program->addWidget(exportEdit);
     hlayout_export_program->addWidget(changeExportProgramButton);
 
     QHBoxLayout *hlayout_export_path = new QHBoxLayout;
-    hlayout_export_path->addWidget(pathLabelEdit);
+    hlayout_export_path->addWidget(exportPathEdit);
     hlayout_export_path->addWidget(changeExportPathButton);
 
     QVBoxLayout *vlayout3 = new QVBoxLayout;
+    vlayout3->addWidget(allowExportCheckBox);
     vlayout3->addWidget(exportLabel,0,Qt::AlignBottom);
     vlayout3->addLayout(hlayout_export_program);
     vlayout3->addSpacing(40);
@@ -223,13 +247,16 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     vlayout3->addLayout(hlayout_export_path);
     vlayout3->addSpacing(40);
     vlayout3->addWidget(anonymizeCheckBox);
+    vlayout3->addWidget(shortenCheckBox);
+    vlayout3->addWidget(systemEventsCheckBox);
+    vlayout3->addWidget(enableDebugModeCheckBox);
     vlayout3->addStretch(10);
 
     tab3->setLayout(vlayout3);
     tab3->adjustSize();
 
     /////////////////////////////////////// tab 4 Other ///////////////////////////////////////////////////////////////////////
-    tab4 = new QWidget;
+    tab4 = new QWidget; // not used
 
 
     // =============== Commons ====================
@@ -279,6 +306,8 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     connect(changeExportProgramButton, SIGNAL(clicked()), this,SLOT(add_exporter()));
     connect(changeExportPathButton, SIGNAL(clicked()), this,SLOT(add_path2export()));
     connect(anonymizeCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableAnonymize(bool)));
+    connect(shortenCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableShorten(bool)));
+    connect(allowExportCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableExport(bool)));
     // SAVE or CANCEL
     connect(cancelButton,   SIGNAL(clicked()), optionsdialog, SLOT(close()));
     connect(saveButton,   SIGNAL(clicked()), this, SLOT(saveAndClose()));
@@ -357,6 +386,17 @@ void OptionsDialog::add_program(QString program){
     }
 }
 
+void OptionsDialog::enableExport(bool checked){
+    un_options.allowExport = checked;
+    exportEdit->setEnabled(checked);
+    changeExportProgramButton->setEnabled(checked);
+    exportPathEdit->setEnabled(checked);
+    changeExportPathButton->setEnabled(checked);
+    anonymizeCheckBox->setEnabled(checked);
+    shortenCheckBox->setEnabled(checked);
+}
+
+
 void OptionsDialog::add_exporter(){
     QString temp = QFileDialog::getOpenFileName(0, tr("Choose EDF exporter"), "", tr("Cuculus(*.exe)"));
 
@@ -373,13 +413,17 @@ void OptionsDialog::add_path2export(){
     if(temp.isEmpty()){
         return;
     }else{
-        pathLabelEdit->setText(temp);
+        exportPathEdit->setText(temp);
     }
 
 }
 
 void OptionsDialog::enableAnonymize(bool checked){
     un_options.anonymizeExport= checked;
+}
+
+void OptionsDialog::enableShorten(bool checked){
+    un_options.shortenExport= checked;
 }
 
 void OptionsDialog::saveAndClose(){
@@ -398,7 +442,7 @@ void OptionsDialog::saveAndClose(){
     un_options.externalProgram2 = controlEdit->text();
     //    //EDF EXPORT
     un_options.exportProgram = exportEdit->text();
-    un_options.exportPath =  pathLabelEdit->text();
+    un_options.exportPath =  exportPathEdit->text();
 
 
     qDebug() << "Save and Close";
