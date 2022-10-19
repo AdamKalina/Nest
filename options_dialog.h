@@ -74,6 +74,7 @@ public slots:
     void enableAnonymize(bool checked);
     void enableShorten(bool checked);
     void enableExport(bool checked);
+    void enableSystemEventsExport(bool checked);
 };
 
 

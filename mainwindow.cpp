@@ -464,8 +464,7 @@ void MainWindow::openBrainLabControl(QString path){
 }
 
 void MainWindow::exportToEDF(){
-    qDebug() << "Here!";
-    //using thi: https://stackoverflow.com/questions/28646914/qaction-with-custom-parameter
+    //using this: https://stackoverflow.com/questions/28646914/qaction-with-custom-parameter
     // TO DO: is there a canon way?, maybe https://forum.qt.io/topic/101448/argument-in-connect/4
     QAction *act = qobject_cast<QAction *>(sender());
     QVariant v = act->data();
@@ -506,12 +505,16 @@ void MainWindow::exportToEDF(){
             arguments << "-s";
         }
 
+        if(nestOptions.exportSystemEvents){
+            arguments << "-y";
+        }
+
         exportProcess->setArguments(arguments);
         exportProcess->setProgram(this->nestOptions.exportProgram);
         exportProcess->start();
 
         // prepared for debugging, maybe can I can also create slots to catch errors later and show them to user
-//        exportProcess->waitForFinished(-1);
+//        exportProcess->waitForFinished(-1); //needed
 
 //        QString output(exportProcess->readAllStandardOutput());
 //        qDebug() << output;
@@ -994,7 +997,7 @@ void MainWindow::writeSettings()
     settings.setValue("export_path",nestOptions.exportPath);
     settings.setValue("allow_export",nestOptions.allowExport);
     settings.setValue("shorten_export",nestOptions.shortenExport);
-
+    settings.setValue("export_system_events",nestOptions.exportSystemEvents);
 
     settings.beginWriteArray("static_dirs");
     for (int i = 0; i < static_dirs.size(); ++i) {
@@ -1029,6 +1032,7 @@ void MainWindow::readSettings()
     nestOptions.exportPath = settings.value("export_path").toString();
     nestOptions.allowExport = settings.value("allow_export").toBool();
     nestOptions.shortenExport = settings.value("shorten_export").toBool();
+    nestOptions.exportSystemEvents = settings.value("export_system_events").toBool();
 
     // load array of static folders
     int size = settings.beginReadArray("static_dirs");

@@ -221,10 +221,9 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     shortenCheckBox->setChecked(mainwindow->nestOptions.shortenExport);
     shortenCheckBox->setEnabled(mainwindow->nestOptions.allowExport);
 
-    systemEventsCheckBox = new QCheckBox(tr("Enable export of system events - not yet ready"));
+    systemEventsCheckBox = new QCheckBox(tr("Enable export of system events"));
     systemEventsCheckBox->setFont(ff);
-    //systemEventsCheckBox->setChecked(mainwindow->nestOptions.shortenExport);
-    systemEventsCheckBox->setEnabled(false);
+    systemEventsCheckBox->setChecked(mainwindow->nestOptions.exportSystemEvents);
 
     enableDebugModeCheckBox = new QCheckBox(tr("Enable debug mode for export - not yet ready"));
     enableDebugModeCheckBox->setFont(ff);
@@ -308,6 +307,7 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     connect(anonymizeCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableAnonymize(bool)));
     connect(shortenCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableShorten(bool)));
     connect(allowExportCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableExport(bool)));
+    connect(systemEventsCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableSystemEventsExport(bool)));
     // SAVE or CANCEL
     connect(cancelButton,   SIGNAL(clicked()), optionsdialog, SLOT(close()));
     connect(saveButton,   SIGNAL(clicked()), this, SLOT(saveAndClose()));
@@ -394,6 +394,7 @@ void OptionsDialog::enableExport(bool checked){
     changeExportPathButton->setEnabled(checked);
     anonymizeCheckBox->setEnabled(checked);
     shortenCheckBox->setEnabled(checked);
+    systemEventsCheckBox->setEnabled(checked);
 }
 
 
@@ -424,6 +425,10 @@ void OptionsDialog::enableAnonymize(bool checked){
 
 void OptionsDialog::enableShorten(bool checked){
     un_options.shortenExport= checked;
+}
+
+void OptionsDialog::enableSystemEventsExport(bool checked){
+    un_options.exportSystemEvents = checked;
 }
 
 void OptionsDialog::saveAndClose(){
