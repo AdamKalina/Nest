@@ -99,7 +99,7 @@ QRecord MainWindow::prepareQRecord(QFileInfo fileInfo, bool dynamic){
             qDebug() << "file "<< fileInfo.filePath() << "is being recorded = " << qrecord.recording_flag;
         }
         // skip loading files from static folders if that is enabled
-        if(!dynamic && !nestOptions.loadStaticOnRefreshEnabled){
+        if(!dynamic && !nestOptions.refreshLoadStatic){
             qDebug() << "static folder - not adding to queue!";
             return qrecord;
         }
@@ -348,6 +348,25 @@ void MainWindow::incrementParentNo(QModelIndex parentInd){
     sourceModel->setData(parentInd.sibling(parentInd.row(),3),tempNo,Qt::DisplayRole);
 }
 
+void MainWindow::changeParentNoOfRecords(QModelIndex parentInd, int change){
+    // increase parent number of EEG by 1 or -1
+    int tempNo = parentInd.sibling(parentInd.row(),3).data().toInt();
+    tempNo += change;
+
+    if(tempNo == 0){
+        QString id = parentInd.data().toString();
+        IdMap.remove(id); // remove patients from QMap
+        proxyModel->removeRows(parentInd.row(),1,parentInd.parent()); // remove the patient from model
+        db.removePerson(id); // remove the patients from database
+    }
+    else{
+        proxyModel->setData(parentInd.sibling(parentInd.row(),3),tempNo,Qt::DisplayRole); //tady to funguje jen s proxyModelem - proè?
+        // TO DO - update time of last EEG
+        //qDebug() << "tady!" << change << tempNo;
+        //qDebug() << "result = " << parentInd.sibling(parentInd.row(),3).data().toInt();
+    }
+}
+
 void MainWindow::updateParentTime(QModelIndex parentInd){
     // change time of last EEG to current record - if it is newer
     QVariant QtempTime = sourceModel->data(parentInd.sibling(parentInd.row(),2));
@@ -374,14 +393,37 @@ void MainWindow::ShowContextMenu(const QPoint & pos){
     QModelIndex index = treeView->indexAt(pos);
     QVariant path = index.sibling(index.row(),4).data();
 
-    if(path.isValid() && nestOptions.allowExport){
-        //qDebug() << path;
+    // TO DO - when the path.isValid() == false --> je to parent (pacient), vytvoøit možnost ho taky smazat
+
+    if((nestOptions.recordDeleteAllow || nestOptions.exportAllow) && path.isValid()){
+        qDebug() << path;
         QMenu contextMenu(tr("Context menu"), this);
-        QAction action1(tr("Export to EDF"), this);
-        action1.setData(path);
-        connect(&action1, SIGNAL(triggered()), this, SLOT(exportToEDF()));
-        contextMenu.addAction(&action1);
+        QAction exportAction(tr("Export to EDF"), this);
+        exportAction.setData(path);
+        connect(&exportAction, SIGNAL(triggered()), this, SLOT(exportToEDF()));
+        contextMenu.addAction(&exportAction);
+
+
+
+        QAction deleteAction(tr("Delete this record"), this);
+        //deleteAction.setData(path);
+        connect(&deleteAction, SIGNAL(triggered()), this, SLOT(deleteRecord()));
+        contextMenu.addAction(&deleteAction);
+
+
+        // when I tried to add actions to menu on "if", it stopped working, so I use this
+        if(!nestOptions.recordDeleteAllow){
+            contextMenu.removeAction(&deleteAction);
+        }
+
+        if(!nestOptions.exportAllow){
+            contextMenu.removeAction(&exportAction);
+        }
+
         contextMenu.exec(treeView->mapToGlobal(pos));
+        //
+
+
     }
 }
 
@@ -497,11 +539,11 @@ void MainWindow::exportToEDF(){
             arguments << str;
         }
 
-        if(nestOptions.anonymizeExport){
+        if(nestOptions.exportAnonymize){
             arguments << "-a";
         }
 
-        if(nestOptions.shortenExport){
+        if(nestOptions.exportShortenLabels){
             arguments << "-s";
         }
 
@@ -514,14 +556,34 @@ void MainWindow::exportToEDF(){
         exportProcess->start();
 
         // prepared for debugging, maybe can I can also create slots to catch errors later and show them to user
-//        exportProcess->waitForFinished(-1); //needed
+        //        exportProcess->waitForFinished(-1); //needed
 
-//        QString output(exportProcess->readAllStandardOutput());
-//        qDebug() << output;
+        //        QString output(exportProcess->readAllStandardOutput());
+        //        qDebug() << output;
 
-//        QString code(exportProcess->exitCode());
-//        qDebug() << code;
+        //        QString code(exportProcess->exitCode());
+        //        qDebug() << code;
     }
+}
+
+void MainWindow::deleteRecord(){
+    QModelIndex index = treeView->selectionModel()->currentIndex();
+
+    QString file_name = index.sibling(index.row(),0).data().toString();
+
+    bool removeSuccess = proxyModel->removeRows(index.row(),1,index.parent()); // the magic was in calling the right model - did not work with sourceModel
+
+    if (removeSuccess){
+        qDebug() << "success on removal " << removeSuccess;
+        changeParentNoOfRecords(index.parent(), -1);
+        db.removeRecord(file_name);
+    }
+
+
+
+
+    // TO DO - lower the number of records in parent by one and delete it if it becomes zero
+    // TO DO - delete the record from db
 }
 
 
@@ -805,16 +867,6 @@ void MainWindow::editFolderList()
     folderList(this);
 }
 
-//void MainWindow::editProgramList()
-//{
-//    externalprogramlist(this);
-//}
-
-//void MainWindow::editRefreshSettings()
-//{
-//    refreshSettings(this);
-//}
-
 void MainWindow::editTabOptions(){
     OptionsDialog(this);
 }
@@ -940,7 +992,7 @@ void MainWindow::setUpWorkingHoursQTimer(){
 }
 
 void MainWindow::workingHoursQTimer(){ // fires every hour to check if it working hours
-    if (nestOptions.workingHoursOnly){
+    if (nestOptions.refreshWorkingHoursOnly){
         whTimer->start(1000*3600); // one hour
     }else{
         whTimer->stop();
@@ -988,16 +1040,16 @@ void MainWindow::writeSettings()
     settings.setValue("defaultReaderFolder","D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/");
     settings.setValue("refreshing_period",nestOptions.refreshingPeriod);
     settings.setValue("periodic_refreshing_enabled", nestOptions.periodicRefreshingEnabled);
-    settings.setValue("load_static_on_refresh_enabled",nestOptions.loadStaticOnRefreshEnabled);
-    settings.setValue("periodic_refreshing_in_working_hours_only",nestOptions.workingHoursOnly);
+    settings.setValue("load_static_on_refresh_enabled",nestOptions.refreshLoadStatic);
+    settings.setValue("periodic_refreshing_in_working_hours_only",nestOptions.refreshWorkingHoursOnly);
     settings.setValue("periodic_refresh_mode",nestOptions.periodicRefreshMode);
     settings.setValue("bold_parent",nestOptions.boldParent);
-    settings.setValue("anonymize_export",nestOptions.anonymizeExport);
+    settings.setValue("anonymize_export",nestOptions.exportAnonymize);
     settings.setValue("export_program",nestOptions.exportProgram);
     settings.setValue("export_path",nestOptions.exportPath);
-    settings.setValue("allow_export",nestOptions.allowExport);
-    settings.setValue("shorten_export",nestOptions.shortenExport);
+    settings.setValue("shorten_export",nestOptions.exportShortenLabels);
     settings.setValue("export_system_events",nestOptions.exportSystemEvents);
+    settings.setValue("enable_delete_records",nestOptions.recordDeleteAllow);
 
     settings.beginWriteArray("static_dirs");
     for (int i = 0; i < static_dirs.size(); ++i) {
@@ -1023,16 +1075,17 @@ void MainWindow::readSettings()
     nestOptions.defaultReaderFolder = settings.value("defaultReaderFolder").toString();
     nestOptions.refreshingPeriod = settings.value("refreshing_period").toInt();
     nestOptions.periodicRefreshingEnabled = settings.value("periodic_refreshing_enabled").toBool();
-    nestOptions.loadStaticOnRefreshEnabled = settings.value("load_static_on_refresh_enabled").toBool();
-    nestOptions.workingHoursOnly = settings.value("periodic_refreshing_in_working_hours_only").toBool();
+    nestOptions.refreshLoadStatic = settings.value("load_static_on_refresh_enabled").toBool();
+    nestOptions.refreshWorkingHoursOnly = settings.value("periodic_refreshing_in_working_hours_only").toBool();
     nestOptions.periodicRefreshMode = settings.value("periodic_refresh_mode").toInt();
     nestOptions.boldParent = settings.value("bold_parent").toBool();
-    nestOptions.anonymizeExport = settings.value("anonymize_export").toBool();
+    nestOptions.exportAnonymize = settings.value("anonymize_export").toBool();
     nestOptions.exportProgram = settings.value("export_program").toString();
     nestOptions.exportPath = settings.value("export_path").toString();
-    nestOptions.allowExport = settings.value("allow_export").toBool();
-    nestOptions.shortenExport = settings.value("shorten_export").toBool();
+    nestOptions.exportAllow = settings.value("allow_export").toBool();
+    nestOptions.exportShortenLabels = settings.value("shorten_export").toBool();
     nestOptions.exportSystemEvents = settings.value("export_system_events").toBool();
+    nestOptions.recordDeleteAllow = settings.value("enable_delete_records").toBool();
 
     // load array of static folders
     int size = settings.beginReadArray("static_dirs");

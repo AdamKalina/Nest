@@ -202,16 +202,14 @@ bool DbManager::addPerson(QRecord qrecord){
 }
 
 
-// not my function
-bool DbManager::removePerson(const QString& name)
-{
+bool DbManager::removePerson(const QString& id){
     bool success = false;
 
-    if (patientExists(name))
+    if (patientExists(id))
     {
         QSqlQuery queryDelete;
-        queryDelete.prepare("DELETE FROM patients WHERE name = (:name)");
-        queryDelete.bindValue(":name", name);
+        queryDelete.prepare("DELETE FROM patients WHERE id = (:id)");
+        queryDelete.bindValue(":id", id);
         success = queryDelete.exec();
 
         if(!success)
@@ -221,7 +219,28 @@ bool DbManager::removePerson(const QString& name)
     }
     else
     {
-        qDebug() << "remove person failed: person doesnt exist";
+        qDebug() << "remove person failed: person doesn't exist";
+    }
+
+    return success;
+}
+
+bool DbManager::removeRecord(const QString& file_name){
+    bool success = false;
+
+    if (recordExists(file_name)){
+        QSqlQuery queryDelete;
+        queryDelete.prepare("DELETE FROM records WHERE file_name = (:file_name)");
+        queryDelete.bindValue(":file_name", file_name);
+        success = queryDelete.exec();
+
+        if(!success){
+            qDebug() << "remove record failed: " << queryDelete.lastError();
+        }
+    }
+    else
+    {
+        qDebug() << "remove record failed: record doesn't exist";
     }
 
     return success;
@@ -249,15 +268,12 @@ bool DbManager::patientExists(const QString& id) const
     checkQuery.prepare("SELECT id FROM patients WHERE id = (:id)");
     checkQuery.bindValue(":id", id);
 
-    if (checkQuery.exec())
-    {
-        if (checkQuery.next())
-        {
+    if (checkQuery.exec()){
+        if (checkQuery.next()){
             exists = true;
         }
     }
-    else
-    {
+    else{
         qDebug() << "person exists failed: " << checkQuery.lastError();
     }
 
@@ -272,15 +288,12 @@ bool DbManager::recordExists(const QString& file_name) const
     checkQuery.prepare("SELECT file_name FROM records WHERE file_name = (:file_name)");
     checkQuery.bindValue(":file_name", file_name);
 
-    if (checkQuery.exec())
-    {
-        if (checkQuery.next())
-        {
+    if (checkQuery.exec()){
+        if (checkQuery.next()){
             exists = true;
         }
     }
-    else
-    {
+    else{
         qDebug() << "record exists failed: " << checkQuery.lastError();
     }
 
@@ -385,8 +398,7 @@ bool DbManager::selectPatient(){
     selectQuery.prepare("SELECT id, name, last_record, sex FROM patients");
     selectQuery.exec();
 
-    while (selectQuery.next())
-    {
+    while (selectQuery.next()){
         QPatient qpatient;
         qpatient.set_values_from_db(selectQuery.record());
 

@@ -60,9 +60,9 @@ public:
     // refreshing settings
     int refreshingPeriod = 15; // in minutes
     bool periodicRefreshingEnabled = false;
-    bool workingHoursOnly = false;
-    bool loadStaticOnRefreshEnabled = true;
     int periodicRefreshMode = 0;
+    bool refreshWorkingHoursOnly = false;
+    bool refreshLoadStatic = true;
 
     // EEG reader
     QString externalProgram1; // for regular files, scan.exe. in XP "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
@@ -72,13 +72,16 @@ public:
     // EDF export
     QString exportProgram;
     QString exportPath;
-    bool anonymizeExport = false;
-    bool allowExport = true;
-    bool shortenExport = false;
+    bool exportAnonymize = false;
+    bool exportAllow = true;
+    bool exportShortenLabels = false;
     bool exportSystemEvents = false;
 
     // EEG folders
     QString defaultDataFolder;
+
+    // user editing of db
+    bool recordDeleteAllow = false;
 };
 
 #endif // QPATIENT_H

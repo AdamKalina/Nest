@@ -92,7 +92,7 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     useWorkingHours = new QCheckBox("Use in working hours only");
     useWorkingHours->setFont(ff);
     useWorkingHours->setEnabled(mainwindow->nestOptions.periodicRefreshingEnabled);
-    useWorkingHours->setChecked(mainwindow->nestOptions.workingHoursOnly);
+    useWorkingHours->setChecked(mainwindow->nestOptions.refreshWorkingHoursOnly);
     QLabel *useWorkingHoursInfo = new QLabel(tr("If checked it will perform periodic refresh in working hours only - set from 7 AM to 17 PM"));
     useWorkingHoursInfo->setFont(ii);
 
@@ -103,7 +103,7 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
 
     QCheckBox *loadStaticOnRefresh = new QCheckBox("Load static data on refresh");
     loadStaticOnRefresh->setFont(ff);
-    loadStaticOnRefresh->setChecked(mainwindow->nestOptions.loadStaticOnRefreshEnabled);
+    loadStaticOnRefresh->setChecked(mainwindow->nestOptions.refreshLoadStatic);
     QLabel *staticLabelInfo = new QLabel(tr("If checked it will load data from refreshed static folders into model.\nIf unchecked it will only refresh database entries."));
     staticLabelInfo->setFont(ii);
 
@@ -189,37 +189,37 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
 
     QCheckBox *allowExportCheckBox = new QCheckBox("Allow export");
     allowExportCheckBox->setFont(ff);
-    allowExportCheckBox->setChecked(mainwindow->nestOptions.allowExport);
+    allowExportCheckBox->setChecked(mainwindow->nestOptions.exportAllow);
 
     QLabel *exportLabel = new QLabel(tr("EDF exporter"));
     exportLabel->setFont(b);
     exportEdit = new QLineEdit(mainwindow->nestOptions.exportProgram);
-    exportEdit->setEnabled(mainwindow->nestOptions.allowExport);
+    exportEdit->setEnabled(mainwindow->nestOptions.exportAllow);
 
     changeExportProgramButton = new QPushButton;
     changeExportProgramButton->setText(tr("Choose Export Program"));
     changeExportProgramButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
-    changeExportProgramButton->setEnabled(mainwindow->nestOptions.allowExport);
+    changeExportProgramButton->setEnabled(mainwindow->nestOptions.exportAllow);
 
     QLabel *exportPathLabel = new QLabel(tr("Path to exported files"));
     exportPathLabel->setFont(b);
     exportPathEdit = new QLineEdit(mainwindow->nestOptions.exportPath);
-    exportPathEdit->setEnabled(mainwindow->nestOptions.allowExport);
+    exportPathEdit->setEnabled(mainwindow->nestOptions.exportAllow);
 
     changeExportPathButton = new QPushButton;
     changeExportPathButton->setText(tr("Choose export path"));
     changeExportPathButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
-    changeExportPathButton->setEnabled(mainwindow->nestOptions.allowExport);
+    changeExportPathButton->setEnabled(mainwindow->nestOptions.exportAllow);
 
     anonymizeCheckBox = new QCheckBox(tr("Anonymize"));
     anonymizeCheckBox->setFont(ff);
-    anonymizeCheckBox->setChecked(mainwindow->nestOptions.anonymizeExport);
-    anonymizeCheckBox->setEnabled(mainwindow->nestOptions.allowExport);
+    anonymizeCheckBox->setChecked(mainwindow->nestOptions.exportAnonymize);
+    anonymizeCheckBox->setEnabled(mainwindow->nestOptions.exportAllow);
 
     shortenCheckBox = new QCheckBox(tr("Shorten event labels"));
     shortenCheckBox->setFont(ff);
-    shortenCheckBox->setChecked(mainwindow->nestOptions.shortenExport);
-    shortenCheckBox->setEnabled(mainwindow->nestOptions.allowExport);
+    shortenCheckBox->setChecked(mainwindow->nestOptions.exportShortenLabels);
+    shortenCheckBox->setEnabled(mainwindow->nestOptions.exportAllow);
 
     systemEventsCheckBox = new QCheckBox(tr("Enable export of system events"));
     systemEventsCheckBox->setFont(ff);
@@ -255,7 +255,17 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     tab3->adjustSize();
 
     /////////////////////////////////////// tab 4 Other ///////////////////////////////////////////////////////////////////////
-    tab4 = new QWidget; // not used
+    tab4 = new QWidget;
+
+    QCheckBox *allowDeleteRecordCheckBox = new QCheckBox("Allow database editing by user");
+    allowDeleteRecordCheckBox->setFont(ff);
+    allowDeleteRecordCheckBox->setChecked(mainwindow->nestOptions.recordDeleteAllow);
+
+    QVBoxLayout *vlayout4 = new QVBoxLayout;
+    vlayout4->addWidget(allowDeleteRecordCheckBox);
+    vlayout4->addSpacing(40);
+    tab4->setLayout(vlayout4);
+    tab4->adjustSize();
 
 
     // =============== Commons ====================
@@ -275,7 +285,7 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     tabholder->addTab(tab1, "&Refresh settings");
     tabholder->addTab(tab2, "E&xternal Program");
     tabholder->addTab(tab3, "&EDF export");
-    //tabholder->addTab(tab4, "Other");
+    tabholder->addTab(tab4, "Other");
 
     QHBoxLayout *horLayout = new QHBoxLayout;
     horLayout->addStretch(1000);
@@ -308,6 +318,8 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     connect(shortenCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableShorten(bool)));
     connect(allowExportCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableExport(bool)));
     connect(systemEventsCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableSystemEventsExport(bool)));
+    // OTHER
+    connect(allowDeleteRecordCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableDelete(bool)));
     // SAVE or CANCEL
     connect(cancelButton,   SIGNAL(clicked()), optionsdialog, SLOT(close()));
     connect(saveButton,   SIGNAL(clicked()), this, SLOT(saveAndClose()));
@@ -352,12 +364,12 @@ void OptionsDialog::enablePeriodicRefreshing(bool checked){
 }
 
 void OptionsDialog::enableWorkingHoursOnly(bool checked){
-    un_options.workingHoursOnly = checked;
+    un_options.refreshWorkingHoursOnly = checked;
     qDebug() << checked;
 }
 
 void OptionsDialog::enableLoadStaticOnRefresh(bool checked){
-    un_options.loadStaticOnRefreshEnabled = checked;
+    un_options.refreshLoadStatic = checked;
     qDebug() << checked;
 }
 
@@ -387,7 +399,7 @@ void OptionsDialog::add_program(QString program){
 }
 
 void OptionsDialog::enableExport(bool checked){
-    un_options.allowExport = checked;
+    un_options.exportAllow = checked;
     exportEdit->setEnabled(checked);
     changeExportProgramButton->setEnabled(checked);
     exportPathEdit->setEnabled(checked);
@@ -420,15 +432,19 @@ void OptionsDialog::add_path2export(){
 }
 
 void OptionsDialog::enableAnonymize(bool checked){
-    un_options.anonymizeExport= checked;
+    un_options.exportAnonymize= checked;
 }
 
 void OptionsDialog::enableShorten(bool checked){
-    un_options.shortenExport= checked;
+    un_options.exportShortenLabels= checked;
 }
 
 void OptionsDialog::enableSystemEventsExport(bool checked){
     un_options.exportSystemEvents = checked;
+}
+
+void OptionsDialog::enableDelete(bool checked){
+    un_options.recordDeleteAllow = checked;
 }
 
 void OptionsDialog::saveAndClose(){
@@ -452,7 +468,7 @@ void OptionsDialog::saveAndClose(){
 
     qDebug() << "Save and Close";
     qDebug() << "Refresh mode: " << un_options.periodicRefreshMode;
-    qDebug() << "Load static on refresh: " << un_options.loadStaticOnRefreshEnabled;
+    qDebug() << "Load static on refresh: " << un_options.refreshLoadStatic;
 
     mainwindow->nestOptions = un_options;
 

@@ -75,6 +75,7 @@ public slots:
     void enableShorten(bool checked);
     void enableExport(bool checked);
     void enableSystemEventsExport(bool checked);
+    void enableDelete(bool checked);
 };
 
 

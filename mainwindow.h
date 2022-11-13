@@ -113,6 +113,7 @@ public:
     void rebuildPatientTreeModel();
     void updatePatientTreeModel();
     void incrementParentNo(QModelIndex parentInd);
+    void changeParentNoOfRecords(QModelIndex parentInd, int change);
     void updateParentTime(QModelIndex parentInd);
     void buildNoFileWarning();
     void AddFolderDialog(bool dynamic);
@@ -159,6 +160,7 @@ public slots:
     void recordedFileChanged(const QString & path);
     void ShowContextMenu(const QPoint &);
     void exportToEDF();
+    void deleteRecord();
 
 private:
     QMenuBar *menubar;

@@ -66,10 +66,17 @@ public:
 
     /**
      * @brief Remove person data from db
-     * @param name - name of person to remove.
+     * @param id - id of person to remove.
      * @return true - person removed successfully, false - person not removed
      */
-    bool removePerson(const QString& name);
+    bool removePerson(const QString& id);
+
+    /**
+     * @brief Remove record data from db
+     * @param file_name - file name of record to remove.
+     * @return true - record removed successfully, false -  record not removed
+     */
+    bool removeRecord(const QString& file_name);
 
     /**
      * @brief Check if person of name "name" exists in db
