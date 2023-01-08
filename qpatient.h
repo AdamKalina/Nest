@@ -76,6 +76,7 @@ public:
     bool exportAllow = true;
     bool exportShortenLabels = false;
     bool exportSystemEvents = false;
+    bool exportEnableDebug = false;
 
     // EEG folders
     QString defaultDataFolder;

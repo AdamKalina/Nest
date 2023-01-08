@@ -224,10 +224,12 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     systemEventsCheckBox = new QCheckBox(tr("Enable export of system events"));
     systemEventsCheckBox->setFont(ff);
     systemEventsCheckBox->setChecked(mainwindow->nestOptions.exportSystemEvents);
+    systemEventsCheckBox->setEnabled(mainwindow->nestOptions.exportAllow);
 
-    enableDebugModeCheckBox = new QCheckBox(tr("Enable debug mode for export - not yet ready"));
+    enableDebugModeCheckBox = new QCheckBox(tr("Enable debug mode for export"));
     enableDebugModeCheckBox->setFont(ff);
-    enableDebugModeCheckBox->setEnabled(false);
+    enableDebugModeCheckBox->setChecked(mainwindow->nestOptions.exportEnableDebug);
+    enableDebugModeCheckBox->setEnabled(mainwindow->nestOptions.exportAllow);
 
     QHBoxLayout *hlayout_export_program = new QHBoxLayout;
     hlayout_export_program->addWidget(exportEdit);
@@ -261,9 +263,14 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     allowDeleteRecordCheckBox->setFont(ff);
     allowDeleteRecordCheckBox->setChecked(mainwindow->nestOptions.recordDeleteAllow);
 
+    QLabel *deleteRecordInfo = new QLabel(tr("When enabled, use right click on record to delete it. If it is the last record, it deletes the patient as well.\n"
+"On refresh it loads the data again, so be sure you correct the file info first."));
+    deleteRecordInfo->setFont(ii);
+
     QVBoxLayout *vlayout4 = new QVBoxLayout;
     vlayout4->addWidget(allowDeleteRecordCheckBox);
-    vlayout4->addSpacing(40);
+    vlayout4->addWidget(deleteRecordInfo);
+    vlayout4->addStretch();
     tab4->setLayout(vlayout4);
     tab4->adjustSize();
 
@@ -318,6 +325,7 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     connect(shortenCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableShorten(bool)));
     connect(allowExportCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableExport(bool)));
     connect(systemEventsCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableSystemEventsExport(bool)));
+    connect(enableDebugModeCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableDebugMode(bool)));
     // OTHER
     connect(allowDeleteRecordCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableDelete(bool)));
     // SAVE or CANCEL
@@ -407,6 +415,7 @@ void OptionsDialog::enableExport(bool checked){
     anonymizeCheckBox->setEnabled(checked);
     shortenCheckBox->setEnabled(checked);
     systemEventsCheckBox->setEnabled(checked);
+    enableDebugModeCheckBox->setEnabled(checked);
 }
 
 
@@ -441,6 +450,10 @@ void OptionsDialog::enableShorten(bool checked){
 
 void OptionsDialog::enableSystemEventsExport(bool checked){
     un_options.exportSystemEvents = checked;
+}
+
+void OptionsDialog::enableDebugMode(bool checked){
+    un_options.exportEnableDebug = checked;
 }
 
 void OptionsDialog::enableDelete(bool checked){

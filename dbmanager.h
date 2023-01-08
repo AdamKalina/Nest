@@ -13,14 +13,12 @@ class DbManager
 public:
 
     DbManager();
+
     /**
-     * @brief Constructor
-     *
+     * @brief setPath = Constructor
      * Constructor sets up connection with db and opens it
      * @param path - absolute path to db file
      */
-    //DbManager(const QString& path);
-
     bool setPath(const QString& path);
 
     /**
@@ -30,6 +28,10 @@ public:
      */
     ~DbManager();
 
+    /**
+      * @brief Checks if the database is opened
+      * @return true = db is opened, false = db is not opened
+      */
     bool isOpen() const;
 
     /**
@@ -39,29 +41,50 @@ public:
     bool createTablePatients();
 
     /**
-     * @brief Creates a new index in TABLE 'patients' if it doesn't already exist
+     * @brief Creates a new index idx_last_record in TABLE 'patients' if it doesn't already exist
      * @return true - index created successfully, false - table not created
      */
-
     bool createIndexPatients();
 
+    /**
+     * @brief Creates a new 'records' table if it doesn't already exist
+     * @return true - 'records' table created successfully, false - table not created
+     */
     bool createTableRecords();
 
-    bool createIndexRecords();
-
     /**
-     * @brief Add person data to db
-     * @param name - name of person to add
+     * @brief Add person data to db patients
+     * @param qrecord - qrecord with patients data
      * @return true - person added successfully, false - person not added
      */
     bool addPerson(QRecord qrecord);
 
+    /**
+     * @brief Add record data to db, logic inside checks if it already exists (--> updateRecord) or if it is new record (--> insertNewRecord)
+     * @param qrecord - qrecord with record data
+     * @return true - record added successfully, record - person not added
+     */
     bool addRecord(QRecord qrecord);
 
+    /**
+     * @brief Insert new record to db
+     * @param qrecord - qrecord with record data
+     * @return true - new record inserted successfully, record - new record not inserted
+     */
     bool insertNewRecord(QRecord qrecord);
 
+    /**
+     * @brief Update existing record
+     * @param qrecord - qrecord with record data
+     * @return true - record updated successfully, record - record not updated
+     */
     bool updateRecord(QRecord qrecord);
 
+    /**
+     * @brief Finds patient for given records and checks if the newly inserted record is newer then last_record
+     * @param qrecord - qrecord with record data
+     * @return true - record updated successfully, record - record not updated
+     */
     bool updatePatientLastRecord(QRecord qrecord);
 
     /**
@@ -97,23 +120,50 @@ public:
      */
     void printAllPersons() const;
 
+    /**
+     * @brief Get patients ids from db where last_record > 2 years ago (hardcoded in the function)
+     * @return Qvector<QString> of patients ids
+     */
     QVector<QString> getPatientsIds();
 
+    /**
+     * @brief Get patients ids from db where last_record > months ago
+     * @param months - number of months to look for in the past
+     * @return Qvector<QString> of patients ids
+     */
     QVector<QString> getPatientsIdsbyMonthsAgo(int months);
 
-    bool selectPatient();
-
-    QPatient selectPatientbyIdWithRecords(QString id);
-
-
-    QPatient selectPatientbyNameWithRecords(QString name);
-
+    /**
+     * @brief Get patients ids from db where name/class_code/doctor LIKE query, wrapper function for getPatientsIdByTextNoteFromCol
+     * @param query - QString inserted by user into filter line
+     * @return Qvector<QString> of patients ids
+     */
     QVector<QString> getPatientsIdbyTextNote(QString query);
 
+    /**
+     * @brief Get patients ids from db where field LIKE query
+     * @param query - QString inserted by user into filter line, field - db col to search
+     * @return Qvector<QString> of patients ids
+     */
     QVector<QString> getPatientsIdByTextNoteFromCol(QString field, QString query);
 
-    // return QRecord selected by patient Id
-    QRecord selectRecordById();
+
+    // function not used?
+    bool selectPatient();
+
+    /**
+     * @brief Select patient from db by id with all its records
+     * @param id - QString with patient's id
+     * @return QPatient structure with all its qrecords
+     */
+    QPatient selectPatientbyIdWithRecords(QString id);
+
+    /**
+     * @brief Select patient from db by name with all its records
+     * @param name - QString with patient's name
+     * @return QPatient structure with all its qrecords
+     */
+    QPatient selectPatientbyNameWithRecords(QString name);
 
     /**
      * @brief Remove all persons from db

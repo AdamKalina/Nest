@@ -37,6 +37,7 @@ QRecord MainWindow::getQRecord(QFileInfo fileInfo){
 // ======== Go through files and collect fileInfo ========
 // this is separate function because there is no way to tell how long it will take so QProgressDialog can not be used
 void MainWindow::checkDataOnHDD(QString path2load, bool dynamic){
+    qDebug() << "MainWindow::checkDataOnHDD";
 
     QDateTime now = QDateTime::currentDateTime();
 
@@ -61,6 +62,7 @@ void MainWindow::checkDataOnHDD(QString path2load, bool dynamic){
 
 // ======== Go through fileinfo and read file headers ========
 void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
+    qDebug() << "MainWindow::readDataOnHDD";
 
     //Progress dialog - shows the progress on reading files
     QString ProgressLabel = QString("Refreshing data in folder %1").arg(path2load);
@@ -86,6 +88,7 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
 
 
 QRecord MainWindow::prepareQRecord(QFileInfo fileInfo, bool dynamic){
+    qDebug() << "MainWindow::prepareQRecord";
 
     QRecord qrecord = getQRecord(fileInfo);
 
@@ -180,6 +183,7 @@ void MainWindow::writeWatcherLog(QString log){
 // TO DO - make this part of separate class?
 
 void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QRecord Qrecord, bool newRecord){
+    qDebug() << "addQRecord2model";
 
     // add int ncol for the old way of coloring red
     QTime n(0, 0, 0);
@@ -213,6 +217,7 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
 }
 
 void addQPatient2model(QAbstractItemModel *model, QPatient Qpatient, bool boldParent){
+    qDebug() << "addQPatient2model";
 
     // define patient
     model->insertRow(0);
@@ -307,6 +312,7 @@ void MainWindow::buildTreeView(){
 };
 
 void MainWindow::updatePatientTreeModel(){
+    qDebug() << "MainWindow::updatePatientTreeModel()";
 
     // add new Qpatients from stack
     while (!QpatientQueue.isEmpty()){
@@ -341,6 +347,7 @@ void MainWindow::updatePatientTreeModel(){
 }
 
 void MainWindow::incrementParentNo(QModelIndex parentInd){
+    qDebug() << "MainWindow::incrementParentNo";
     // increment parent number of EEG by 1
     QVariant QtempNo = sourceModel->data(parentInd.sibling(parentInd.row(),3));
     int tempNo = QtempNo.toInt();
@@ -349,6 +356,7 @@ void MainWindow::incrementParentNo(QModelIndex parentInd){
 }
 
 void MainWindow::changeParentNoOfRecords(QModelIndex parentInd, int change){
+    qDebug() << "MainWindow::changeParentNoOfRecords";
     // increase parent number of EEG by 1 or -1
     int tempNo = parentInd.sibling(parentInd.row(),3).data().toInt();
     tempNo += change;
@@ -368,6 +376,7 @@ void MainWindow::changeParentNoOfRecords(QModelIndex parentInd, int change){
 }
 
 void MainWindow::updateParentTime(QModelIndex parentInd){
+    qDebug() << "MainWindow::updateParentTime";
     // change time of last EEG to current record - if it is newer
     QVariant QtempTime = sourceModel->data(parentInd.sibling(parentInd.row(),2));
     QDateTime QnewTime = QrecordQueue.head().record_start;
@@ -403,13 +412,10 @@ void MainWindow::ShowContextMenu(const QPoint & pos){
         connect(&exportAction, SIGNAL(triggered()), this, SLOT(exportToEDF()));
         contextMenu.addAction(&exportAction);
 
-
-
-        QAction deleteAction(tr("Delete this record"), this);
+        QAction deleteAction(tr("Delete this record from database"), this);
         //deleteAction.setData(path);
         connect(&deleteAction, SIGNAL(triggered()), this, SLOT(deleteRecord()));
         contextMenu.addAction(&deleteAction);
-
 
         // when I tried to add actions to menu on "if", it stopped working, so I use this
         if(!nestOptions.recordDeleteAllow){
@@ -555,14 +561,14 @@ void MainWindow::exportToEDF(){
         exportProcess->setProgram(this->nestOptions.exportProgram);
         exportProcess->start();
 
-        // prepared for debugging, maybe can I can also create slots to catch errors later and show them to user
-        //        exportProcess->waitForFinished(-1); //needed
+        if(nestOptions.exportEnableDebug){
+            exportProcess->waitForFinished(-1); //needed
+            QString output(exportProcess->readAllStandardOutput());
+            qDebug() << output;
 
-        //        QString output(exportProcess->readAllStandardOutput());
-        //        qDebug() << output;
-
-        //        QString code(exportProcess->exitCode());
-        //        qDebug() << code;
+            QString code(exportProcess->exitCode());
+            qDebug() << code;
+        }
     }
 }
 
@@ -574,16 +580,10 @@ void MainWindow::deleteRecord(){
     bool removeSuccess = proxyModel->removeRows(index.row(),1,index.parent()); // the magic was in calling the right model - did not work with sourceModel
 
     if (removeSuccess){
-        qDebug() << "success on removal " << removeSuccess;
+        //qDebug() << "success on removal " << removeSuccess;
         changeParentNoOfRecords(index.parent(), -1);
         db.removeRecord(file_name);
     }
-
-
-
-
-    // TO DO - lower the number of records in parent by one and delete it if it becomes zero
-    // TO DO - delete the record from db
 }
 
 
@@ -660,8 +660,7 @@ void MainWindow::chooseExternalProgram1(){
 
     if(temp.isEmpty()){
         return;
-    }
-    else{
+    }else{
         nestOptions.externalProgram1 = temp;
     }
 };
@@ -672,8 +671,7 @@ void MainWindow::chooseExternalProgram2(){
 
     if(temp.isEmpty()){
         return;
-    }
-    else{
+    }else{
         nestOptions.externalProgram2 = temp;
     }
 };
@@ -684,8 +682,7 @@ void MainWindow::chooseExportProgram(){
 
     if(temp.isEmpty()){
         return;
-    }
-    else{
+    }else{
         nestOptions.exportProgram = temp;
     }
 };
@@ -778,8 +775,6 @@ void MainWindow::buildFilterLine(){
     filter->setClearButtonEnabled(1);
     connect(filter, SIGNAL(textChanged(QString)), this, SLOT(filter_text_changed(QString)));
     connect(filter, SIGNAL(returnPressed()), this, SLOT(filter_return_pressed()));
-    //filter->setParent(dataWidget);
-    //stackedLayout->addWidget(filter);
     layout->addWidget(filter);
 }
 
@@ -1050,6 +1045,7 @@ void MainWindow::writeSettings()
     settings.setValue("shorten_export",nestOptions.exportShortenLabels);
     settings.setValue("export_system_events",nestOptions.exportSystemEvents);
     settings.setValue("enable_delete_records",nestOptions.recordDeleteAllow);
+    settings.setValue("enable_export_debug_mode",nestOptions.exportEnableDebug);
 
     settings.beginWriteArray("static_dirs");
     for (int i = 0; i < static_dirs.size(); ++i) {
@@ -1086,6 +1082,7 @@ void MainWindow::readSettings()
     nestOptions.exportShortenLabels = settings.value("shorten_export").toBool();
     nestOptions.exportSystemEvents = settings.value("export_system_events").toBool();
     nestOptions.recordDeleteAllow = settings.value("enable_delete_records").toBool();
+    nestOptions.exportEnableDebug = settings.value("enable_export_debug_mode").toBool();
 
     // load array of static folders
     int size = settings.beginReadArray("static_dirs");
@@ -1132,15 +1129,12 @@ void MainWindow::connectDb(){
     // Load db
     db.setPath(path2db);
 
-    if (db.isOpen())
-    {
+    if (db.isOpen()){
         qDebug() << "Database is open!";
         db.createTablePatients();   // Creates a table if it doesn't exist. Otherwise, it will use existing table.
         db.createTableRecords();
         db.createIndexPatients();
-    }
-    else
-    {
+    }else{
         qDebug() << "Database is not open!";
     }
 
