@@ -63,6 +63,7 @@ public:
     // std variables
     bool sourceModelLoaded = false;
     bool dbLoaded = false;
+    bool programStart = true;
     long no_files_loaded = 0;
     //    int refreshingPeriod = 15; // in minutes
     //    bool periodicRefreshingEnabled = false;

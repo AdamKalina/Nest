@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     QFont sansFont("Century Gothic", 10);
     p.setFont(sansFont);
     p.setPen(Qt::black);
-    p.drawText(20, 60, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, "version 0.65");
+    p.drawText(20, 60, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, "version 0.7");
     p.drawText(20, 300, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, QString("build %1").arg(__DATE__));
 
     QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);
@@ -74,14 +74,17 @@ int main(int argc, char *argv[])
     splash.showMessage("Connecting to database", Qt::AlignHCenter | Qt::AlignBottom);
     w.connectDb();
 
-    splash.showMessage("Loading data from database", Qt::AlignHCenter | Qt::AlignBottom);
+    splash.showMessage("Setting up timers and watchers", Qt::AlignHCenter | Qt::AlignBottom);
     w.initSystemWatcher(); // initiate watchers before loading data - duh
-    w.loadDataFromDb();
-
     w.setUpRefreshQTimer();
     w.setUpWorkingHoursQTimer();
     splash.showMessage("Looking for new data", Qt::AlignHCenter | Qt::AlignBottom);
     w.refreshDynamic();
+    w.programStart = false;
+
+    splash.showMessage("Loading data from database", Qt::AlignHCenter | Qt::AlignBottom);
+    w.loadDataFromDb();
+    w.updatePatientTreeModel();
 
     splash.clearMessage();
 

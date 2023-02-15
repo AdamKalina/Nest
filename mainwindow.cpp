@@ -7,6 +7,15 @@ void MainWindow::loadDataFromDb(){
 
     if(db.isOpen()){
         // get IDs of patients that had at least one recording in last x months
+
+        // FOR TESTING - maybe use the last x months from before last record...
+
+
+        if (nestOptions.months2load == 0){
+            // check that always at least months of data are loaded
+            nestOptions.months2load = 2;
+        }
+
         QVector<QString> qpatientIds = db.getPatientsIdsbyMonthsAgo(nestOptions.months2load);
 
         QVectorIterator<QString> i(qpatientIds);
@@ -106,6 +115,12 @@ QRecord MainWindow::prepareQRecord(QFileInfo fileInfo, bool dynamic){
             qDebug() << "static folder - not adding to queue!";
             return qrecord;
         }
+
+        if(programStart){
+            qDebug() << "program is starting - not adding to queue!";
+            return qrecord;
+        }
+
         // using QMap - checks if the QPatient is already loaded
         QMap<QString, bool>::iterator qit = IdMap.find(qrecord.id);
         if (qit != IdMap.end()) {
@@ -184,17 +199,26 @@ void MainWindow::writeWatcherLog(QString log){
 
 void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QRecord Qrecord, bool newRecord){
     qDebug() << "addQRecord2model";
-
+    qDebug() << "parent: " << parent.data();
+    qDebug() << "Qrecord name: " <<Qrecord.name;
+    qDebug() << "Qrecord id: " << Qrecord.id;
+    qDebug() << "Qrecord id: " << Qrecord.check_flag << " " << Qrecord.class_code << " " << Qrecord.doctor << " " << Qrecord.file_name << " " << Qrecord.file_path << " " << Qrecord.file_size << " " << Qrecord.id <<
+Qrecord.name << " " << Qrecord.num_pages << " " << Qrecord.protocol << " " << Qrecord.record_start << " " << Qrecord.recording_flag << " " << Qrecord.video_flag;
     // add int ncol for the old way of coloring red
     QTime n(0, 0, 0);
     QTime t;
     t = n.addSecs(Qrecord.num_pages*10);
 
+    qDebug() << "after time thingy";
+
     QString Qinfo;
 
     if(newRecord){
+        qDebug() << "if a new record, add it to parent";
         model->insertRows(ind, 1, parent); // adds a child to the previous item
+        qDebug() << "inserted row successfull";
     }
+
 
     if(Qrecord.doctor != "." && Qrecord.doctor != ""){
         Qinfo = Qrecord.class_code + "\n" + Qrecord.doctor;
@@ -202,17 +226,28 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
         Qinfo = Qrecord.class_code;
     }
 
+    qDebug() << "after Qinfo thingy";
+
     model->setData(model->index(ind, 0, parent), Qrecord.file_name, Qt::DisplayRole);
+    qDebug() << "set data file name";
     model->setData(model->index(ind, 1, parent), Qinfo, Qt::DisplayRole); //class_code
+    qDebug() << "set data qinfo";
     model->setData(model->index(ind, 2, parent), Qrecord.record_start,Qt::DisplayRole);
+    qDebug() << "set data record start";
     model->setData(model->index(ind, 3, parent), t.toString("hh:mm:ss"), Qt::DisplayRole);
+    qDebug() << "set data time";
     model->setData(model->index(ind, 4, parent), Qrecord.file_path, Qt::DisplayRole);
+    qDebug() << "set data file path";
     model->setData(model->index(ind, 5, parent), Qrecord.recording_flag, Qt::DisplayRole);
+    qDebug() << "set data recording flag";
     model->setData(model->index(ind, 6, parent), Qrecord.doctor, Qt::DisplayRole);
+    qDebug() << "set data doctor";
+    qDebug() << "all data set";
 
     // if file has video - show DVicon
     if (Qrecord.video_flag){
         model->setData(model->index(ind,0, parent), QIcon(":/images/DV_icon.png"), Qt::DecorationRole);
+        qDebug() << "added DV icon";
     }
 }
 
@@ -1046,6 +1081,7 @@ void MainWindow::writeSettings()
     settings.setValue("export_system_events",nestOptions.exportSystemEvents);
     settings.setValue("enable_delete_records",nestOptions.recordDeleteAllow);
     settings.setValue("enable_export_debug_mode",nestOptions.exportEnableDebug);
+    settings.setValue("months_to_load",nestOptions.months2load);
 
     settings.beginWriteArray("static_dirs");
     for (int i = 0; i < static_dirs.size(); ++i) {
@@ -1083,6 +1119,7 @@ void MainWindow::readSettings()
     nestOptions.exportSystemEvents = settings.value("export_system_events").toBool();
     nestOptions.recordDeleteAllow = settings.value("enable_delete_records").toBool();
     nestOptions.exportEnableDebug = settings.value("enable_export_debug_mode").toBool();
+    nestOptions.months2load = settings.value("months_to_load").toInt();
 
     // load array of static folders
     int size = settings.beginReadArray("static_dirs");
