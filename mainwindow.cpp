@@ -1083,6 +1083,8 @@ void MainWindow::writeSettings()
     settings.setValue("enable_export_debug_mode",nestOptions.exportEnableDebug);
     settings.setValue("months_to_load",nestOptions.months2load);
 
+    qDebug() << nestOptions.months2load << "test";
+
     settings.beginWriteArray("static_dirs");
     for (int i = 0; i < static_dirs.size(); ++i) {
         settings.setArrayIndex(i);
@@ -1120,6 +1122,8 @@ void MainWindow::readSettings()
     nestOptions.recordDeleteAllow = settings.value("enable_delete_records").toBool();
     nestOptions.exportEnableDebug = settings.value("enable_export_debug_mode").toBool();
     nestOptions.months2load = settings.value("months_to_load").toInt();
+
+    qDebug() << nestOptions.months2load << "test";
 
     // load array of static folders
     int size = settings.beginReadArray("static_dirs");

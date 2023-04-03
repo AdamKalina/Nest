@@ -6,6 +6,7 @@
 #include <QTabWidget>
 #include <QGroupBox>
 #include <QButtonGroup>
+#include <QSpinBox>
 #include "mainwindow.h"
 
 class MainWindow;
@@ -51,6 +52,8 @@ private:
     *systemEventsCheckBox,
     *enableDebugModeCheckBox;
     QDial *hourDial;
+
+    QSpinBox *months2loadSpinBox;
 
     QLineEdit *readerEdit,
     *controlEdit,

@@ -267,9 +267,22 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
 "On refresh it loads the data again, so be sure you correct the file info first."));
     deleteRecordInfo->setFont(ii);
 
+    QLabel *months2loadSpinBoxInfo = new QLabel(tr("Number of months (of patients with EEG) to load into Nest during initial startup - from 1 to 36."));
+    months2loadSpinBoxInfo->setFont(ff);
+    months2loadSpinBox = new QSpinBox;
+    months2loadSpinBox->setRange(1,36);
+    months2loadSpinBox->setMaximumWidth(60);
+    months2loadSpinBox->setValue(mainwindow->nestOptions.months2load);
+    QLabel *months2loadSpinBoxInfoRestart = new QLabel(tr("Restart is required for changes to take effect."));
+    months2loadSpinBoxInfoRestart->setFont(ii);
+
     QVBoxLayout *vlayout4 = new QVBoxLayout;
     vlayout4->addWidget(allowDeleteRecordCheckBox);
     vlayout4->addWidget(deleteRecordInfo);
+    vlayout4->addSpacing(40);
+    vlayout4->addWidget(months2loadSpinBoxInfo);
+    vlayout4->addWidget(months2loadSpinBox);
+    vlayout4->addWidget(months2loadSpinBoxInfoRestart);
     vlayout4->addStretch();
     tab4->setLayout(vlayout4);
     tab4->adjustSize();
@@ -477,6 +490,10 @@ void OptionsDialog::saveAndClose(){
     //    //EDF EXPORT
     un_options.exportProgram = exportEdit->text();
     un_options.exportPath =  exportPathEdit->text();
+
+    // MONTHS to load
+    qDebug() << months2loadSpinBox->value();
+    un_options.months2load = months2loadSpinBox->value();
 
 
     qDebug() << "Save and Close";
