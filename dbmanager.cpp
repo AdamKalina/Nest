@@ -75,12 +75,15 @@ bool DbManager::insertNewRecord(QRecord qrecord){
 }
 
 bool DbManager::updateRecord(QRecord qrecord){
+    // it also allows for update of name and id because sometimes technicians make mistake in that
     bool success = true;
     qDebug() << "DbManager::updateRecord";
 
     // UPDATE TABLE records
     QSqlQuery query;
-    query.prepare("UPDATE records SET record_start=:record_start, class_code=:class_code, protocol=:protocol, doctor=:doctor, file_path=:file_path, recording_flag=:recording_flag, video_flag=:video_flag, num_pages=:num_pages WHERE file_name =:file_name");
+    query.prepare("UPDATE records SET id=:id, name=:name, record_start=:record_start, class_code=:class_code, protocol=:protocol, doctor=:doctor, file_path=:file_path, recording_flag=:recording_flag, video_flag=:video_flag, num_pages=:num_pages WHERE file_name =:file_name");
+    query.bindValue(":id",qrecord.id);
+    query.bindValue(":name",qrecord.name);
     query.bindValue(":record_start", qrecord.record_start.toTime_t());
     query.bindValue(":class_code", qrecord.class_code);
     query.bindValue(":protocol",qrecord.protocol);

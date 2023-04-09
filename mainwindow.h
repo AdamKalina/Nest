@@ -120,6 +120,7 @@ public:
     void AddFolderDialog(bool dynamic);
     void buildFilterLine();
     void connectDb();
+    void checkStorage();
     //void saveQMap();
     //int loadQMap();
     //QDateTime TimeT2QDateTime(time_t);

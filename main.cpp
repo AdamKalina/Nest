@@ -91,5 +91,6 @@ int main(int argc, char *argv[])
     // =================================
     // show mainwindow
     w.show();
+    w.checkStorage();
     return a.exec();
 }

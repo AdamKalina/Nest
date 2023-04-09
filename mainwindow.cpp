@@ -12,7 +12,7 @@ void MainWindow::loadDataFromDb(){
 
 
         if (nestOptions.months2load == 0){
-            // check that always at least months of data are loaded
+            // check that always at least 2 months of data are loaded
             nestOptions.months2load = 2;
         }
 
@@ -203,7 +203,7 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
     qDebug() << "Qrecord name: " <<Qrecord.name;
     qDebug() << "Qrecord id: " << Qrecord.id;
     qDebug() << "Qrecord id: " << Qrecord.check_flag << " " << Qrecord.class_code << " " << Qrecord.doctor << " " << Qrecord.file_name << " " << Qrecord.file_path << " " << Qrecord.file_size << " " << Qrecord.id <<
-Qrecord.name << " " << Qrecord.num_pages << " " << Qrecord.protocol << " " << Qrecord.record_start << " " << Qrecord.recording_flag << " " << Qrecord.video_flag;
+                Qrecord.name << " " << Qrecord.num_pages << " " << Qrecord.protocol << " " << Qrecord.record_start << " " << Qrecord.recording_flag << " " << Qrecord.video_flag;
     // add int ncol for the old way of coloring red
     QTime n(0, 0, 0);
     QTime t;
@@ -362,6 +362,7 @@ void MainWindow::updatePatientTreeModel(){
         QString recordID = QrecordQueue.head().file_name;
 
         QModelIndexList parents = sourceModel->match(sourceModel->index(0,0), Qt::DisplayRole, patientID, 1, Qt::MatchExactly); // find matching row by patient ID, only one match is expected
+        // check if there is no match at all (e.g. when there was error in the patients ID)
         QModelIndex parentInd = parents.first();
 
         QModelIndexList childs = sourceModel->match(sourceModel->index(0,0,parentInd),Qt::DisplayRole, recordID, 1, Qt::MatchExactly); // find matching row by file ID, only one match is expected
@@ -675,6 +676,28 @@ void MainWindow::connect2storage(){
     runBatchFile("connect.bat");
 };
 
+void MainWindow::checkStorage(){
+
+    QFile file("volumes.txt");
+    if(file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+    {
+        QTextStream stream(&file);
+        stream << QDateTime::currentDateTime().toLocalTime().toString() << "\n";
+
+        foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+            if (storage.isValid() && storage.isReady())
+            {
+                stream << "storage path " << storage.rootPath() << "\n";
+                stream << "storage name " << storage.name() << "\n";
+                stream << "storage readonly " << storage.isReadOnly() << "\n";
+                stream << "storage filesystem type " << storage.fileSystemType() << "\n";
+                stream << "storage device " << storage.device() << "\n\n";
+            }
+        }
+        file.close();
+    }
+}
+
 void MainWindow::runBatchFile(QString batchFile){
     // runs the batch command for storage connection
     QProcess connectProcess;
@@ -688,6 +711,8 @@ void MainWindow::runBatchFile(QString batchFile){
     qDebug() << connectProcess.readAllStandardError();
 }
 
+
+// TO DO - generic function for adding external prorgram (BrainLab, BrainLab Control, BrainLab export, NicOne, Harmonie, etc.)
 
 void MainWindow::chooseExternalProgram1(){
 
@@ -969,8 +994,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(helpKey, SIGNAL(activated()), this, SLOT(show_about_dialog()));
 
     // ====== LAYOUT =====
-
-    // ====== LAYOUT =====
     //set the layout
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
@@ -1083,8 +1106,6 @@ void MainWindow::writeSettings()
     settings.setValue("enable_export_debug_mode",nestOptions.exportEnableDebug);
     settings.setValue("months_to_load",nestOptions.months2load);
 
-    qDebug() << nestOptions.months2load << "test";
-
     settings.beginWriteArray("static_dirs");
     for (int i = 0; i < static_dirs.size(); ++i) {
         settings.setArrayIndex(i);
@@ -1122,8 +1143,6 @@ void MainWindow::readSettings()
     nestOptions.recordDeleteAllow = settings.value("enable_delete_records").toBool();
     nestOptions.exportEnableDebug = settings.value("enable_export_debug_mode").toBool();
     nestOptions.months2load = settings.value("months_to_load").toInt();
-
-    qDebug() << nestOptions.months2load << "test";
 
     // load array of static folders
     int size = settings.beginReadArray("static_dirs");
