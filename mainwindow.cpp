@@ -97,7 +97,7 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
 
 
 QRecord MainWindow::prepareQRecord(QFileInfo fileInfo, bool dynamic){
-    qDebug() << "MainWindow::prepareQRecord";
+    //qDebug() << "MainWindow::prepareQRecord";
 
     QRecord qrecord = getQRecord(fileInfo);
 
@@ -117,7 +117,7 @@ QRecord MainWindow::prepareQRecord(QFileInfo fileInfo, bool dynamic){
         }
 
         if(programStart){
-            qDebug() << "program is starting - not adding to queue!";
+            //qDebug() << "program is starting - not adding to queue!";
             return qrecord;
         }
 
@@ -198,25 +198,22 @@ void MainWindow::writeWatcherLog(QString log){
 // TO DO - make this part of separate class?
 
 void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QRecord Qrecord, bool newRecord){
-    qDebug() << "addQRecord2model";
-    qDebug() << "parent: " << parent.data();
-    qDebug() << "Qrecord name: " <<Qrecord.name;
-    qDebug() << "Qrecord id: " << Qrecord.id;
-    qDebug() << "Qrecord id: " << Qrecord.check_flag << " " << Qrecord.class_code << " " << Qrecord.doctor << " " << Qrecord.file_name << " " << Qrecord.file_path << " " << Qrecord.file_size << " " << Qrecord.id <<
-                Qrecord.name << " " << Qrecord.num_pages << " " << Qrecord.protocol << " " << Qrecord.record_start << " " << Qrecord.recording_flag << " " << Qrecord.video_flag;
+    //qDebug() << "addQRecord2model";
+    //qDebug() << "parent: " << parent.data();
+    //qDebug() << "Qrecord name: " <<Qrecord.name;
+    //qDebug() << "Qrecord id: " << Qrecord.id;
+    //qDebug() << "Qrecord id: " << Qrecord.check_flag << " " << Qrecord.class_code << " " << Qrecord.doctor << " " << Qrecord.file_name << " " << Qrecord.file_path << " " << Qrecord.file_size << " " << Qrecord.id <<
+    //            Qrecord.name << " " << Qrecord.record_duration_s << " " << Qrecord.protocol << " " << Qrecord.record_start << " " << Qrecord.recording_flag << " " << Qrecord.video_flag;
     // add int ncol for the old way of coloring red
-    QTime n(0, 0, 0);
-    QTime t;
-    t = n.addSecs(Qrecord.num_pages*10);
-
-    qDebug() << "after time thingy";
 
     QString Qinfo;
+    QTime n(0, 0, 0);
+    n = n.addSecs(Qrecord.record_duration_s);
 
     if(newRecord){
-        qDebug() << "if a new record, add it to parent";
+        //qDebug() << "if a new record, add it to parent";
         model->insertRows(ind, 1, parent); // adds a child to the previous item
-        qDebug() << "inserted row successfull";
+        //qDebug() << "inserted row successfull";
     }
 
 
@@ -226,33 +223,32 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
         Qinfo = Qrecord.class_code;
     }
 
-    qDebug() << "after Qinfo thingy";
-
+// TO DO - nice way how to display recording system in model
     model->setData(model->index(ind, 0, parent), Qrecord.file_name, Qt::DisplayRole);
-    qDebug() << "set data file name";
+    //qDebug() << "set data file name";
     model->setData(model->index(ind, 1, parent), Qinfo, Qt::DisplayRole); //class_code
-    qDebug() << "set data qinfo";
+    //qDebug() << "set data qinfo";
     model->setData(model->index(ind, 2, parent), Qrecord.record_start,Qt::DisplayRole);
-    qDebug() << "set data record start";
-    model->setData(model->index(ind, 3, parent), t.toString("hh:mm:ss"), Qt::DisplayRole);
-    qDebug() << "set data time";
+    //qDebug() << "set data record start";
+    model->setData(model->index(ind, 3, parent), n.toString("hh:mm:ss"), Qt::DisplayRole);
+    //qDebug() << "set data time";
     model->setData(model->index(ind, 4, parent), Qrecord.file_path, Qt::DisplayRole);
-    qDebug() << "set data file path";
+    //qDebug() << "set data file path";
     model->setData(model->index(ind, 5, parent), Qrecord.recording_flag, Qt::DisplayRole);
-    qDebug() << "set data recording flag";
+    //qDebug() << "set data recording flag";
     model->setData(model->index(ind, 6, parent), Qrecord.doctor, Qt::DisplayRole);
-    qDebug() << "set data doctor";
-    qDebug() << "all data set";
+    //qDebug() << "set data doctor";
+    //qDebug() << "all data set";
 
     // if file has video - show DVicon
     if (Qrecord.video_flag){
         model->setData(model->index(ind,0, parent), QIcon(":/images/DV_icon.png"), Qt::DecorationRole);
-        qDebug() << "added DV icon";
+        //qDebug() << "added DV icon";
     }
 }
 
 void addQPatient2model(QAbstractItemModel *model, QPatient Qpatient, bool boldParent){
-    qDebug() << "addQPatient2model";
+    //qDebug() << "addQPatient2model";
 
     // define patient
     model->insertRow(0);

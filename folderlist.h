@@ -4,6 +4,7 @@
 #include "mainwindow.h"
 
 class MainWindow;
+class folderTab;
 
 class folderList : public QObject
 {
@@ -17,6 +18,16 @@ private:
 
     QDialog      *edit_folders_dialog,
     *dialog;
+
+    QTabWidget     *tabholder;
+
+    QWidget        *tab1,
+    *tab2,
+    *tab3,
+    *tab4,
+    *tab5,
+    *tab6,
+    *tab7;
 
     QListWidget  *dfolder_path_list,
     *sfolder_path_list;
@@ -38,6 +49,8 @@ private:
 
     QMessageBox *duplicate_msgBox;
 
+    folderTab *harmonieTab;
+
     int row;
     bool currentMode;
     void rowClicked(QListWidgetItem *, bool dynamic);
@@ -53,6 +66,56 @@ private slots:
     void add_folder_dynamic();
     void add_folder_static();
     void refresh_sel_static();
+
+};
+
+class folderTab : public QWidget
+{
+    Q_OBJECT
+
+public:
+    folderTab(QWidget *parent = nullptr);
+    MainWindow *mainwindow;
+
+
+private:
+    QListWidget  *dfolder_path_list,
+    *sfolder_path_list;
+
+    QPushButton  *CloseButton,
+    *add_static_button,
+    *refresh_sel_static_button,
+    *add_dynamic_button;
+
+
+    //    *button1,
+    //    *button2,
+    //    *button3,
+    //    *button4;
+
+    //    QListWidgetItem *currentItem;
+
+    //    QLabel *staticLabel,
+    //    *dynamicLabel,
+    //    *helpLabel;
+
+    //    QMessageBox *duplicate_msgBox;
+
+    //    int row;
+    //    bool currentMode;
+    //    void rowClicked(QListWidgetItem *, bool dynamic);
+    //    void add_folder(bool dynamic);
+
+
+    //private slots:
+    //    void rowClickedDynamic(QListWidgetItem *);
+    //    void rowClickedStatic(QListWidgetItem *);
+    //    void adEntry();
+    //    void removeEntry();
+    //    void refreshEntry();
+    //    void add_folder_dynamic();
+    //    void add_folder_static();
+    //    void refresh_sel_static();
 
 };
 

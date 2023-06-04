@@ -44,9 +44,9 @@ QDateTime decode_date_time(long date, long time)
     // this is kinda hack - old BrainLab does not account for time transition to daylight saving time, I need to correct it manually
     // works fine on my computer
     //if(startDateTime.isDaylightTime()){
-        //qDebug() << "before " << startDateTime;
-      //  startDateTime = startDateTime.addSecs(3600);
-        //qDebug() << "after " << startDateTime;
+    //qDebug() << "before " << startDateTime;
+    //  startDateTime = startDateTime.addSecs(3600);
+    //qDebug() << "after " << startDateTime;
     //}
 
     return startDateTime;
@@ -277,8 +277,12 @@ QRecord read_signal_file(QFileInfo fileInfo){
     qrecord.file_size = file_size;
     qrecord.record_start = decode_date_time(signal.measurement.start_date, signal.measurement.start_hour);
     qrecord.sex = signal.measurement.sex;
-    qrecord.num_pages = (file_size - signal.data_table.signal_info.offset) / signal.data_table.signal_info.size;
+    int num_pages = (file_size - signal.data_table.signal_info.offset) / signal.data_table.signal_info.size;
+
+    qrecord.record_duration_s = num_pages*10;
+
     qrecord.check_flag = 1;
+    qrecord.system = "Brainlab";
 
     return qrecord;
 }

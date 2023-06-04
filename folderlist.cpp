@@ -14,6 +14,12 @@ folderList::folderList(QWidget *w_parent)
     edit_folders_dialog->setModal(true);
     edit_folders_dialog->setAttribute(Qt::WA_DeleteOnClose, true);
 
+    tabholder = new QTabWidget;
+
+    /////////////////////////////////////// tab 1 Brainlab folders ///////////////////////////////////////////////////////////////////////
+
+    tab1 = new QWidget;
+
     QLabel *dynamicLabel = new QLabel(tr("Dynamic folders"));
     dynamicLabel->setFont(f);
     dfolder_path_list = new QListWidget;
@@ -53,17 +59,12 @@ folderList::folderList(QWidget *w_parent)
     refresh_sel_static_button->setMinimumWidth(180);
     refresh_sel_static_button->setIcon(mainwindow->style()->standardIcon(QStyle::SP_BrowserReload));
 
-    CloseButton = new QPushButton;
-    CloseButton->setText("Close");
-    CloseButton->setMinimumWidth(180);
-    CloseButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_DialogCloseButton));
-
     QLabel *helpLabel = new QLabel(tr("Double click on item for context menu"));
     helpLabel->setFont(f);
 
-    QHBoxLayout *hlayout1 = new QHBoxLayout;
-    hlayout1->addStretch(1000);
-    hlayout1->addWidget(CloseButton);
+    //    QHBoxLayout *hlayout1 = new QHBoxLayout;
+    //    hlayout1->addStretch(1000);
+    //    hlayout1->addWidget(CloseButton);
 
     QHBoxLayout *hlayoutStatic = new QHBoxLayout;
     hlayoutStatic->addWidget(refresh_sel_static_button, Qt::AlignLeft);
@@ -78,25 +79,61 @@ folderList::folderList(QWidget *w_parent)
     vlayout1->addWidget(sfolder_path_list, 1000);
     vlayout1->addLayout(hlayoutStatic);
     vlayout1->addWidget(helpLabel);
-    vlayout1->addSpacing(20);
-    vlayout1->addLayout(hlayout1);
+    //    vlayout1->addSpacing(20);
+    //    vlayout1->addLayout(hlayout1);
 
-    edit_folders_dialog->setLayout(vlayout1);
+    tab1->setLayout(vlayout1);
 
+    //edit_folders_dialog->setLayout(vlayout1);
+
+    /////////////////////////////////////// tab 2 Harmonie folders ///////////////////////////////////////////////////////////////////////
+
+    tab2 = new QWidget;
+
+    //folderTab *harmonieTab = new folderTab();
+    //harmonieTab = new folderTab(this);
+    harmonieTab = new folderTab;
+    QVBoxLayout *vlayout2 = new QVBoxLayout;
+
+    vlayout2->addWidget(harmonieTab);
+    vlayout2->setContentsMargins(0,0,0,0); // to cancel out nesting of layouts
+    tab2->setLayout(vlayout2);
+
+    /////////////////////////////////////// COMMONS ///////////////////////////////////////////////////////////////////////
+
+    tabholder->addTab(tab1, "&BrainLab");
+    tabholder->addTab(tab2, "&Harmonie");
+    //tabholder->addTab(tab3, "&NicOne");
+
+    CloseButton = new QPushButton;
+    CloseButton->setText("Close");
+    CloseButton->setMinimumWidth(180);
+    CloseButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_DialogCloseButton));
+
+    QHBoxLayout *horLayout = new QHBoxLayout;
+    horLayout->addStretch(1000);
+    horLayout->addWidget(CloseButton);
+
+    QVBoxLayout *mainLayout = new QVBoxLayout;
+    mainLayout->addWidget(tabholder);
+    mainLayout->addSpacing(20);
+    mainLayout->addLayout(horLayout);
+
+    edit_folders_dialog->setLayout(mainLayout);
+
+    // SIGNALS and SLOTS
     connect(CloseButton,   SIGNAL(clicked()), edit_folders_dialog, SLOT(close()));
-    connect(dfolder_path_list, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(rowClickedDynamic(QListWidgetItem *)));
-    connect(sfolder_path_list, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(rowClickedStatic(QListWidgetItem *)));
+    connect(dfolder_path_list, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(rowClickedDynamic(QListWidgetItem*)));
+    connect(sfolder_path_list, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(rowClickedStatic(QListWidgetItem*)));
     connect(add_dynamic_button,SIGNAL(clicked()), this, SLOT(add_folder_dynamic()));
     connect(add_static_button,SIGNAL(clicked()), this, SLOT(add_folder_static()));
     connect(refresh_sel_static_button,SIGNAL(clicked()), this, SLOT(refresh_sel_static()));
-
 
     edit_folders_dialog->exec();
 }
 
 void folderList::rowClickedDynamic(QListWidgetItem *item){
     rowClicked(item,true);
-
 }
 
 void folderList::rowClickedStatic(QListWidgetItem *item){
@@ -216,7 +253,7 @@ void folderList::adEntry(){
     //prepare message box
     QMessageBox *duplicate_msgBox = new QMessageBox;
     duplicate_msgBox->setText(tr("Duplicate folder detected"));
-    duplicate_msgBox->setInformativeText(tr("Returning withou action"));
+    duplicate_msgBox->setInformativeText(tr("Returning without action"));
 
     QString new_dir = QFileDialog::getExistingDirectory(0, tr("Choose directory"), mainwindow->nestOptions.defaultDataFolder);
     if(new_dir.isEmpty()){
@@ -253,4 +290,55 @@ void folderList::refreshEntry(){
     mainwindow->checkDataOnHDD(currentItem->data(Qt::DisplayRole).toString(), currentMode);
     mainwindow->updatePatientTreeModel();
     dialog->close();
+}
+
+
+folderTab::folderTab(QWidget *parent)
+{
+    QFont f( "Arial", 10, QFont::Bold);
+    QLabel *dynamicLabel = new QLabel(tr("Dynamic folders"));
+    dynamicLabel->setFont(f);
+    dfolder_path_list = new QListWidget;
+    dfolder_path_list->setSelectionBehavior(QAbstractItemView::SelectRows);
+    dfolder_path_list->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    dfolder_path_list->setSpacing(1);
+
+    add_dynamic_button = new QPushButton;
+    add_dynamic_button->setText(tr("Add dynamic folder"));
+    add_dynamic_button->setMinimumWidth(180);
+    add_dynamic_button->setIcon(this->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+
+    QLabel *staticLabel = new QLabel(tr("Static folders"));
+    staticLabel->setFont(f);
+    sfolder_path_list = new QListWidget;
+    sfolder_path_list->setSelectionBehavior(QAbstractItemView::SelectRows);
+    sfolder_path_list->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    sfolder_path_list->setSpacing(1);
+
+    add_static_button = new QPushButton;
+    add_static_button->setText(tr("Add static folder"));
+    add_static_button->setMinimumWidth(180);
+    add_static_button->setIcon(this->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+
+    refresh_sel_static_button = new QPushButton;
+    refresh_sel_static_button->setText(tr("Refresh selected"));
+    refresh_sel_static_button->setMinimumWidth(180);
+    refresh_sel_static_button->setIcon(this->style()->standardIcon(QStyle::SP_BrowserReload));
+
+    QLabel *helpLabel = new QLabel(tr("Double click on item for context menu"));
+    helpLabel->setFont(f);
+
+    QHBoxLayout *hlayoutStatic = new QHBoxLayout;
+    hlayoutStatic->addWidget(refresh_sel_static_button, Qt::AlignLeft);
+    hlayoutStatic->addStretch(1000);
+    hlayoutStatic->addWidget(add_static_button, Qt::AlignRight);
+
+    QVBoxLayout *vlayout1 = new QVBoxLayout(this);
+    vlayout1->addWidget(dynamicLabel);
+    vlayout1->addWidget(dfolder_path_list, 1000);
+    vlayout1->addWidget(add_dynamic_button, 1000, Qt::AlignRight);
+    vlayout1->addWidget(staticLabel);
+    vlayout1->addWidget(sfolder_path_list, 1000);
+    vlayout1->addLayout(hlayoutStatic);
+    vlayout1->addWidget(helpLabel);
 }

@@ -4,7 +4,7 @@
 
 
 void QRecord::setID(std::string old_id){
-    // removes "/" in ID (rodné èíslo)
+    // removes "/" in ID (rodné èíslo) and switch "x" to upper case
     id = QString::fromLocal8Bit(old_id.c_str());
     id.remove(QChar('/'), Qt::CaseInsensitive);
     //capitalize "x" ind ID
@@ -23,6 +23,7 @@ void QRecord::set_values_from_db(QSqlRecord rec){
     id = rec.value("id").toString();
     name = rec.value("name").toString();
     record_start = TimeT2QDateTime(rec.value("record_start").toInt());
+    record_duration_s = rec.value("record_duration_s").toInt();
     sex = rec.value("sex").toInt();
     class_code = rec.value("class_code").toString();
     protocol = rec.value("protocol").toString();
@@ -30,7 +31,7 @@ void QRecord::set_values_from_db(QSqlRecord rec){
     file_path = rec.value("file_path").toString();
     recording_flag = rec.value("recording_flag").toInt();
     video_flag = rec.value("video_flag").toInt();
-    num_pages = rec.value("num_pages").toInt();
+    system = rec.value("recording_system").toString();
 }
 
 // TO DO - make Time_t --> QDateTime conversion part of QRecord constructor ?
@@ -84,8 +85,8 @@ QDataStream & operator<<(QDataStream & out, const QRecord & Qrecord)
 {
     out << Qrecord.check_flag << Qrecord.class_code << Qrecord.file_name << Qrecord.file_path;
     out << (quint32)Qrecord.file_size << Qrecord.id << Qrecord.name << Qrecord.protocol << Qrecord.record_start;
-    out << Qrecord.recording_flag << Qrecord.sex << Qrecord.video_flag << (qint16)Qrecord.num_pages;
-    //qDebug() << "pages out: " << Qrecord.num_pages;
+    out << Qrecord.recording_flag << Qrecord.sex << Qrecord.video_flag << Qrecord.record_duration_s;
+
     return out;
 }
 
@@ -107,12 +108,7 @@ QDataStream & operator>>(QDataStream & in, QRecord & Qrecord)
 {
     in >> Qrecord.check_flag >> Qrecord.class_code >> Qrecord.file_name >> Qrecord.file_path;
     in >> (qint32&)Qrecord.file_size >> Qrecord.id >> Qrecord.name >> Qrecord.protocol >> Qrecord.record_start;
-    in >> Qrecord.recording_flag >> Qrecord.sex >> Qrecord.video_flag;
+    in >> Qrecord.recording_flag >> Qrecord.sex >> Qrecord.video_flag >> Qrecord.record_duration_s;
 
-    qint16 pages;
-    in >> pages;
-    Qrecord.num_pages = pages;
-    //in >> (qint16&)Qrecord.num_pages;
-    //qDebug() << "pages in: " << (qint16&)Qrecord.num_pages;
     return in;
 }

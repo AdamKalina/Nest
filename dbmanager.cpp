@@ -30,10 +30,10 @@ bool DbManager::isOpen() const{
 }
 
 bool DbManager::addRecord(QRecord qrecord){
-    qDebug() << "DbManager::addRecord";
+    //qDebug() << "DbManager::addRecord";
 
     if(recordExists(qrecord.file_name)){ // check if record exists
-        updateRecord(qrecord); // updating record - only class_code, protocol, doctor, file_path, recording_flag, video_flag, num_pages
+        updateRecord(qrecord); // updating record - only class_code, protocol, doctor, file_path, recording_flag, video_flag, file_length
     }else{
         insertNewRecord(qrecord); // insert as new and update patient
         if(!patientExists(qrecord.id)){
@@ -46,13 +46,13 @@ bool DbManager::addRecord(QRecord qrecord){
 }
 
 bool DbManager::insertNewRecord(QRecord qrecord){
-    qDebug() << "DbManager::insertNewRecord";
+    //qDebug() << "DbManager::insertNewRecord";
     bool success = false;
 
     // insert into TABLE records
     QSqlQuery query;
-    query.prepare("INSERT INTO records (file_name, id, name, record_start, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, num_pages)"
-    "VALUES (:file_name, :id, :name , :record_start, :sex, :class_code, :protocol, :doctor, :file_path, :recording_flag, :video_flag, :num_pages)");
+    query.prepare("INSERT INTO records (file_name, id, name, record_start, record_duration_s, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, recording_system)"
+    "VALUES (:file_name, :id, :name , :record_start, :record_duration_s, :sex, :class_code, :protocol, :doctor, :file_path, :recording_flag, :video_flag, :recording_system)");
     query.bindValue(":file_name", qrecord.file_name);
     query.bindValue(":id", qrecord.id);
     query.bindValue(":name", qrecord.name);
@@ -64,7 +64,8 @@ bool DbManager::insertNewRecord(QRecord qrecord){
     query.bindValue(":file_path",qrecord.file_path);
     query.bindValue(":recording_flag",qrecord.recording_flag);
     query.bindValue(":video_flag",qrecord.video_flag);
-    query.bindValue(":num_pages",qrecord.num_pages);
+    query.bindValue(":record_duration_s",qrecord.record_duration_s);
+    query.bindValue(":recording_system", qrecord.system);
 
     if (!query.exec()){
         qDebug() << "Couldn't INSERT INTO the table 'records' " << query.lastError();
@@ -77,21 +78,21 @@ bool DbManager::insertNewRecord(QRecord qrecord){
 bool DbManager::updateRecord(QRecord qrecord){
     // it also allows for update of name and id because sometimes technicians make mistake in that
     bool success = true;
-    qDebug() << "DbManager::updateRecord";
+    //qDebug() << "DbManager::updateRecord";
 
     // UPDATE TABLE records
     QSqlQuery query;
-    query.prepare("UPDATE records SET id=:id, name=:name, record_start=:record_start, class_code=:class_code, protocol=:protocol, doctor=:doctor, file_path=:file_path, recording_flag=:recording_flag, video_flag=:video_flag, num_pages=:num_pages WHERE file_name =:file_name");
+    query.prepare("UPDATE records SET id=:id, name=:name, record_start=:record_start, class_code=:class_code, protocol=:protocol, doctor=:doctor, file_path=:file_path, recording_flag=:recording_flag, video_flag=:video_flag, record_duration_s=:record_duration_s WHERE file_name =:file_name");
     query.bindValue(":id",qrecord.id);
     query.bindValue(":name",qrecord.name);
     query.bindValue(":record_start", qrecord.record_start.toTime_t());
+    query.bindValue(":record_duration_s",qrecord.record_duration_s);
     query.bindValue(":class_code", qrecord.class_code);
     query.bindValue(":protocol",qrecord.protocol);
     query.bindValue(":doctor", qrecord.doctor);
     query.bindValue(":file_path",qrecord.file_path);
     query.bindValue(":recording_flag",qrecord.recording_flag);
     query.bindValue(":video_flag",qrecord.video_flag);
-    query.bindValue(":num_pages",qrecord.num_pages);
     query.bindValue(":file_name",qrecord.file_name);
 
     if (!query.exec()){
@@ -166,8 +167,8 @@ bool DbManager::createTableRecords(){
     bool success = true;
 
     QSqlQuery query;
-    query.prepare("CREATE TABLE IF NOT EXISTS records(file_name TEXT PRIMARY KEY, id TEXT, name TEXT, record_start INTEGER, sex INTEGER,"
-    "class_code TEXT, protocol TEXT, doctor TEXT, file_path TEXT, recording_flag INTEGER, video_flag INTEGER, num_pages INTEGER);");
+    query.prepare("CREATE TABLE IF NOT EXISTS records(file_name TEXT PRIMARY KEY, id TEXT, name TEXT, record_start INTEGER, record_duration_s INTEGER, sex INTEGER,"
+    "class_code TEXT, protocol TEXT, doctor TEXT, file_path TEXT, recording_flag INTEGER, video_flag INTEGER, recording_system TEXT);");
 
     if (!query.exec()){
         qDebug() << "Couldn't create the table 'records': one might already exist.";
@@ -178,7 +179,7 @@ bool DbManager::createTableRecords(){
 }
 
 bool DbManager::addPerson(QRecord qrecord){
-    qDebug() << "DbManager::addPerson";
+    //qDebug() << "DbManager::addPerson";
     bool success = false;
     QSqlQuery queryAdd;
     queryAdd.prepare("INSERT INTO patients (id, name, sex, last_record) VALUES (:id, :name, :sex, :last_record)");
@@ -266,7 +267,7 @@ bool DbManager::patientExists(const QString& id) const{
 }
 
 bool DbManager::recordExists(const QString& file_name) const{
-    qDebug() << "DbManager::recordExists";
+    //qDebug() << "DbManager::recordExists";
     bool exists = false;
 
     QSqlQuery checkQuery;
@@ -286,7 +287,7 @@ bool DbManager::recordExists(const QString& file_name) const{
 
 // TO DO - generic version of this function
 QVector<QString> DbManager::getPatientsIds(){
-    qDebug() << "DbManager::getPatientsIds()";
+    //qDebug() << "DbManager::getPatientsIds()";
 
     int twoYearsAgo = QDateTime::currentDateTimeUtc().addYears(-2).toTime_t();
     //qDebug()  << twoYearsAgo;
@@ -311,7 +312,7 @@ QVector<QString> DbManager::getPatientsIds(){
 }
 
 QVector<QString> DbManager::getPatientsIdsbyMonthsAgo(int months){
-    qDebug() << "DbManager::getPatientsIdsbyMonthsAgo";
+    //qDebug() << "DbManager::getPatientsIdsbyMonthsAgo";
 
 
     int longAgo = QDateTime::currentDateTimeUtc().addMonths(-months).toTime_t();
@@ -336,7 +337,7 @@ QVector<QString> DbManager::getPatientsIdsbyMonthsAgo(int months){
 }
 
 QVector<QString> DbManager::getPatientsIdbyTextNote(QString query){
-    qDebug() << "DbManager::getPatientsIdbyTextNote";
+    //qDebug() << "DbManager::getPatientsIdbyTextNote";
     QVector<QString> qpatientIds;
     QStringList cols;
     cols << "name" << "class_code" << "doctor";
@@ -354,7 +355,7 @@ QVector<QString> DbManager::getPatientsIdbyTextNote(QString query){
 }
 
 QVector<QString> DbManager::getPatientsIdByTextNoteFromCol(QString col, QString query){
-    qDebug() << "DbManager::getPatientsIdByTextNoteFromCol";
+    //qDebug() << "DbManager::getPatientsIdByTextNoteFromCol";
     //qDebug() << "now searching " << col << " for " << query;
 
     QString query_string = "SELECT id FROM records WHERE ";
@@ -394,7 +395,7 @@ bool DbManager::selectPatient(){
         qDebug() << "===" << qpatient.id << "===" << qpatient.name << "===" << qpatient.last_record;
 
         QSqlQuery selectRecordQuery;
-        selectRecordQuery.prepare("SELECT file_name, id, name, record_start, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, num_pages FROM records WHERE id = (:id)");
+        selectRecordQuery.prepare("SELECT file_name, id, name, record_start, record_duration_s, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, FROM records WHERE id = (:id)");
         selectRecordQuery.bindValue(":id",qpatient.id);
         selectRecordQuery.exec();
 
@@ -423,7 +424,7 @@ QPatient DbManager::selectPatientbyIdWithRecords(QString id){
     QPatient qpatient;
 
     QSqlQuery selectRecordQuery;
-    selectRecordQuery.prepare("SELECT file_name, id, name, record_start, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, num_pages FROM records WHERE id = (:id)");
+    selectRecordQuery.prepare("SELECT file_name, id, name, record_start, record_duration_s, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, recording_system FROM records WHERE id = (:id)");
     selectRecordQuery.bindValue(":id",id);
     selectRecordQuery.exec();
 
@@ -455,7 +456,7 @@ QPatient DbManager::selectPatientbyNameWithRecords(QString name){
     QPatient qpatient;
 
     QSqlQuery selectRecordQuery;
-    selectRecordQuery.prepare("SELECT file_name, id, name, record_start, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, num_pages FROM records WHERE name = (:name)");
+    selectRecordQuery.prepare("SELECT file_name, id, name, record_start, record_duration_s, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag FROM records WHERE name = (:name)");
     selectRecordQuery.bindValue(":name",name);
     selectRecordQuery.exec();
 

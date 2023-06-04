@@ -18,15 +18,17 @@ public:
     QString id;
     QString name;
     QDateTime record_start;
+    int record_duration_s;
     int sex;
     QString class_code;
     QString protocol;
     QString doctor;
     QString file_name;
     QString file_path;
+    QString system;
     int recording_flag;
     int video_flag;
-    int num_pages;
+    //int num_pages; // replace with file_duration
     void setID(std::string);
     void setPath(QString);
     void set_values_from_db(QSqlRecord);
