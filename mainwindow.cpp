@@ -223,7 +223,7 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
         Qinfo = Qrecord.class_code;
     }
 
-// TO DO - nice way how to display recording system in model
+    // TO DO - nice way how to display recording system in model
     model->setData(model->index(ind, 0, parent), Qrecord.file_name, Qt::DisplayRole);
     //qDebug() << "set data file name";
     model->setData(model->index(ind, 1, parent), Qinfo, Qt::DisplayRole); //class_code
@@ -489,7 +489,7 @@ void MainWindow::double_click_record(QModelIndex index){
     myProcess->setArguments(arguments);
 
     if (recording_flag.toBool()){
-        if(nestOptions.externalProgram2.isEmpty()){
+        if(nestOptions.brainlabControl.isEmpty()){
             int ret = setProgram.exec();
             if (ret == QMessageBox::Yes){
                 chooseExternalProgram2();
@@ -501,7 +501,7 @@ void MainWindow::double_click_record(QModelIndex index){
         openBrainLabControl(path);
     }
     else{
-        if(nestOptions.externalProgram1.isEmpty()){
+        if(nestOptions.brainlabReader.isEmpty()){
             int ret = setProgram.exec();
             if (ret == QMessageBox::Yes){
                 chooseExternalProgram1();
@@ -510,7 +510,7 @@ void MainWindow::double_click_record(QModelIndex index){
                 return;
             }
         }
-        myProcess->setProgram(this->nestOptions.externalProgram1);
+        myProcess->setProgram(this->nestOptions.brainlabReader);
         myProcess->start();
     }
 }
@@ -524,7 +524,7 @@ void MainWindow::openBrainLabControl(QString path){
         qDebug() << "the file is not on the path";
         qDebug() << fi.path();
         // if the right drive is not loaded then look for correct batch file
-        int ind = dynamic_dirs.indexOf(fi.path());
+        int ind = nestOptions.Brainlab_dirs.dynamic_dirs.indexOf(fi.path());
         if (ind != -1){
             // if there is batch file mapped to it - use it
             QString batchFile = batchFiles.at(ind);
@@ -539,7 +539,7 @@ void MainWindow::openBrainLabControl(QString path){
     QStringList arguments;
     arguments << path;
     myProcess->setArguments(arguments);
-    myProcess->setProgram(this->nestOptions.externalProgram2);
+    myProcess->setProgram(this->nestOptions.brainlabControl);
     myProcess->start();
 }
 
@@ -656,12 +656,12 @@ void MainWindow::AddFolderDialog(bool dynamic){
 
     // add the folder only when it is not in the list already
     if (dynamic){
-        if(!dynamic_dirs.contains(new_dir)){
-            dynamic_dirs << new_dir;
+        if(!nestOptions.Brainlab_dirs.dynamic_dirs.contains(new_dir)){
+            nestOptions.Brainlab_dirs.dynamic_dirs << new_dir;
         }
     }else{
-        if(!static_dirs.contains(new_dir)){
-            static_dirs << new_dir;
+        if(!nestOptions.Brainlab_dirs.static_dirs.contains(new_dir)){
+            nestOptions.Brainlab_dirs.static_dirs << new_dir;
         }
     }
     checkDataOnHDD(new_dir,dynamic);
@@ -717,7 +717,7 @@ void MainWindow::chooseExternalProgram1(){
     if(temp.isEmpty()){
         return;
     }else{
-        nestOptions.externalProgram1 = temp;
+        nestOptions.brainlabReader = temp;
     }
 };
 
@@ -728,7 +728,7 @@ void MainWindow::chooseExternalProgram2(){
     if(temp.isEmpty()){
         return;
     }else{
-        nestOptions.externalProgram2 = temp;
+        nestOptions.brainlabControl = temp;
     }
 };
 
@@ -745,7 +745,7 @@ void MainWindow::chooseExportProgram(){
 
 void MainWindow::refreshDynamic(){
 
-    checkFolders(dynamic_dirs,true);
+    checkFolders(nestOptions.Brainlab_dirs.dynamic_dirs,true);
     updateLastRefreshTime();
     updatePatientTreeModel();
 }
@@ -753,7 +753,7 @@ void MainWindow::refreshDynamic(){
 void MainWindow::refreshStatic(){
 
     QMessageBox msgBox;
-    msgBox.setText(tr("Refreshing static folder might take some time"));
+    msgBox.setText(tr("Refreshing static folders might take some time"));
     msgBox.setInformativeText(tr("Do you really want to do it now?"));
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
     msgBox.setDefaultButton(QMessageBox::Cancel);
@@ -763,7 +763,7 @@ void MainWindow::refreshStatic(){
         return;
     }
     else{
-        checkFolders(static_dirs,false);
+        checkFolders(nestOptions.Brainlab_dirs.static_dirs,false);
         updatePatientTreeModel();
     }
 }
@@ -1083,8 +1083,11 @@ void MainWindow::writeSettings()
 {
     //QSettings settings("PuffinSoft", "EEGle Nest");
     QSettings settings("settings.ini",QSettings::IniFormat);
-    settings.setValue("external_program_reader", nestOptions.externalProgram1);
-    settings.setValue("external_program_control", nestOptions.externalProgram2);
+    settings.setValue("external_program_reader", nestOptions.brainlabReader);
+    settings.setValue("external_program_control", nestOptions.brainlabControl);
+    settings.setValue("brainlab_reader", nestOptions.brainlabReader);
+    settings.setValue("brainlab_control", nestOptions.brainlabControl);
+    settings.setValue("harmonie_reader", nestOptions.harmonieReader);
     settings.setValue("defaultDataFolder","D:/Dropbox/Scripts/Cpp/");
     settings.setValue("defaultReaderFolder","D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/");
     settings.setValue("refreshing_period",nestOptions.refreshingPeriod);
@@ -1102,26 +1105,71 @@ void MainWindow::writeSettings()
     settings.setValue("enable_export_debug_mode",nestOptions.exportEnableDebug);
     settings.setValue("months_to_load",nestOptions.months2load);
 
-    settings.beginWriteArray("static_dirs");
-    for (int i = 0; i < static_dirs.size(); ++i) {
-        settings.setArrayIndex(i);
-        settings.setValue("path", static_dirs.at(i));
-    }
-    settings.endArray();
+//    settings.beginWriteArray("static_dirs");
+//    for (int i = 0; i < static_dirs.size(); ++i) {
+//        settings.setArrayIndex(i);
+//        settings.setValue("path", static_dirs.at(i));
+//    }
+//    settings.endArray();
 
-    settings.beginWriteArray("dynamic_dirs");
-    for (int i = 0; i < dynamic_dirs.size(); ++i) {
-        settings.setArrayIndex(i);
-        settings.setValue("path", dynamic_dirs.at(i));
+//    settings.beginWriteArray("dynamic_dirs");
+//    for (int i = 0; i < dynamic_dirs.size(); ++i) {
+//        settings.setArrayIndex(i);
+//        settings.setValue("path", dynamic_dirs.at(i));
+//    }
+//    settings.endArray();
+
+    //// Signal folders ////
+    std::vector<std::string> systems = {"Brainlab", "Harmonie", "Nicolet"};
+    std::vector<signal_dirs*> dirs = {&nestOptions.Brainlab_dirs,&nestOptions.Harmonie_dirs,&nestOptions.Nicone_dirs};
+
+    for(unsigned int s = 0; s < systems.size(); s++){
+        settings.beginGroup(QString::fromStdString(systems[s]));
+
+        settings.beginWriteArray("static_dirs");
+        for (int i = 0; i < dirs[s]->static_dirs.size(); ++i) {
+            settings.setArrayIndex(i);
+            settings.setValue("path", dirs[s]->static_dirs.at(i));
+        }
+        settings.endArray();
+
+        settings.beginWriteArray("dynamic_dirs");
+        for (int i = 0; i < dirs[s]->dynamic_dirs.size(); ++i) {
+            settings.setArrayIndex(i);
+            settings.setValue("path", dirs[s]->dynamic_dirs.at(i));
+        }
+        settings.endArray();
+
+        settings.endGroup();
     }
-    settings.endArray();
+
+
+    // Brainlab
+
+    //    settings.beginGroup("Brainlab");
+    //    settings.beginWriteArray("static_dirs");
+
+    //    for (int i = 0; i < nestOptions.Brainlab_dirs.static_dirs.size(); ++i) {
+    //        settings.setArrayIndex(i);
+    //        settings.setValue("path", nestOptions.Brainlab_dirs.static_dirs.at(i));
+    //    }
+    //    settings.endArray();
+
+    //    settings.beginWriteArray("dynamic_dirs");
+    //    for (int i = 0; i < nestOptions.Brainlab_dirs.dynamic_dirs.size(); ++i) {
+    //        settings.setArrayIndex(i);
+    //        settings.setValue("path", nestOptions.Brainlab_dirs.dynamic_dirs.at(i));
+    //    }
+    //    settings.endArray();
+    //    settings.endGroup();
+
 }
 
 void MainWindow::readSettings()
 {
     QSettings settings("settings.ini",QSettings::IniFormat);
-    nestOptions.externalProgram1 = settings.value("external_program_reader").toString();
-    nestOptions.externalProgram2 = settings.value("external_program_control").toString();
+    nestOptions.brainlabReader = settings.value("external_program_reader").toString();
+    nestOptions.brainlabControl = settings.value("external_program_control").toString();
     nestOptions.defaultDataFolder = settings.value("defaultDataFolder").toString();
     nestOptions.defaultReaderFolder = settings.value("defaultReaderFolder").toString();
     nestOptions.refreshingPeriod = settings.value("refreshing_period").toInt();
@@ -1140,27 +1188,57 @@ void MainWindow::readSettings()
     nestOptions.exportEnableDebug = settings.value("enable_export_debug_mode").toBool();
     nestOptions.months2load = settings.value("months_to_load").toInt();
 
-    // load array of static folders
-    int size = settings.beginReadArray("static_dirs");
-    for (int i = 0; i < size; ++i) {
-        settings.setArrayIndex(i);
-        QString new_stat_dir = settings.value("path").toString();
-        static_dirs.append(new_stat_dir);
+    //// Signal folders ////
+    std::vector<std::string> systems = {"Brainlab", "Harmonie", "Nicolet"};
+    std::vector<signal_dirs*> dirs = {&nestOptions.Brainlab_dirs,&nestOptions.Harmonie_dirs,&nestOptions.Nicone_dirs};
+
+    for(unsigned int s = 0; s < systems.size(); s++){
+        settings.beginGroup(QString::fromStdString(systems[s]));
+
+        // load array of static folders
+        int size = settings.beginReadArray("static_dirs");
+        for (int i = 0; i < size; ++i) {
+            settings.setArrayIndex(i);
+            QString new_stat_dir = settings.value("path").toString();
+            dirs[s]->static_dirs.append(new_stat_dir);
+        }
+        settings.endArray();
+
+        // load array of dynamic folders
+        size = settings.beginReadArray("dynamic_dirs");
+        for (int i = 0; i < size; ++i) {
+            settings.setArrayIndex(i);
+            QString new_dyn_dir = settings.value("path").toString();
+            dirs[s]->dynamic_dirs.append(new_dyn_dir);
+        }
+        settings.endArray();
+
+        settings.endGroup();
     }
-    settings.endArray();
+
+    //    int size = settings.beginReadArray("static_dirs");
+    //    for (int i = 0; i < size; ++i) {
+    //        settings.setArrayIndex(i);
+    //        QString new_stat_dir = settings.value("path").toString();
+    //        static_dirs.append(new_stat_dir);
+    //    }
+    //    settings.endArray();
+
+    //    // load array of dynamic folders
+    //    size = settings.beginReadArray("dynamic_dirs");
+    //    for (int i = 0; i < size; ++i) {
+    //        settings.setArrayIndex(i);
+    //        QString new_dyn_dir = settings.value("path").toString();
+    //        dynamic_dirs.append(new_dyn_dir);
+    //    }
+    //    settings.endArray();
+
+//    nestOptions.Brainlab_dirs.dynamic_dirs = dynamic_dirs;
+//    nestOptions.Brainlab_dirs.static_dirs = static_dirs;
 
 
-    // load array of dynamic folders
-    size = settings.beginReadArray("dynamic_dirs");
-    for (int i = 0; i < size; ++i) {
-        settings.setArrayIndex(i);
-        QString new_dyn_dir = settings.value("path").toString();
-        dynamic_dirs.append(new_dyn_dir);
-    }
-    settings.endArray();
-
-    // load array of used drives (not used)
-    size = settings.beginReadArray("used_drives");
+    // load array of used drives (not used right now)
+    int size = settings.beginReadArray("used_drives");
     for (int i = 0; i < size; ++i) {
         settings.setArrayIndex(i);
         QString usedDrive = settings.value("path").toString();

@@ -29,8 +29,9 @@ private:
     QDialog        *optionsdialog;
     QPushButton    *cancelButton,
     *saveButton,
-    *AddReaderButton,
-    *AddControlButton,
+    *AddBrainlabReaderButton,
+    *AddBrainlabControlButton,
+    *AddHarmonieReaderButton,
     *changeExportPathButton,
     *changeExportProgramButton;
 
@@ -55,8 +56,9 @@ private:
 
     QSpinBox *months2loadSpinBox;
 
-    QLineEdit *readerEdit,
-    *controlEdit,
+    QLineEdit *brainlabReaderEdit,
+    *brainlabControlEdit,
+    *harmonieReaderEdit,
     *exportEdit,
     *exportPathEdit;
 
@@ -70,8 +72,9 @@ public slots:
     void enableLoadStaticOnRefresh(bool checked);
     void saveAndClose();
     void modeButtonClicked(int value);
-    void add_reader();
-    void add_control();
+    void add_brainlab_reader();
+    void add_brainlab_control();
+    void add_harmonie_reader();
     void add_exporter();
     void add_path2export();
     void enableAnonymize(bool checked);

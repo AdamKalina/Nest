@@ -52,7 +52,13 @@ QDataStream & operator<<(QDataStream & out, const QRecord & Qrecord);
 QDataStream & operator>>(QDataStream & in, QRecord & Qrecord);
 QDataStream & operator>>(QDataStream & in, QPatient & Qpatient);
 
-class n_options{
+struct signal_dirs{
+    QStringList dynamic_dirs;
+    QStringList static_dirs;
+};
+
+
+class n_options{   
 
 public:
     // general
@@ -67,8 +73,10 @@ public:
     bool refreshLoadStatic = true;
 
     // EEG reader
-    QString externalProgram1; // for regular files, scan.exe. in XP "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
-    QString externalProgram2; // for files being recorded - control.exe in XP
+    QString brainlabReader; // for regular files, scan.exe. in XP, "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
+    QString brainlabControl; // for files being recorded - control.exe in XP
+    QString harmonieReader;
+    QString nicOneReader;
     QString defaultReaderFolder;
 
     // EDF export
@@ -82,6 +90,9 @@ public:
 
     // EEG folders
     QString defaultDataFolder;
+    signal_dirs Brainlab_dirs;
+    signal_dirs Harmonie_dirs;
+    signal_dirs Nicone_dirs;
 
     // user editing of db
     bool recordDeleteAllow = false;

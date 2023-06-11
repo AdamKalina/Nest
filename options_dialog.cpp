@@ -149,36 +149,51 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     /////////////////////////////////////// tab 2 External programs ///////////////////////////////////////////////////////////////////////
     tab2 = new QWidget;
 
-    QLabel *readerLabel = new QLabel(tr("EEG reader"));
-    readerLabel->setFont(b);
-    readerEdit = new QLineEdit(un_options.externalProgram1);
+    QLabel *brainlabReaderLabel = new QLabel(tr("Brainlab - EEG reader"));
+    brainlabReaderLabel->setFont(b);
+    brainlabReaderEdit = new QLineEdit(un_options.brainlabReader);
 
-    QLabel *controlLabel = new QLabel(tr("EEG reader for files still being recorded (control)"));
-    controlLabel->setFont(b);
-    controlEdit = new QLineEdit(un_options.externalProgram2);
+    QLabel *brainlabControlLabel = new QLabel(tr("Brainlab - EEG reader for files still being recorded (control)"));
+    brainlabControlLabel->setFont(b);
+    brainlabControlEdit = new QLineEdit(un_options.brainlabControl);
 
-    AddReaderButton = new QPushButton;
-    AddReaderButton->setText(tr("Add reader"));
-    AddReaderButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+    QLabel *harmonieReaderlabel = new QLabel(tr("Harmonie - EEG reader"));
+    harmonieReaderlabel->setFont(b);
+    harmonieReaderEdit = new QLineEdit(un_options.harmonieReader);
 
-    AddControlButton = new QPushButton;
-    AddControlButton->setText(tr("Add control"));
-    AddControlButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+    AddBrainlabReaderButton = new QPushButton;
+    AddBrainlabReaderButton->setText(tr("Add Brainlab reader"));
+    AddBrainlabReaderButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+
+    AddBrainlabControlButton = new QPushButton;
+    AddBrainlabControlButton->setText(tr("Add Brainlab control"));
+    AddBrainlabControlButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+
+    AddHarmonieReaderButton = new QPushButton;
+    AddHarmonieReaderButton->setText(tr("Add Harmonie control"));
+    AddHarmonieReaderButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
 
     QHBoxLayout *hlayout_reader = new QHBoxLayout;
-    hlayout_reader->addWidget(readerEdit);
-    hlayout_reader->addWidget(AddReaderButton);
+    hlayout_reader->addWidget(brainlabReaderEdit);
+    hlayout_reader->addWidget(AddBrainlabReaderButton);
 
     QHBoxLayout *hlayout_control = new QHBoxLayout;
-    hlayout_control->addWidget(controlEdit);
-    hlayout_control->addWidget(AddControlButton);
+    hlayout_control->addWidget(brainlabControlEdit);
+    hlayout_control->addWidget(AddBrainlabControlButton);
+
+    QHBoxLayout *hlayout_harmonie = new QHBoxLayout;
+    hlayout_harmonie->addWidget(harmonieReaderEdit);
+    hlayout_harmonie->addWidget(AddHarmonieReaderButton);
 
     QVBoxLayout *vlayout2 = new QVBoxLayout;
-    vlayout2->addWidget(readerLabel,0,Qt::AlignBottom);
+    vlayout2->addWidget(brainlabReaderLabel,0,Qt::AlignBottom);
     vlayout2->addLayout(hlayout_reader);
     vlayout2->addSpacing(40);
-    vlayout2->addWidget(controlLabel,0,Qt::AlignBottom);
+    vlayout2->addWidget(brainlabControlLabel,0,Qt::AlignBottom);
     vlayout2->addLayout(hlayout_control);
+    vlayout2->addSpacing(40);
+    vlayout2->addWidget(harmonieReaderlabel,0,Qt::AlignBottom);
+    vlayout2->addLayout(hlayout_harmonie);
     vlayout2->addStretch(10);
 
     tab2->setLayout(vlayout2);
@@ -329,8 +344,9 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     connect(useWorkingHours, SIGNAL(toggled(bool)), this, SLOT(enableWorkingHoursOnly(bool)));
     connect(loadStaticOnRefresh, SIGNAL(toggled(bool)), this, SLOT(enableLoadStaticOnRefresh(bool)));
     // EXTERNAL PROGRAMS
-    connect(AddReaderButton, SIGNAL(clicked()), this,SLOT(add_reader()));
-    connect(AddControlButton, SIGNAL(clicked()), this,SLOT(add_control()));
+    connect(AddBrainlabReaderButton, SIGNAL(clicked()), this,SLOT(add_brainlab_reader()));
+    connect(AddBrainlabControlButton, SIGNAL(clicked()), this,SLOT(add_brainlab_control()));
+    connect(AddHarmonieReaderButton, SIGNAL(clicked()), this,SLOT(add_harmonie_reader()));
     // EDF export
     connect(changeExportProgramButton, SIGNAL(clicked()), this,SLOT(add_exporter()));
     connect(changeExportPathButton, SIGNAL(clicked()), this,SLOT(add_path2export()));
@@ -394,12 +410,16 @@ void OptionsDialog::enableLoadStaticOnRefresh(bool checked){
     qDebug() << checked;
 }
 
-void OptionsDialog::add_reader(){
-    add_program("reader");
+void OptionsDialog::add_brainlab_reader(){
+    add_program("brainlabReader");
 }
 
-void OptionsDialog::add_control(){
-    add_program("control");
+void OptionsDialog::add_brainlab_control(){
+    add_program("brainlabControl");
+}
+
+void OptionsDialog::add_harmonie_reader(){
+    add_program("harmonie");
 }
 
 void OptionsDialog::add_program(QString program){
@@ -410,12 +430,16 @@ void OptionsDialog::add_program(QString program){
         return;
     }
 
-    if(program == "reader"){
-        readerEdit->setText(temp);
+    if(program == "brainlabReader"){
+        brainlabReaderEdit->setText(temp);
     }
 
-    if(program == "control"){
-        controlEdit->setText(temp);
+    if(program == "brainlabControl"){
+        brainlabControlEdit->setText(temp);
+    }
+
+    if(program == "harmonie"){
+        harmonieReaderEdit->setText(temp);
     }
 }
 
@@ -485,8 +509,9 @@ void OptionsDialog::saveAndClose(){
     }
 
     //    // EXTERNAL PROGRAMS
-    un_options.externalProgram1 = readerEdit->text();
-    un_options.externalProgram2 = controlEdit->text();
+    un_options.brainlabReader = brainlabReaderEdit->text();
+    un_options.brainlabControl = brainlabControlEdit->text();
+    un_options.harmonieReader = harmonieReaderEdit->text();
     //    //EDF EXPORT
     un_options.exportProgram = exportEdit->text();
     un_options.exportPath =  exportPathEdit->text();

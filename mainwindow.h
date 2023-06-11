@@ -65,14 +65,6 @@ public:
     bool dbLoaded = false;
     bool programStart = true;
     long no_files_loaded = 0;
-    //    int refreshingPeriod = 15; // in minutes
-    //    bool periodicRefreshingEnabled = false;
-    //    bool workingHoursOnly = false;
-    //    bool loadStaticOnRefreshEnabled = true;
-    //    bool boldParent = false;
-
-    //    int periodicRefreshMode = 0;
-    //    int months2load = 24;
 
     // Qt variables
     QMap<QString, QPatient> patientMap;
