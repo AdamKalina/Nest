@@ -28,30 +28,49 @@ void MainWindow::loadDataFromDb(){
     }
 }
 
-QRecord MainWindow::getQRecord(QFileInfo fileInfo){
+QRecord MainWindow::getQRecord(QFileInfo fileInfo, const QString recordingSystem){
+    //qDebug() << fileInfo.absoluteDir().absolutePath();
+    // T
 
-    // read the data header
-    // this function returns only the data needed - maybe rename it
-    QRecord qrecord = read_signal_file(fileInfo);
+    QRecord qrecord;
 
-    // check if .LOG file with same name exists - and if it does, flag the record as still being recorded
-    // TO DO - is this the best way? There is lot of data in the header of recorded file, search for "TEMP" instead?
-    qrecord.recording_flag = QFileInfo::exists(fileInfo.canonicalPath() + "/" + fileInfo.baseName() + ".LOG"); // bool to int
-    // TO DO - the same for video file, is there a field in signal that states that video exists?
-    qrecord.video_flag = QFileInfo::exists(fileInfo.canonicalPath() + "/" + fileInfo.baseName() + ".M01"); // bool to int
-
+    if (recordingSystem == "brainlab"){
+        qrecord = read_signal_file(fileInfo);
+    }
     return qrecord;
 }
 
+//QRecord MainWindow::getQRecordBrainlab(QFileInfo fileInfo){
+//    // read the data header
+//    // this function returns only the data needed - maybe rename it
+//    QRecord qrecord = read_signal_file(fileInfo);
+
+//    // OLD WAYS - TO delete - replaced by reading read_only field in header
+//    // check if .LOG file with same name exists - and if it does, flag the record as still being recorded
+//    // TO DO - is this the best way? There is lot of data in the header of recorded file, search for "TEMP" instead?
+//    //qrecord.recording_flag = QFileInfo::exists(fileInfo.canonicalPath() + "/" + fileInfo.baseName() + ".LOG"); // bool to int
+
+//    // checking for video file
+//    // there are also events in the EEG file (Start video recording/Stop video recording) that gets deleted when you remove video, but this seems faster
+//    //qrecord.video_flag = QFileInfo::exists(fileInfo.canonicalPath() + "/" + fileInfo.baseName() + ".M01"); // bool to int
+
+//    return qrecord;
+//}
+
 // ======== Go through files and collect fileInfo ========
 // this is separate function because there is no way to tell how long it will take so QProgressDialog can not be used
-void MainWindow::checkDataOnHDD(QString path2load, bool dynamic){
-    qDebug() << "MainWindow::checkDataOnHDD";
+void MainWindow::checkDataOnHDD(QString path2load, bool dynamic, const QString recordingSystem){
+    //qDebug() << "MainWindow::checkDataOnHDD";
 
     QDateTime now = QDateTime::currentDateTime();
 
     // QDirIterator - goes through files recursively
-    QDirIterator QDit(path2load, QStringList() << "*.sig" << "*.SIG", QDir::Files, QDirIterator::Subdirectories);
+
+    QString system_extension;
+
+    system_extension = system_extensions[recordingSystem];
+
+    QDirIterator QDit(path2load, QStringList() << system_extension.toLower() << system_extension, QDir::Files, QDirIterator::Subdirectories);
     while (QDit.hasNext()){
 
         QString Qpath = QDit.next();
@@ -66,11 +85,11 @@ void MainWindow::checkDataOnHDD(QString path2load, bool dynamic){
         }
         fiQueue.enqueue(fi);
     }
-    readDataOnHDD(path2load, dynamic);
+    readDataOnHDD(path2load, dynamic, recordingSystem);
 }
 
 // ======== Go through fileinfo and read file headers ========
-void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
+void MainWindow::readDataOnHDD(QString path2load, bool dynamic, const QString recordingSystem){
     qDebug() << "MainWindow::readDataOnHDD";
 
     //Progress dialog - shows the progress on reading files
@@ -86,7 +105,7 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
     while (!fiQueue.isEmpty()){
 
         QFileInfo fid = fiQueue.dequeue(); // take the next fileinfo from queue
-        prepareQRecord(fid, dynamic);
+        prepareQRecord(fid, dynamic, recordingSystem);
 
         // update progress dialog
         ii++;
@@ -96,10 +115,10 @@ void MainWindow::readDataOnHDD(QString path2load, bool dynamic){
 }
 
 
-QRecord MainWindow::prepareQRecord(QFileInfo fileInfo, bool dynamic){
+QRecord MainWindow::prepareQRecord(QFileInfo fileInfo, bool dynamic, const QString recordingSystem){
     //qDebug() << "MainWindow::prepareQRecord";
 
-    QRecord qrecord = getQRecord(fileInfo);
+    QRecord qrecord = getQRecord(fileInfo, recordingSystem);
 
     // if something is wrong with this file, skip it
     if (qrecord.check_flag == 1){
@@ -143,7 +162,6 @@ void MainWindow::initSystemWatcher(){
 
     // QFileSystemWatcher for files being recorded
     recordingFileWatcher = new QFileSystemWatcher(this);
-    //recordingFileWatcher->addPath("D:/Dropbox/Scripts/Cpp/EEGLEnest/data_test/dynamic_data_test/S0023497.SIG");
     connect(recordingFileWatcher, SIGNAL(fileChanged(QString)), this, SLOT(recordedFileChanged(QString)));
 }
 
@@ -151,13 +169,13 @@ void MainWindow::recordedFileChanged(const QString & path){
 
     QFileInfo fi(path);
 
-    //some editors might emit two signals when changing file and the first one points to file with zero size
+    // some editors might emit two signals when changing file and the first one points to file with zero size
     // https://stackoverflow.com/questions/59754532/why-does-qfilesystemwatcher-emit-multiple-signals-and-qfileinfo-for-the-first-t
     if(fi.size() == 0){
         return;
     }
 
-    QRecord qrecord = getQRecord(fi);
+    QRecord qrecord = getQRecord(fi, "brainlab");
 
     if(qrecord.recording_flag == 1){
         //check it is still in the watcher
@@ -664,7 +682,7 @@ void MainWindow::AddFolderDialog(bool dynamic){
             nestOptions.Brainlab_dirs.static_dirs << new_dir;
         }
     }
-    checkDataOnHDD(new_dir,dynamic);
+    checkDataOnHDD(new_dir,dynamic,"brainlab");
     updatePatientTreeModel();
 };
 
@@ -745,7 +763,9 @@ void MainWindow::chooseExportProgram(){
 
 void MainWindow::refreshDynamic(){
 
-    checkFolders(nestOptions.Brainlab_dirs.dynamic_dirs,true);
+    checkFolders(nestOptions.Brainlab_dirs.dynamic_dirs,true, "brainlab");
+    //    checkFolders(nestOptions.Harmonie_dirs.dynamic_dirs,true, "harmonie");
+    //    checkFolders(nestOptions.Nicone_dirs.dynamic_dirs,true, "nicolet");
     updateLastRefreshTime();
     updatePatientTreeModel();
 }
@@ -763,17 +783,19 @@ void MainWindow::refreshStatic(){
         return;
     }
     else{
-        checkFolders(nestOptions.Brainlab_dirs.static_dirs,false);
+        checkFolders(nestOptions.Brainlab_dirs.static_dirs, false, "brainlab");
+        //    checkFolders(nestOptions.Harmonie_dirs.dynamic_dirs,false, "harmonie");
+        //    checkFolders(nestOptions.Nicone_dirs.dynamic_dirs,false, "nicolet");
         updatePatientTreeModel();
     }
 }
 
-void MainWindow::checkFolders(const QStringList dirs, bool dynamic){
+void MainWindow::checkFolders(const QStringList dirs, bool dynamic, const QString recordingSystem){
     // generic function - goes through list of folders and loads FileInfo into queue (inside checkDataOnHDD)
     if(!dirs.isEmpty()){
         for(const auto& i : dirs){
             qDebug() << "loading data: " << i;
-            checkDataOnHDD(i,dynamic);
+            checkDataOnHDD(i, dynamic, recordingSystem);
         }
     }
 }
@@ -999,6 +1021,10 @@ MainWindow::MainWindow(QWidget *parent)
     // build parts of layout
     buildFilterLine(); // build filter line - do it first if you want it on the top
     buildTreeView();
+
+    system_extensions["brainlab"] = "*.SIG";
+    system_extensions["nicolet"] = "*.E";
+    system_extensions["harmonie"] = "*STS";
 }
 
 
@@ -1074,9 +1100,6 @@ void MainWindow::closeEvent (QCloseEvent *event)
     }
 }
 
-
-
-
 // ======== Write and Read Settings ========
 
 void MainWindow::writeSettings()
@@ -1105,27 +1128,14 @@ void MainWindow::writeSettings()
     settings.setValue("enable_export_debug_mode",nestOptions.exportEnableDebug);
     settings.setValue("months_to_load",nestOptions.months2load);
 
-//    settings.beginWriteArray("static_dirs");
-//    for (int i = 0; i < static_dirs.size(); ++i) {
-//        settings.setArrayIndex(i);
-//        settings.setValue("path", static_dirs.at(i));
-//    }
-//    settings.endArray();
-
-//    settings.beginWriteArray("dynamic_dirs");
-//    for (int i = 0; i < dynamic_dirs.size(); ++i) {
-//        settings.setArrayIndex(i);
-//        settings.setValue("path", dynamic_dirs.at(i));
-//    }
-//    settings.endArray();
-
     //// Signal folders ////
     std::vector<std::string> systems = {"Brainlab", "Harmonie", "Nicolet"};
-    std::vector<signal_dirs*> dirs = {&nestOptions.Brainlab_dirs,&nestOptions.Harmonie_dirs,&nestOptions.Nicone_dirs};
+    std::vector<signal_dirs*> dirs = {&nestOptions.Brainlab_dirs,&nestOptions.Harmonie_dirs,&nestOptions.Nicolet_dirs};
 
     for(unsigned int s = 0; s < systems.size(); s++){
         settings.beginGroup(QString::fromStdString(systems[s]));
 
+        dirs[s]->static_dirs.sort(); // sort the folder alphabetically
         settings.beginWriteArray("static_dirs");
         for (int i = 0; i < dirs[s]->static_dirs.size(); ++i) {
             settings.setArrayIndex(i);
@@ -1133,6 +1143,7 @@ void MainWindow::writeSettings()
         }
         settings.endArray();
 
+        dirs[s]->dynamic_dirs.sort();
         settings.beginWriteArray("dynamic_dirs");
         for (int i = 0; i < dirs[s]->dynamic_dirs.size(); ++i) {
             settings.setArrayIndex(i);
@@ -1142,27 +1153,6 @@ void MainWindow::writeSettings()
 
         settings.endGroup();
     }
-
-
-    // Brainlab
-
-    //    settings.beginGroup("Brainlab");
-    //    settings.beginWriteArray("static_dirs");
-
-    //    for (int i = 0; i < nestOptions.Brainlab_dirs.static_dirs.size(); ++i) {
-    //        settings.setArrayIndex(i);
-    //        settings.setValue("path", nestOptions.Brainlab_dirs.static_dirs.at(i));
-    //    }
-    //    settings.endArray();
-
-    //    settings.beginWriteArray("dynamic_dirs");
-    //    for (int i = 0; i < nestOptions.Brainlab_dirs.dynamic_dirs.size(); ++i) {
-    //        settings.setArrayIndex(i);
-    //        settings.setValue("path", nestOptions.Brainlab_dirs.dynamic_dirs.at(i));
-    //    }
-    //    settings.endArray();
-    //    settings.endGroup();
-
 }
 
 void MainWindow::readSettings()
@@ -1190,7 +1180,7 @@ void MainWindow::readSettings()
 
     //// Signal folders ////
     std::vector<std::string> systems = {"Brainlab", "Harmonie", "Nicolet"};
-    std::vector<signal_dirs*> dirs = {&nestOptions.Brainlab_dirs,&nestOptions.Harmonie_dirs,&nestOptions.Nicone_dirs};
+    std::vector<signal_dirs*> dirs = {&nestOptions.Brainlab_dirs,&nestOptions.Harmonie_dirs,&nestOptions.Nicolet_dirs};
 
     for(unsigned int s = 0; s < systems.size(); s++){
         settings.beginGroup(QString::fromStdString(systems[s]));
@@ -1215,27 +1205,6 @@ void MainWindow::readSettings()
 
         settings.endGroup();
     }
-
-    //    int size = settings.beginReadArray("static_dirs");
-    //    for (int i = 0; i < size; ++i) {
-    //        settings.setArrayIndex(i);
-    //        QString new_stat_dir = settings.value("path").toString();
-    //        static_dirs.append(new_stat_dir);
-    //    }
-    //    settings.endArray();
-
-    //    // load array of dynamic folders
-    //    size = settings.beginReadArray("dynamic_dirs");
-    //    for (int i = 0; i < size; ++i) {
-    //        settings.setArrayIndex(i);
-    //        QString new_dyn_dir = settings.value("path").toString();
-    //        dynamic_dirs.append(new_dyn_dir);
-    //    }
-    //    settings.endArray();
-
-//    nestOptions.Brainlab_dirs.dynamic_dirs = dynamic_dirs;
-//    nestOptions.Brainlab_dirs.static_dirs = static_dirs;
-
 
     // load array of used drives (not used right now)
     int size = settings.beginReadArray("used_drives");

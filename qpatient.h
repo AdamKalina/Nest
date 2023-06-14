@@ -76,7 +76,7 @@ public:
     QString brainlabReader; // for regular files, scan.exe. in XP, "D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/EEGle.exe";
     QString brainlabControl; // for files being recorded - control.exe in XP
     QString harmonieReader;
-    QString nicOneReader;
+    QString nicoletReader;
     QString defaultReaderFolder;
 
     // EDF export
@@ -92,7 +92,7 @@ public:
     QString defaultDataFolder;
     signal_dirs Brainlab_dirs;
     signal_dirs Harmonie_dirs;
-    signal_dirs Nicone_dirs;
+    signal_dirs Nicolet_dirs;
 
     // user editing of db
     bool recordDeleteAllow = false;

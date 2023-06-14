@@ -4,7 +4,7 @@ DbManager::DbManager(){
 }
 
 bool DbManager::setPath(const QString& path){
-    qDebug() << "DbManager::setPath";
+    //qDebug() << "DbManager::setPath";
 
     m_db = QSqlDatabase::addDatabase("QSQLITE");
     m_db.setDatabaseName(path);
@@ -104,7 +104,7 @@ bool DbManager::updateRecord(QRecord qrecord){
 }
 
 bool DbManager::updatePatientLastRecord(QRecord qrecord){
-    qDebug() << "updatePatientLastRecord";
+    //qDebug() << "updatePatientLastRecord";
     QSqlQuery selectQuery;
     selectQuery.prepare("SELECT last_record FROM patients WHERE id = (:id)");
     selectQuery.bindValue(":id", qrecord.id);
@@ -248,7 +248,7 @@ void DbManager::printAllPersons() const{
 }
 
 bool DbManager::patientExists(const QString& id) const{
-    qDebug() << "DbManager::patientExists";
+    //qDebug() << "DbManager::patientExists";
     bool exists = false;
 
     QSqlQuery checkQuery;
@@ -381,7 +381,7 @@ QVector<QString> DbManager::getPatientsIdByTextNoteFromCol(QString col, QString 
 
 
 bool DbManager::selectPatient(){
-    qDebug() << "DbManager::selectPatient";
+    //qDebug() << "DbManager::selectPatient";
     bool success = false;
 
     QSqlQuery selectQuery;
@@ -419,7 +419,7 @@ bool DbManager::selectPatient(){
 }
 
 QPatient DbManager::selectPatientbyIdWithRecords(QString id){
-    qDebug() << "DbManager::selectPatientbyIdWithRecords";
+    //qDebug() << "DbManager::selectPatientbyIdWithRecords";
 
     QPatient qpatient;
 

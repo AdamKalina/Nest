@@ -69,6 +69,7 @@ public:
     // Qt variables
     QMap<QString, QPatient> patientMap;
     QMap<QString,bool> IdMap;
+    QMap<QString,QString> system_extensions;
     QQueue<QRecord> QrecordQueue;
     QQueue<QPatient> QpatientQueue;
     QQueue<QFileInfo> fiQueue; // queue for filesInfo
@@ -90,9 +91,9 @@ public:
     void readSettings();
     void writeSettings();
     void loadDataFromDb();
-    void checkFolders(const QStringList dirs, bool dynamic);
-    void checkDataOnHDD(QString path2load, bool dynamic);
-    void readDataOnHDD(QString path2load, bool dynamic);
+    void checkFolders(const QStringList dirs, bool dynamic, const QString recordingSystem);
+    void checkDataOnHDD(QString path2load, bool dynamic, const QString recordingSystem);
+    void readDataOnHDD(QString path2load, bool dynamic, const QString recordingSystem);
     void checkQPatient(QPatient qpatient);
     void updateLastRefreshTime();
     void setUpRefreshQTimer();
@@ -101,8 +102,11 @@ public:
     void workingHoursQTimer();
     void buildTreeView();
     QAbstractItemModel* createPatientTreeModel();
-    QRecord prepareQRecord(QFileInfo fileInfo, bool dynamic);
-    QRecord getQRecord(QFileInfo fileInfo);
+    QRecord prepareQRecord(QFileInfo fileInfo, bool dynamic, const QString recordingSystem);
+    QRecord getQRecord(QFileInfo fileInfo, const QString recordingSystem);
+    //QRecord getQRecordBrainlab(QFileInfo fileInfo);
+    //QRecord getQRecordHarmonie(QFileInfo fileInfo);
+    //QRecord getQRecordNicolet(QFileInfo fileInfo);
     void rebuildPatientTreeModel();
     void updatePatientTreeModel();
     void incrementParentNo(QModelIndex parentInd);

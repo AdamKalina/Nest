@@ -90,9 +90,13 @@ SignalHeader read_signal_header(std::fstream &file)
 {
     SignalHeader stud;
     file.read(reinterpret_cast<char *>(&stud.program_id), sizeof(stud.program_id));
+    //std::cout << "program id: " << stud.program_id << std::endl;
     file.read(reinterpret_cast<char *>(&stud.signal_id), sizeof(stud.signal_id));
+    //std::cout << "signal id: " << stud.signal_id << std::endl;
     file.read(reinterpret_cast<char *>(&stud.version_id), sizeof(stud.version_id));
+    //std::cout << "version id: " << stud.version_id << std::endl;
     file.read(reinterpret_cast<char *>(&stud.read_only), sizeof(stud.read_only));
+    //std::cout << "read only: " << stud.read_only << std::endl;
     return stud;
 }
 
@@ -267,7 +271,7 @@ QRecord read_signal_file(QFileInfo fileInfo){
 
     file.close();
 
-    // or make special constructor for this? - but class QRecord does not know struct measurement
+    // export file info in qrecord
     qrecord.setID(signal.measurement.id);
     qrecord.setPath(fileInfo.filePath());
     qrecord.name = QString::fromLocal8Bit(signal.measurement.name);
@@ -277,12 +281,19 @@ QRecord read_signal_file(QFileInfo fileInfo){
     qrecord.file_size = file_size;
     qrecord.record_start = decode_date_time(signal.measurement.start_date, signal.measurement.start_hour);
     qrecord.sex = signal.measurement.sex;
+    qrecord.recording_flag = !signal.header.read_only; // read_only = 0 --> still being recorded
     int num_pages = (file_size - signal.data_table.signal_info.offset) / signal.data_table.signal_info.size;
 
     qrecord.record_duration_s = num_pages*10;
 
     qrecord.check_flag = 1;
     qrecord.system = "Brainlab";
+
+    // checking for video file
+    // there are also events in the EEG file (Start video recording/Stop video recording) that gets deleted when you remove video, but this seems faster
+    qrecord.video_flag = QFileInfo::exists(fileInfo.canonicalPath() + "/" + fileInfo.baseName() + ".M01"); // bool to int
+    //qDebug() << qrecord.file_name << " has video " << qrecord.video_flag;
+
 
     return qrecord;
 }
