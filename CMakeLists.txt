@@ -51,11 +51,10 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         read_signal_file.cpp
+        read_harmonie_file.cpp
         leaffilterproxymodel.cpp
         qpatient.cpp
         folderlist.cpp
-        #externalprogramlist.cpp
-        #refreshsettings.cpp
         options_dialog.cpp
         customdelegate.cpp
         dbmanager.cpp

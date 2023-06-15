@@ -39,6 +39,7 @@
 #include <QPushButton>
 
 #include "read_signal_file.h"
+#include "read_harmonie_file.h"
 #include "qpatient.h"
 #include "folderlist.h"
 #include "externalprogramlist.h"

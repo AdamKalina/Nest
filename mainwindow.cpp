@@ -30,13 +30,18 @@ void MainWindow::loadDataFromDb(){
 
 QRecord MainWindow::getQRecord(QFileInfo fileInfo, const QString recordingSystem){
     //qDebug() << fileInfo.absoluteDir().absolutePath();
-    // T
+    //qDebug() << recordingSystem;
 
     QRecord qrecord;
 
     if (recordingSystem == "brainlab"){
         qrecord = read_signal_file(fileInfo);
     }
+
+    if(recordingSystem == "harmonie"){
+        qrecord = read_harmonie_file(fileInfo);
+    }
+
     return qrecord;
 }
 
@@ -61,6 +66,7 @@ QRecord MainWindow::getQRecord(QFileInfo fileInfo, const QString recordingSystem
 // this is separate function because there is no way to tell how long it will take so QProgressDialog can not be used
 void MainWindow::checkDataOnHDD(QString path2load, bool dynamic, const QString recordingSystem){
     //qDebug() << "MainWindow::checkDataOnHDD";
+    //qDebug() << path2load << " " << recordingSystem;
 
     QDateTime now = QDateTime::currentDateTime();
 
@@ -79,7 +85,7 @@ void MainWindow::checkDataOnHDD(QString path2load, bool dynamic, const QString r
         // if this is dynamic folder and periodicRefreshMode != 0 --> decide whether to put the file in queue
         if(dynamic && nestOptions.periodicRefreshMode != 0){
             if(fi.lastModified().daysTo(now) > nestOptions.periodicRefreshMode){
-                qDebug() << "This file is too old - skipping";
+                //qDebug() << "This file is too old - skipping";
                 continue;
             }
         }
@@ -90,7 +96,8 @@ void MainWindow::checkDataOnHDD(QString path2load, bool dynamic, const QString r
 
 // ======== Go through fileinfo and read file headers ========
 void MainWindow::readDataOnHDD(QString path2load, bool dynamic, const QString recordingSystem){
-    qDebug() << "MainWindow::readDataOnHDD";
+    //qDebug() << "MainWindow::readDataOnHDD";
+    //qDebug() << path2load << " " << recordingSystem;
 
     //Progress dialog - shows the progress on reading files
     QString ProgressLabel = QString("Refreshing data in folder %1").arg(path2load);
@@ -1024,7 +1031,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     system_extensions["brainlab"] = "*.SIG";
     system_extensions["nicolet"] = "*.E";
-    system_extensions["harmonie"] = "*STS";
+    system_extensions["harmonie"] = "*.STS";
 }
 
 

@@ -4,8 +4,6 @@ folderList::folderList(QWidget *w_parent)
 {
     mainwindow = (MainWindow *)w_parent;
 
-    int i;
-
     QFont f( "Arial", 10, QFont::Bold);
 
     edit_folders_dialog = new QDialog;
@@ -409,7 +407,7 @@ void folderTab::set_static_folders(QStringList *sfolder_list){
 
 void folderTab::add_folder(bool dynamic){
 
-    qDebug() << recordingSystem;
+    //qDebug() << recordingSystem;
 
     //prepare message box
     QMessageBox *duplicate_msgBox = new QMessageBox;
@@ -443,8 +441,8 @@ void folderTab::add_folder(bool dynamic){
 
 void folderTab::set_mainwindow(MainWindow *mainwindow_){
     mainwindow = mainwindow_;
-    qDebug() << mainwindow->static_dirs;
-    qDebug() << dirs_list->static_dirs;
+   //qDebug() << mainwindow->static_dirs;
+    //qDebug() << dirs_list->static_dirs;
 }
 
 void folderTab::rowClickedDynamic(QListWidgetItem *item){
