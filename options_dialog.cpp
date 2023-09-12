@@ -161,6 +161,11 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     harmonieReaderlabel->setFont(b);
     harmonieReaderEdit = new QLineEdit(un_options.harmonieReader);
 
+    QLabel *dicomReaderLabel = new QLabel(tr("DICOM reader"));
+    dicomReaderLabel->setFont(b);
+    dicomReaderEdit = new QLineEdit(un_options.dicomReaderPath);
+    dicomReaderEdit->setEnabled(mainwindow->nestOptions.dicomReaderEnable);
+
     AddBrainlabReaderButton = new QPushButton;
     AddBrainlabReaderButton->setText(tr("Add Brainlab reader"));
     AddBrainlabReaderButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
@@ -170,8 +175,17 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     AddBrainlabControlButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
 
     AddHarmonieReaderButton = new QPushButton;
-    AddHarmonieReaderButton->setText(tr("Add Harmonie control"));
+    AddHarmonieReaderButton->setText(tr("Add Harmonie reader"));
     AddHarmonieReaderButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+
+    QCheckBox *allowDicomCheckBox = new QCheckBox("Allow export");
+    allowDicomCheckBox->setFont(ff);
+    allowDicomCheckBox->setChecked(mainwindow->nestOptions.dicomReaderEnable);
+
+    AddDicomReaderButton = new QPushButton;
+    AddDicomReaderButton ->setText(tr("Add DICOM reader"));
+    AddDicomReaderButton ->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+    AddDicomReaderButton->setEnabled(mainwindow->nestOptions.dicomReaderEnable);
 
     QHBoxLayout *hlayout_reader = new QHBoxLayout;
     hlayout_reader->addWidget(brainlabReaderEdit);
@@ -185,6 +199,10 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     hlayout_harmonie->addWidget(harmonieReaderEdit);
     hlayout_harmonie->addWidget(AddHarmonieReaderButton);
 
+    QHBoxLayout *hlayout_dicom = new QHBoxLayout;
+    hlayout_dicom->addWidget(dicomReaderEdit);
+    hlayout_dicom->addWidget(AddDicomReaderButton);
+
     QVBoxLayout *vlayout2 = new QVBoxLayout;
     vlayout2->addWidget(brainlabReaderLabel,0,Qt::AlignBottom);
     vlayout2->addLayout(hlayout_reader);
@@ -194,6 +212,10 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     vlayout2->addSpacing(40);
     vlayout2->addWidget(harmonieReaderlabel,0,Qt::AlignBottom);
     vlayout2->addLayout(hlayout_harmonie);
+    vlayout2->addSpacing(40);
+    vlayout2->addWidget(allowDicomCheckBox);
+    vlayout2->addWidget(dicomReaderLabel,0,Qt::AlignBottom);
+    vlayout2->addLayout(hlayout_dicom);
     vlayout2->addStretch(10);
 
     tab2->setLayout(vlayout2);
@@ -347,6 +369,8 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     connect(AddBrainlabReaderButton, SIGNAL(clicked()), this,SLOT(add_brainlab_reader()));
     connect(AddBrainlabControlButton, SIGNAL(clicked()), this,SLOT(add_brainlab_control()));
     connect(AddHarmonieReaderButton, SIGNAL(clicked()), this,SLOT(add_harmonie_reader()));
+    connect(AddDicomReaderButton, SIGNAL(clicked()), this,SLOT(add_dicom_reader()));
+    connect(allowDicomCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableDicom(bool)));
     // EDF export
     connect(changeExportProgramButton, SIGNAL(clicked()), this,SLOT(add_exporter()));
     connect(changeExportPathButton, SIGNAL(clicked()), this,SLOT(add_path2export()));
@@ -422,9 +446,13 @@ void OptionsDialog::add_harmonie_reader(){
     add_program("harmonie");
 }
 
+void OptionsDialog::add_dicom_reader(){
+    add_program("dicom");
+}
+
 void OptionsDialog::add_program(QString program){
 
-    QString temp = QFileDialog::getOpenFileName(0, tr("Choose EEG reader"), mainwindow->nestOptions.defaultReaderFolder, tr("BrainLab(*.exe)"));
+    QString temp = QFileDialog::getOpenFileName(0, tr("Choose external program"), mainwindow->nestOptions.defaultReaderFolder, tr("*.exe"));
 
     if(temp.isEmpty()){
         return;
@@ -441,6 +469,16 @@ void OptionsDialog::add_program(QString program){
     if(program == "harmonie"){
         harmonieReaderEdit->setText(temp);
     }
+
+    if(program == "dicom"){
+        dicomReaderEdit->setText(temp);
+    }
+}
+
+void OptionsDialog::enableDicom(bool checked){
+    un_options.dicomReaderEnable = checked;
+    dicomReaderEdit->setEnabled(checked);
+    AddDicomReaderButton->setEnabled(checked);
 }
 
 void OptionsDialog::enableExport(bool checked){
@@ -499,9 +537,6 @@ void OptionsDialog::enableDelete(bool checked){
 
 void OptionsDialog::saveAndClose(){
 
-    qDebug() << "period" << un_options.refreshingPeriod;
-    qDebug() << "usePeriodic" << un_options.periodicRefreshingEnabled;
-
     // REFRESHING SETTINGS
     // refreshing period should not be 0
     if(un_options.refreshingPeriod == 0){
@@ -512,18 +547,19 @@ void OptionsDialog::saveAndClose(){
     un_options.brainlabReader = brainlabReaderEdit->text();
     un_options.brainlabControl = brainlabControlEdit->text();
     un_options.harmonieReader = harmonieReaderEdit->text();
+    un_options.dicomReaderPath = dicomReaderEdit->text();
     //    //EDF EXPORT
     un_options.exportProgram = exportEdit->text();
     un_options.exportPath =  exportPathEdit->text();
 
     // MONTHS to load
-    qDebug() << months2loadSpinBox->value();
+    //qDebug() << months2loadSpinBox->value();
     un_options.months2load = months2loadSpinBox->value();
 
 
-    qDebug() << "Save and Close";
-    qDebug() << "Refresh mode: " << un_options.periodicRefreshMode;
-    qDebug() << "Load static on refresh: " << un_options.refreshLoadStatic;
+    //qDebug() << "Save and Close";
+    //qDebug() << "Refresh mode: " << un_options.periodicRefreshMode;
+    //qDebug() << "Load static on refresh: " << un_options.refreshLoadStatic;
 
     mainwindow->nestOptions = un_options;
 

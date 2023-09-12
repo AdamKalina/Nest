@@ -29,44 +29,28 @@ void MainWindow::loadDataFromDb(){
 }
 
 QRecord MainWindow::getQRecord(QFileInfo fileInfo, const QString recordingSystem){
-    //qDebug() << fileInfo.absoluteDir().absolutePath();
-    //qDebug() << recordingSystem;
+    //    qDebug() << "MainWindow::getQRecord";
+    //    qDebug() << fileInfo.absoluteDir().absolutePath();
+    //    qDebug() << recordingSystem;
 
     QRecord qrecord;
 
-    if (recordingSystem == "brainlab"){
+    if (recordingSystem == "Brainlab"){
         qrecord = read_signal_file(fileInfo);
     }
 
-    if(recordingSystem == "harmonie"){
+    if(recordingSystem == "Harmonie"){
         qrecord = read_harmonie_file(fileInfo);
     }
 
     return qrecord;
 }
 
-//QRecord MainWindow::getQRecordBrainlab(QFileInfo fileInfo){
-//    // read the data header
-//    // this function returns only the data needed - maybe rename it
-//    QRecord qrecord = read_signal_file(fileInfo);
-
-//    // OLD WAYS - TO delete - replaced by reading read_only field in header
-//    // check if .LOG file with same name exists - and if it does, flag the record as still being recorded
-//    // TO DO - is this the best way? There is lot of data in the header of recorded file, search for "TEMP" instead?
-//    //qrecord.recording_flag = QFileInfo::exists(fileInfo.canonicalPath() + "/" + fileInfo.baseName() + ".LOG"); // bool to int
-
-//    // checking for video file
-//    // there are also events in the EEG file (Start video recording/Stop video recording) that gets deleted when you remove video, but this seems faster
-//    //qrecord.video_flag = QFileInfo::exists(fileInfo.canonicalPath() + "/" + fileInfo.baseName() + ".M01"); // bool to int
-
-//    return qrecord;
-//}
-
 // ======== Go through files and collect fileInfo ========
 // this is separate function because there is no way to tell how long it will take so QProgressDialog can not be used
 void MainWindow::checkDataOnHDD(QString path2load, bool dynamic, const QString recordingSystem){
-    //qDebug() << "MainWindow::checkDataOnHDD";
-    //qDebug() << path2load << " " << recordingSystem;
+    //    qDebug() << "MainWindow::checkDataOnHDD";
+    //    qDebug() << path2load << " " << recordingSystem;
 
     QDateTime now = QDateTime::currentDateTime();
 
@@ -96,8 +80,8 @@ void MainWindow::checkDataOnHDD(QString path2load, bool dynamic, const QString r
 
 // ======== Go through fileinfo and read file headers ========
 void MainWindow::readDataOnHDD(QString path2load, bool dynamic, const QString recordingSystem){
-    //qDebug() << "MainWindow::readDataOnHDD";
-    //qDebug() << path2load << " " << recordingSystem;
+    //    qDebug() << "MainWindow::readDataOnHDD";
+    //    qDebug() << path2load << " " << recordingSystem;
 
     //Progress dialog - shows the progress on reading files
     QString ProgressLabel = QString("Refreshing data in folder %1").arg(path2load);
@@ -182,7 +166,7 @@ void MainWindow::recordedFileChanged(const QString & path){
         return;
     }
 
-    QRecord qrecord = getQRecord(fi, "brainlab");
+    QRecord qrecord = getQRecord(fi, "Brainlab");
 
     if(qrecord.recording_flag == 1){
         //check it is still in the watcher
@@ -261,7 +245,7 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
     //qDebug() << "set data file path";
     model->setData(model->index(ind, 5, parent), Qrecord.recording_flag, Qt::DisplayRole);
     //qDebug() << "set data recording flag";
-    model->setData(model->index(ind, 6, parent), Qrecord.doctor, Qt::DisplayRole);
+    model->setData(model->index(ind, 6, parent), Qrecord.recording_system, Qt::DisplayRole);
     //qDebug() << "set data doctor";
     //qDebug() << "all data set";
 
@@ -317,7 +301,7 @@ QAbstractItemModel* MainWindow::createPatientTreeModel(){
     model->setHeaderData(3, Qt::Horizontal, QString::fromLocal8Bit("Poèet EEG"));
     model->setHeaderData(4, Qt::Horizontal, QString::fromLocal8Bit("Cesta"));
     model->setHeaderData(5, Qt::Horizontal, QString::fromLocal8Bit("Recorded"));
-    model->setHeaderData(6, Qt::Horizontal, QString::fromLocal8Bit("Doctor"));
+    model->setHeaderData(6, Qt::Horizontal, QString::fromLocal8Bit("System"));
 
     while (!QpatientQueue.isEmpty()){
         // adds the patient to the model
@@ -346,7 +330,7 @@ void MainWindow::buildTreeView(){
     treeView->setModel(proxyModel); // or set SourceModel here for no filtering
     treeView->setColumnHidden(4,true); // hide path to EEG file
     treeView->setColumnHidden(5,true); // hide "being recorded"
-    treeView->setColumnHidden(6,true); // hide "doctor" - maybe delete it later
+    treeView->setColumnHidden(6,true); // hide "system"
     treeView->setSortingEnabled(true); // enable sorting
     treeView->sortByColumn(2,Qt::DescendingOrder); //newest files first
     treeView->header()->setSectionsMovable(0); // disable moving columns by dragging
@@ -360,6 +344,17 @@ void MainWindow::buildTreeView(){
     treeView->setItemDelegate(new CustomDelegate); // set custom delegate
     treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
     treeView->setContextMenuPolicy(Qt::CustomContextMenu); // allow context menu
+
+    //treeView->header()->setMinimumSectionSize(50);
+    //treeView->header()->resizeSection(0 /*column index*/, 25 /*width*/);
+    //treeView->setWordWrap(true);
+
+    //treeView->resizeColumnToContents(1); //nefunguje
+    //    treeView->setColumnWidth(0,250); //funguje, ale musí se nastavit ruènì
+    //    treeView->setColumnWidth(1,250);
+    //    treeView->setColumnWidth(2,250);
+    //    treeView->setColumnWidth(3,250);
+    //    treeView->setColumnWidth(4,1500);
 
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(double_click_tree(QModelIndex)));
     connect(treeView, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(ShowContextMenu(const QPoint &)));
@@ -458,35 +453,48 @@ void MainWindow::ShowContextMenu(const QPoint & pos){
 
     QModelIndex index = treeView->indexAt(pos);
     QVariant path = index.sibling(index.row(),4).data();
+    qDebug() << path;
 
-    // TO DO - when the path.isValid() == false --> je to parent (pacient), vytvoøit možnost ho taky smazat
+    // TO DO - vytvoøit možnost smazat celého pacienta
+    // TO DO - lepší možnost rozeznávat parenta od children?
 
-    if((nestOptions.recordDeleteAllow || nestOptions.exportAllow) && path.isValid()){
-        qDebug() << path;
-        QMenu contextMenu(tr("Context menu"), this);
-        QAction exportAction(tr("Export to EDF"), this);
-        exportAction.setData(path);
-        connect(&exportAction, SIGNAL(triggered()), this, SLOT(exportToEDF()));
-        contextMenu.addAction(&exportAction);
-
-        QAction deleteAction(tr("Delete this record from database"), this);
-        //deleteAction.setData(path);
-        connect(&deleteAction, SIGNAL(triggered()), this, SLOT(deleteRecord()));
-        contextMenu.addAction(&deleteAction);
-
-        // when I tried to add actions to menu on "if", it stopped working, so I use this
-        if(!nestOptions.recordDeleteAllow){
-            contextMenu.removeAction(&deleteAction);
+    if(!path.isValid()){ // !path.isValid() = is parent
+        if(nestOptions.dicomReaderEnable){
+            QVariant parent_id = index.sibling(index.row(),0).data();
+            qDebug() << index;
+            qDebug() << parent_id;
+            QMenu contextMenu(tr("Context menu"), this);
+            QAction dicomAction(tr("Open in DICOM Viewer"), this);
+            dicomAction.setData(parent_id);
+            connect(&dicomAction, SIGNAL(triggered()), this, SLOT(openXvision()));
+            contextMenu.addAction(&dicomAction);
+            contextMenu.exec(treeView->mapToGlobal(pos));
         }
+    }
+    else{
+        if(nestOptions.recordDeleteAllow || nestOptions.exportAllow){
+            QMenu contextMenu(tr("Context menu"), this);
+            QAction exportAction(tr("Export to EDF"), this);
+            exportAction.setData(path);
+            connect(&exportAction, SIGNAL(triggered()), this, SLOT(exportToEDF()));
+            contextMenu.addAction(&exportAction);
 
-        if(!nestOptions.exportAllow){
-            contextMenu.removeAction(&exportAction);
+            QAction deleteAction(tr("Delete this record from database"), this);
+            //deleteAction.setData(path);
+            connect(&deleteAction, SIGNAL(triggered()), this, SLOT(deleteRecord()));
+            contextMenu.addAction(&deleteAction);
+
+            // when I tried to add actions to menu on "if", it stopped working, so I build it and then I delete what is not needed
+            if(!nestOptions.recordDeleteAllow){
+                contextMenu.removeAction(&deleteAction);
+            }
+
+            if(!nestOptions.exportAllow){
+                contextMenu.removeAction(&exportAction);
+            }
+
+            contextMenu.exec(treeView->mapToGlobal(pos));
         }
-
-        contextMenu.exec(treeView->mapToGlobal(pos));
-        //
-
-
     }
 }
 
@@ -495,9 +503,10 @@ void MainWindow::double_click_record(QModelIndex index){
     // on Win 10 it should be removed
 
     QString path = index.sibling(index.row(),4).data().toString();
+    QString system = index.sibling(index.row(),6).data().toString();
     QVariant recording_flag = index.sibling(index.row(),5).data();
 
-    // TO DO - check if the path exists?
+    // TO DO - check if the path exists
 
     // TO DO - make a constructor for this messagebox somewhere else?
     QMessageBox setProgram;
@@ -513,30 +522,46 @@ void MainWindow::double_click_record(QModelIndex index){
     arguments << path;
     myProcess->setArguments(arguments);
 
-    if (recording_flag.toBool()){
-        if(nestOptions.brainlabControl.isEmpty()){
-            int ret = setProgram.exec();
-            if (ret == QMessageBox::Yes){
-                chooseExternalProgram2();
+    if(system == "Brainlab"){
+        if (recording_flag.toBool()){
+            if(nestOptions.brainlabControl.isEmpty()){
+                int ret = setProgram.exec();
+                if (ret == QMessageBox::Yes){
+                    chooseBrainLabControl();
+                }
+                else{
+                    return;
+                }
             }
-            else{
-                return;
-            }
+            openBrainLabControl(path);
         }
-        openBrainLabControl(path);
+        else{
+            if(nestOptions.brainlabReader.isEmpty()){
+                int ret = setProgram.exec();
+                if (ret == QMessageBox::Yes){
+                    chooseBrainLabReader();
+                }
+                else{
+                    return;
+                }
+            }
+            myProcess->setProgram(this->nestOptions.brainlabReader);
+            myProcess->start();
+        }
     }
-    else{
-        if(nestOptions.brainlabReader.isEmpty()){
+    if(system == "Harmonie"){
+        if(nestOptions.harmonieReader.isEmpty()){
             int ret = setProgram.exec();
             if (ret == QMessageBox::Yes){
-                chooseExternalProgram1();
+                chooseHarmonieReader();
             }
             else{
                 return;
             }
         }
-        myProcess->setProgram(this->nestOptions.brainlabReader);
+        myProcess->setProgram(this->nestOptions.harmonieReader);
         myProcess->start();
+        //QProcess::startDetached(this->nestOptions.harmonieReader,arguments);
     }
 }
 
@@ -586,7 +611,7 @@ void MainWindow::exportToEDF(){
     if(nestOptions.exportProgram.isEmpty()){
         int ret = setProgram.exec();
         if (ret == QMessageBox::Yes){
-            chooseExternalProgram2(); //
+            chooseExportProgram();
         }
         else{
             return;
@@ -643,6 +668,40 @@ void MainWindow::deleteRecord(){
     }
 }
 
+void MainWindow::openXvision(){
+    QAction *act = qobject_cast<QAction *>(sender());
+    QVariant v = act->data();
+    qDebug() << v.toString();
+
+    // check if dicom Viewer is set
+    QMessageBox setProgram;
+    setProgram.setIcon(QMessageBox::Question);
+    setProgram.setText(tr("DICOM viewer is not set"));
+    setProgram.setInformativeText(tr("Do you want to set it now?"));
+    setProgram.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    setProgram.setDefaultButton(QMessageBox::Yes);
+
+    if(nestOptions.dicomReaderPath.isEmpty()){
+        int ret = setProgram.exec();
+        if (ret == QMessageBox::Yes){
+            chooseDicomReader();
+        }
+        else{
+            return;
+        }
+    }
+    //QProcess *dicomProcess = new QProcess(nullptr);
+    QStringList arguments;
+    QString str = "/patientid=" +  v.toString(); // /patientid=8903030004
+    qDebug() << str;
+    arguments << str;
+    //dicomProcess->setArguments(arguments);
+    //dicomProcess->setProgram(this->nestOptions.dicomReaderPath);
+    //dicomProcess->start();
+
+    QProcess::startDetached(this->nestOptions.dicomReaderPath,arguments);
+
+};
 
 void MainWindow::double_click_patient(QModelIndex index){
 
@@ -689,7 +748,7 @@ void MainWindow::AddFolderDialog(bool dynamic){
             nestOptions.Brainlab_dirs.static_dirs << new_dir;
         }
     }
-    checkDataOnHDD(new_dir,dynamic,"brainlab");
+    checkDataOnHDD(new_dir,dynamic,"Brainlab");
     updatePatientTreeModel();
 };
 
@@ -734,10 +793,22 @@ void MainWindow::runBatchFile(QString batchFile){
 
 
 // TO DO - generic function for adding external prorgram (BrainLab, BrainLab Control, BrainLab export, NicOne, Harmonie, etc.)
+// this would probably do the trick, but I am not sure whether the translation would work anymore
 
-void MainWindow::chooseExternalProgram1(){
+void MainWindow::chooseExternalProgram(QString instruction, QString file_type, QString & option_exe){
 
-    QString temp = QFileDialog::getOpenFileName(this, tr("Choose EEG reader"), nestOptions.defaultReaderFolder, tr("BrainLab reader (*.exe)"));
+    QString temp = QFileDialog::getOpenFileName(this, tr(instruction.toStdString().c_str()), nestOptions.defaultReaderFolder, tr(file_type.toStdString().c_str()));
+
+    if(temp.isEmpty()){
+        return;
+    }else{
+        option_exe = temp;
+    }
+}
+
+void MainWindow::chooseBrainLabReader(){
+
+    QString temp = QFileDialog::getOpenFileName(this, tr("Choose BrainLab EEG reader"), nestOptions.defaultReaderFolder, tr("BrainLab reader (*.exe)"));
 
     if(temp.isEmpty()){
         return;
@@ -746,9 +817,9 @@ void MainWindow::chooseExternalProgram1(){
     }
 };
 
-void MainWindow::chooseExternalProgram2(){
+void MainWindow::chooseBrainLabControl(){
 
-    QString temp = QFileDialog::getOpenFileName(this, tr("Choose EEG reader for control"), nestOptions.defaultReaderFolder, tr("BrainLab control (*.exe)"));
+    QString temp = QFileDialog::getOpenFileName(this, tr("Choose BrainLab control"), nestOptions.defaultReaderFolder, tr("BrainLab control (*.exe)"));
 
     if(temp.isEmpty()){
         return;
@@ -768,10 +839,32 @@ void MainWindow::chooseExportProgram(){
     }
 };
 
+void MainWindow::chooseDicomReader(){
+    QString temp = QFileDialog::getOpenFileName(0, tr("Choose DICOM Viewer"), "", tr("xVision(*.exe)"));
+
+    if(temp.isEmpty()){
+        return;
+    }else{
+        nestOptions.dicomReaderPath = temp;
+    }
+
+};
+
+void MainWindow::chooseHarmonieReader(){
+    QString temp = QFileDialog::getOpenFileName(0, tr("Choose Harmonie Browser"), "", tr("Harmonie Browser(*.exe)"));
+
+    if(temp.isEmpty()){
+        return;
+    }else{
+        nestOptions.harmonieReader = temp;
+    }
+
+};
+
 void MainWindow::refreshDynamic(){
 
-    checkFolders(nestOptions.Brainlab_dirs.dynamic_dirs,true, "brainlab");
-    //    checkFolders(nestOptions.Harmonie_dirs.dynamic_dirs,true, "harmonie");
+    checkFolders(nestOptions.Brainlab_dirs.dynamic_dirs,true, "Brainlab");
+    //    checkFolders(nestOptions.Harmonie_dirs.dynamic_dirs,true, "Harmonie");
     //    checkFolders(nestOptions.Nicone_dirs.dynamic_dirs,true, "nicolet");
     updateLastRefreshTime();
     updatePatientTreeModel();
@@ -790,8 +883,8 @@ void MainWindow::refreshStatic(){
         return;
     }
     else{
-        checkFolders(nestOptions.Brainlab_dirs.static_dirs, false, "brainlab");
-        //    checkFolders(nestOptions.Harmonie_dirs.dynamic_dirs,false, "harmonie");
+        checkFolders(nestOptions.Brainlab_dirs.static_dirs, false, "Brainlab");
+        //    checkFolders(nestOptions.Harmonie_dirs.dynamic_dirs,false, "Harmonie");
         //    checkFolders(nestOptions.Nicone_dirs.dynamic_dirs,false, "nicolet");
         updatePatientTreeModel();
     }
@@ -866,6 +959,11 @@ void MainWindow::buildFilterLine(){
 void MainWindow::filter_text_changed(const QString & text){
     //qDebug() << text;
     proxyModel->setFilterFixedString(text);
+
+    //QPoint point = QPoint(geometry().left() + filter->geometry().left(), geometry().top() + filter->geometry().bottom()+10);
+    // TO DO - make it delayed be couple of seconds
+    // TO DO - make it appear just when nothing is found?
+    //QToolTip::showText(point,tr("Looking for something? Try hitting ENTER!"));
 }
 
 void MainWindow::filter_return_pressed(){
@@ -965,6 +1063,11 @@ MainWindow::MainWindow(QWidget *parent)
     refreshDynamicAction->setWhatsThis("test");
     connect(refreshDynamicAction, SIGNAL(triggered()), this, SLOT(refreshDynamic()));
 
+    // ====== refresh dynamic action
+    colapseAllAction = new QAction(tr("Collapse all"),this);
+    colapseAllAction->setIcon(style()->standardIcon(QStyle::SP_TitleBarShadeButton));
+    connect(colapseAllAction, SIGNAL(triggered()), this, SLOT(collapseAll()));
+
     // ======== File menu ========
     filemenu = new QMenu(this);
     filemenu->setTitle(tr("&Data"));
@@ -977,11 +1080,9 @@ MainWindow::MainWindow(QWidget *parent)
     // ======== Settings ========
     setmenu = new QMenu(this);
     setmenu->setTitle(tr("&Settings"));
-    setmenu->addAction(tr("Add Reader"), this, SLOT(chooseExternalProgram1()));
-    setmenu->addAction(tr("Add Control"), this, SLOT(chooseExternalProgram2()));
+    setmenu->addAction(tr("Add Reader"), this, SLOT(chooseBrainLabReader()));
+    setmenu->addAction(tr("Add Control"), this, SLOT(chooseBrainLabControl()));
     setmenu->addAction(tr("Folders"), this, SLOT(editFolderList()));
-    //setmenu->addAction(tr("Program list"), this, SLOT(editProgramList()));
-    //setmenu->addAction(tr("Refresh settings"), this, SLOT(editRefreshSettings()));
     setmenu->addAction(tr("Options"), this, SLOT(editTabOptions()));
 
     // ======= View ========
@@ -1010,6 +1111,7 @@ MainWindow::MainWindow(QWidget *parent)
     menubar->addMenu(viewmenu);
     menubar->addMenu(helpmenu);
     menubar->addAction(refreshDynamicAction);
+    menubar->addAction(colapseAllAction);
 
     // ====== SHORTCUTS ======
     refreshKey = new QShortcut(QKeySequence::Refresh, this);
@@ -1029,9 +1131,9 @@ MainWindow::MainWindow(QWidget *parent)
     buildFilterLine(); // build filter line - do it first if you want it on the top
     buildTreeView();
 
-    system_extensions["brainlab"] = "*.SIG";
-    system_extensions["nicolet"] = "*.E";
-    system_extensions["harmonie"] = "*.STS";
+    system_extensions["Brainlab"] = "*.SIG";
+    system_extensions["Nicolet"] = "*.E";
+    system_extensions["Harmonie"] = "*.STS";
 }
 
 
@@ -1073,7 +1175,7 @@ void MainWindow::setUpWorkingHoursQTimer(){
     workingHoursQTimer();
 }
 
-void MainWindow::workingHoursQTimer(){ // fires every hour to check if it working hours
+void MainWindow::workingHoursQTimer(){ // fires every hour to check if it is working hours
     if (nestOptions.refreshWorkingHoursOnly){
         whTimer->start(1000*3600); // one hour
     }else{
@@ -1113,11 +1215,11 @@ void MainWindow::writeSettings()
 {
     //QSettings settings("PuffinSoft", "EEGle Nest");
     QSettings settings("settings.ini",QSettings::IniFormat);
-    settings.setValue("external_program_reader", nestOptions.brainlabReader);
-    settings.setValue("external_program_control", nestOptions.brainlabControl);
     settings.setValue("brainlab_reader", nestOptions.brainlabReader);
     settings.setValue("brainlab_control", nestOptions.brainlabControl);
     settings.setValue("harmonie_reader", nestOptions.harmonieReader);
+    settings.setValue("dicom_reader", nestOptions.dicomReaderPath);
+    settings.setValue("enable_dicom_reader",nestOptions.dicomReaderEnable);
     settings.setValue("defaultDataFolder","D:/Dropbox/Scripts/Cpp/");
     settings.setValue("defaultReaderFolder","D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/");
     settings.setValue("refreshing_period",nestOptions.refreshingPeriod);
@@ -1126,6 +1228,7 @@ void MainWindow::writeSettings()
     settings.setValue("periodic_refreshing_in_working_hours_only",nestOptions.refreshWorkingHoursOnly);
     settings.setValue("periodic_refresh_mode",nestOptions.periodicRefreshMode);
     settings.setValue("bold_parent",nestOptions.boldParent);
+    settings.setValue("allow_export", nestOptions.exportAllow);
     settings.setValue("anonymize_export",nestOptions.exportAnonymize);
     settings.setValue("export_program",nestOptions.exportProgram);
     settings.setValue("export_path",nestOptions.exportPath);
@@ -1165,8 +1268,11 @@ void MainWindow::writeSettings()
 void MainWindow::readSettings()
 {
     QSettings settings("settings.ini",QSettings::IniFormat);
-    nestOptions.brainlabReader = settings.value("external_program_reader").toString();
-    nestOptions.brainlabControl = settings.value("external_program_control").toString();
+    nestOptions.brainlabReader = settings.value("brainlab_reader").toString();
+    nestOptions.brainlabControl = settings.value("brainlab_control").toString();
+    nestOptions.harmonieReader = settings.value("harmonie_reader").toString();
+    nestOptions.dicomReaderPath = settings.value("dicom_reader").toString();
+    nestOptions.dicomReaderEnable = settings.value("enable_dicom_reader").toBool();
     nestOptions.defaultDataFolder = settings.value("defaultDataFolder").toString();
     nestOptions.defaultReaderFolder = settings.value("defaultReaderFolder").toString();
     nestOptions.refreshingPeriod = settings.value("refreshing_period").toInt();
@@ -1184,6 +1290,7 @@ void MainWindow::readSettings()
     nestOptions.recordDeleteAllow = settings.value("enable_delete_records").toBool();
     nestOptions.exportEnableDebug = settings.value("enable_export_debug_mode").toBool();
     nestOptions.months2load = settings.value("months_to_load").toInt();
+
 
     //// Signal folders ////
     std::vector<std::string> systems = {"Brainlab", "Harmonie", "Nicolet"};

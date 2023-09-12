@@ -287,7 +287,7 @@ QRecord read_signal_file(QFileInfo fileInfo){
     qrecord.record_duration_s = num_pages*10;
 
     qrecord.check_flag = 1;
-    qrecord.system = "Brainlab";
+    qrecord.recording_system = "Brainlab";
 
     // checking for video file
     // there are also events in the EEG file (Start video recording/Stop video recording) that gets deleted when you remove video, but this seems faster

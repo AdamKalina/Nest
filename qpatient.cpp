@@ -31,7 +31,7 @@ void QRecord::set_values_from_db(QSqlRecord rec){
     file_path = rec.value("file_path").toString();
     recording_flag = rec.value("recording_flag").toInt();
     video_flag = rec.value("video_flag").toInt();
-    system = rec.value("recording_system").toString();
+    recording_system = rec.value("recording_system").toString();
 }
 
 // TO DO - make Time_t --> QDateTime conversion part of QRecord constructor ?

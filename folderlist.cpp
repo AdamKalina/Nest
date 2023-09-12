@@ -16,81 +16,10 @@ folderList::folderList(QWidget *w_parent)
 
     /////////////////////////////////////// tab 1 Brainlab folders ///////////////////////////////////////////////////////////////////////
 
-    //    tab1 = new QWidget;
-
-    //    QLabel *dynamicLabel = new QLabel(tr("Dynamic folders"));
-    //    dynamicLabel->setFont(f);
-    //    dfolder_path_list = new QListWidget;
-    //    dfolder_path_list->setSelectionBehavior(QAbstractItemView::SelectRows);
-    //    dfolder_path_list->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    //    dfolder_path_list->setSpacing(1);
-
-    //    for(i=0; i < mainwindow->dynamic_dirs.size(); i++)
-    //    {
-    //        new QListWidgetItem(mainwindow->dynamic_dirs[i], dfolder_path_list);
-    //    }
-
-    //    add_dynamic_button = new QPushButton;
-    //    add_dynamic_button->setText(tr("Add dynamic folder"));
-    //    add_dynamic_button->setMinimumWidth(180);
-    //    add_dynamic_button->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
-
-    //    QLabel *staticLabel = new QLabel(tr("Static folders"));
-    //    staticLabel->setFont(f);
-    //    sfolder_path_list = new QListWidget;
-    //    sfolder_path_list->setSelectionBehavior(QAbstractItemView::SelectRows);
-    //    sfolder_path_list->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    //    sfolder_path_list->setSpacing(1);
-
-    //    for(i=0; i < mainwindow->static_dirs.size(); i++)
-    //    {
-    //        new QListWidgetItem(mainwindow->static_dirs[i], sfolder_path_list);
-    //    }
-
-    //    add_static_button = new QPushButton;
-    //    add_static_button->setText(tr("Add static folder"));
-    //    add_static_button->setMinimumWidth(180);
-    //    add_static_button->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
-
-    //    refresh_sel_static_button = new QPushButton;
-    //    refresh_sel_static_button->setText(tr("Refresh selected"));
-    //    refresh_sel_static_button->setMinimumWidth(180);
-    //    refresh_sel_static_button->setIcon(mainwindow->style()->standardIcon(QStyle::SP_BrowserReload));
-
-    //    QLabel *helpLabel = new QLabel(tr("Double click on item for context menu"));
-    //    helpLabel->setFont(f);
-
-    //    //    QHBoxLayout *hlayout1 = new QHBoxLayout;
-    //    //    hlayout1->addStretch(1000);
-    //    //    hlayout1->addWidget(CloseButton);
-
-    //    QHBoxLayout *hlayoutStatic = new QHBoxLayout;
-    //    hlayoutStatic->addWidget(refresh_sel_static_button, Qt::AlignLeft);
-    //    hlayoutStatic->addStretch(1000);
-    //    hlayoutStatic->addWidget(add_static_button, Qt::AlignRight);
-
-    //    QVBoxLayout *vlayout1 = new QVBoxLayout;
-    //    vlayout1->addWidget(dynamicLabel);
-    //    vlayout1->addWidget(dfolder_path_list, 1000);
-    //    vlayout1->addWidget(add_dynamic_button, 1000, Qt::AlignRight);
-    //    vlayout1->addWidget(staticLabel);
-    //    vlayout1->addWidget(sfolder_path_list, 1000);
-    //    vlayout1->addLayout(hlayoutStatic);
-    //    vlayout1->addWidget(helpLabel);
-    //    //    vlayout1->addSpacing(20);
-    //    //    vlayout1->addLayout(hlayout1);
-
-    //    tab1->setLayout(vlayout1);
-
-    //edit_folders_dialog->setLayout(vlayout1);
-
-
-    /////////////////////////////////////// tab 1 Brainlab folders ///////////////////////////////////////////////////////////////////////
-
     tab1 = new QWidget;
 
     brainlabTab = new folderTab;
-    brainlabTab->set_recording_system("brainlab");
+    brainlabTab->set_recording_system("Brainlab");
     brainlabTab->set_folders(&mainwindow->nestOptions.Brainlab_dirs);
     brainlabTab->set_mainwindow(mainwindow);
 
@@ -107,7 +36,7 @@ folderList::folderList(QWidget *w_parent)
     //folderTab *harmonieTab = new folderTab(this);
     //harmonieTab = new folderTab(this);
     harmonieTab = new folderTab;
-    harmonieTab->set_recording_system("harmonie");
+    harmonieTab->set_recording_system("Harmonie");
     harmonieTab->set_folders(&mainwindow->nestOptions.Harmonie_dirs);
     harmonieTab->set_mainwindow(mainwindow);
 
@@ -364,7 +293,7 @@ folderTab::folderTab(QWidget *parent)
     connect(sfolder_path_list, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(rowClickedStatic(QListWidgetItem*)));
     connect(add_dynamic_button,SIGNAL(clicked()), this, SLOT(add_folder_dynamic()));
     connect(add_static_button,SIGNAL(clicked()), this, SLOT(add_folder_static()));
-    //connect(refresh_sel_static_button,SIGNAL(clicked()), this, SLOT(refresh_sel_static()));
+    connect(refresh_sel_static_button,SIGNAL(clicked()), this, SLOT(refresh_sel_static()));
 }
 
 void folderTab::add_folder_dynamic(){
@@ -441,7 +370,7 @@ void folderTab::add_folder(bool dynamic){
 
 void folderTab::set_mainwindow(MainWindow *mainwindow_){
     mainwindow = mainwindow_;
-   //qDebug() << mainwindow->static_dirs;
+    //qDebug() << mainwindow->static_dirs;
     //qDebug() << dirs_list->static_dirs;
 }
 
@@ -550,7 +479,18 @@ void folderTab::adEntry(){
 
 // pass EEG system as next argument
 void folderTab::refreshEntry(){
+    QElapsedTimer timer;
+    timer.start();
     mainwindow->checkDataOnHDD(currentItem->data(Qt::DisplayRole).toString(), currentMode, recordingSystem);
+    qDebug() << "The slow operation took" << timer.elapsed() << "milliseconds";
     mainwindow->updatePatientTreeModel();
     dialog->close();
+}
+
+void folderTab::refresh_sel_static(){
+
+    for(int i = 0; i<sfolder_path_list->selectedItems().count(); i++){
+        mainwindow->checkDataOnHDD(sfolder_path_list->selectedItems().at(i)->text(), false, recordingSystem);
+    }
+    mainwindow->updatePatientTreeModel();
 }

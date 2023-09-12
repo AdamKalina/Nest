@@ -25,7 +25,7 @@ public:
     QString doctor;
     QString file_name;
     QString file_path;
-    QString system;
+    QString recording_system;
     int recording_flag;
     int video_flag;
     //int num_pages; // replace with file_duration
@@ -47,6 +47,8 @@ public:
     void set_values_from_db(QSqlRecord);
 };
 
+
+// not used anymore
 QDataStream & operator<<(QDataStream & out, const QPatient & Qpatient);
 QDataStream & operator<<(QDataStream & out, const QRecord & Qrecord);
 QDataStream & operator>>(QDataStream & in, QRecord & Qrecord);
@@ -96,6 +98,10 @@ public:
 
     // user editing of db
     bool recordDeleteAllow = false;
+
+    // path to xVision - purely Motol function
+    QString dicomReaderPath;
+    bool dicomReaderEnable;
 };
 
 #endif // QPATIENT_H

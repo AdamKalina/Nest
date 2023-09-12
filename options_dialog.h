@@ -32,6 +32,7 @@ private:
     *AddBrainlabReaderButton,
     *AddBrainlabControlButton,
     *AddHarmonieReaderButton,
+    *AddDicomReaderButton,
     *changeExportPathButton,
     *changeExportProgramButton;
 
@@ -59,6 +60,7 @@ private:
     QLineEdit *brainlabReaderEdit,
     *brainlabControlEdit,
     *harmonieReaderEdit,
+    *dicomReaderEdit,
     *exportEdit,
     *exportPathEdit;
 
@@ -75,6 +77,7 @@ public slots:
     void add_brainlab_reader();
     void add_brainlab_control();
     void add_harmonie_reader();
+    void add_dicom_reader();
     void add_exporter();
     void add_path2export();
     void enableAnonymize(bool checked);
@@ -83,6 +86,7 @@ public slots:
     void enableSystemEventsExport(bool checked);
     void enableDebugMode(bool checked);
     void enableDelete(bool checked);
+    void enableDicom(bool checked);
 };
 
 

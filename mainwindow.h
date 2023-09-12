@@ -37,6 +37,7 @@
 #include <QQueue>
 #include <QListWidget>
 #include <QPushButton>
+#include <QToolTip>
 
 #include "read_signal_file.h"
 #include "read_harmonie_file.h"
@@ -137,9 +138,12 @@ public slots:
     void double_click_tree(QModelIndex index);
     void AddDynamicFolderDialog();
     void AddStaticFolderDialog();
-    void chooseExternalProgram1();
-    void chooseExternalProgram2();
+    void chooseBrainLabReader();
+    void chooseBrainLabControl();
     void chooseExportProgram();
+    void chooseHarmonieReader();
+    void chooseDicomReader();
+    void chooseExternalProgram(QString instruction, QString file_type, QString & option_exe);
     void filter_text_changed(const QString & text);
     void filter_return_pressed();
     void refreshDynamic();
@@ -160,6 +164,7 @@ public slots:
     void ShowContextMenu(const QPoint &);
     void exportToEDF();
     void deleteRecord();
+    void openXvision();
 
 private:
     QMenuBar *menubar;
@@ -175,7 +180,7 @@ private:
     QShortcut *refreshKey, *helpKey;
     QTimer *timer;
     QTimer *whTimer;
-    QAction *showPathAction, *refreshDynamicAction;
+    QAction *showPathAction, *refreshDynamicAction, *colapseAllAction;
     QFileSystemWatcher * watcher, * recordingFileWatcher;
 
 };

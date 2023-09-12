@@ -123,7 +123,7 @@ private slots:
     void refreshEntry();
     void add_folder_dynamic();
     void add_folder_static();
-    //    void refresh_sel_static();
+    void refresh_sel_static();
 
 };
 

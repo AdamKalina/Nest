@@ -65,7 +65,7 @@ bool DbManager::insertNewRecord(QRecord qrecord){
     query.bindValue(":recording_flag",qrecord.recording_flag);
     query.bindValue(":video_flag",qrecord.video_flag);
     query.bindValue(":record_duration_s",qrecord.record_duration_s);
-    query.bindValue(":recording_system", qrecord.system);
+    query.bindValue(":recording_system", qrecord.recording_system);
 
     if (!query.exec()){
         qDebug() << "Couldn't INSERT INTO the table 'records' " << query.lastError();
@@ -78,7 +78,7 @@ bool DbManager::insertNewRecord(QRecord qrecord){
 bool DbManager::updateRecord(QRecord qrecord){
     // it also allows for update of name and id because sometimes technicians make mistake in that
     bool success = true;
-    //qDebug() << "DbManager::updateRecord";
+    qDebug() << "DbManager::updateRecord";
 
     // UPDATE TABLE records
     QSqlQuery query;
@@ -340,7 +340,7 @@ QVector<QString> DbManager::getPatientsIdbyTextNote(QString query){
     //qDebug() << "DbManager::getPatientsIdbyTextNote";
     QVector<QString> qpatientIds;
     QStringList cols;
-    cols << "name" << "class_code" << "doctor";
+    cols << "name" << "class_code" << "doctor" << "file_name";
     //qDebug() << cols;
 
     //now run "like" sql query in given cols
