@@ -178,7 +178,7 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     AddHarmonieReaderButton->setText(tr("Add Harmonie reader"));
     AddHarmonieReaderButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
 
-    QCheckBox *allowDicomCheckBox = new QCheckBox("Allow export");
+    QCheckBox *allowDicomCheckBox = new QCheckBox("Allow right-click for opening in DICOM Viewer");
     allowDicomCheckBox->setFont(ff);
     allowDicomCheckBox->setChecked(mainwindow->nestOptions.dicomReaderEnable);
 

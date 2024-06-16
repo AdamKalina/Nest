@@ -32,7 +32,7 @@ void header_harmonie_read_starting_time2(std::ifstream &file){
     while (file.get() != 0) {
     }
 
-    // this read the 64bit float that giver number of seconds between start of the file and 1.1. 0000 00:00
+    // this read the 64bit float that gives number of seconds between start of the file and 1.1. 0000 00:00
     file.read(reinterpret_cast<char *>(&f), sizeof(f));
 
     std::cout.precision(17);

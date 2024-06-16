@@ -254,6 +254,9 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
         model->setData(model->index(ind,0, parent), QIcon(":/images/DV_icon.png"), Qt::DecorationRole);
         //qDebug() << "added DV icon";
     }
+    else{ // if file has no video or the video was deleted - hide DVicon
+        model->setData(model->index(ind,0, parent), NULL, Qt::DecorationRole);
+    }
 }
 
 void addQPatient2model(QAbstractItemModel *model, QPatient Qpatient, bool boldParent){
