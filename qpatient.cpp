@@ -18,6 +18,24 @@ void QRecord::setPath(QString old_path){
     file_name = fi.baseName();
 }
 
+void QRecord::sexFromID(std::string id){
+    if(id == "0"){
+        return;
+    }
+
+    std::string month = id.substr(2, 2); // 0 = female, 1 = male
+    int m = atoi(month.c_str());
+    //qDebug() << m;
+    if(m <= 12){
+        sex = 1;
+        //qDebug() << "male";
+    }
+    else{
+        sex = 0;
+        //qDebug() << "female";
+    }
+}
+
 void QRecord::set_values_from_db(QSqlRecord rec){
     file_name = rec.value("file_name").toString();
     id = rec.value("id").toString();

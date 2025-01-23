@@ -52,6 +52,7 @@ set(PROJECT_SOURCES
         mainwindow.h
         read_signal_file.cpp
         read_harmonie_file.cpp
+        read_nicolet_file.cpp
         leaffilterproxymodel.cpp
         qpatient.cpp
         folderlist.cpp

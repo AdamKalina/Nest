@@ -46,11 +46,27 @@ folderList::folderList(QWidget *w_parent)
     vlayout2->setContentsMargins(0,0,0,0); // to cancel out nesting of layouts
     tab2->setLayout(vlayout2);
 
+    /////////////////////////////////////// tab 3 Nicolet folders ///////////////////////////////////////////////////////////////////////
+
+    tab3 = new QWidget;
+
+    nicoletTab = new folderTab;
+    nicoletTab->set_recording_system("Nicolet");
+    nicoletTab->set_folders(&mainwindow->nestOptions.Nicolet_dirs);
+    nicoletTab->set_mainwindow(mainwindow);
+
+    QVBoxLayout *vlayout3 = new QVBoxLayout;
+
+    vlayout3->addWidget(nicoletTab);
+    vlayout3->setContentsMargins(0,0,0,0); // to cancel out nesting of layouts
+    tab3->setLayout(vlayout3);
+
+
     /////////////////////////////////////// COMMONS ///////////////////////////////////////////////////////////////////////
 
     tabholder->addTab(tab1, "&BrainLab");
     tabholder->addTab(tab2, "&Harmonie");
-    //tabholder->addTab(tab3, "&NicOne");
+    tabholder->addTab(tab3, "&NicoletOne");
 
     CloseButton = new QPushButton;
     CloseButton->setText("Close");

@@ -31,6 +31,7 @@ private:
     *saveButton,
     *AddBrainlabReaderButton,
     *AddBrainlabControlButton,
+    *AddNicoletReaderButton,
     *AddHarmonieReaderButton,
     *AddDicomReaderButton,
     *changeExportPathButton,
@@ -59,6 +60,7 @@ private:
 
     QLineEdit *brainlabReaderEdit,
     *brainlabControlEdit,
+    *nicoletReaderEdit,
     *harmonieReaderEdit,
     *dicomReaderEdit,
     *exportEdit,
@@ -75,8 +77,9 @@ public slots:
     void saveAndClose();
     void modeButtonClicked(int value);
     void add_brainlab_reader();
-    void add_brainlab_control();
+    //void add_brainlab_control();
     void add_harmonie_reader();
+    void add_nicolet_reader();
     void add_dicom_reader();
     void add_exporter();
     void add_path2export();

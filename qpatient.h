@@ -31,6 +31,7 @@ public:
     //int num_pages; // replace with file_duration
     void setID(std::string);
     void setPath(QString);
+    void sexFromID(std::string id);
     void set_values_from_db(QSqlRecord);
 };
 

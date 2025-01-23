@@ -153,13 +153,17 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     brainlabReaderLabel->setFont(b);
     brainlabReaderEdit = new QLineEdit(un_options.brainlabReader);
 
-    QLabel *brainlabControlLabel = new QLabel(tr("Brainlab - EEG reader for files still being recorded (control)"));
-    brainlabControlLabel->setFont(b);
-    brainlabControlEdit = new QLineEdit(un_options.brainlabControl);
+    //QLabel *brainlabControlLabel = new QLabel(tr("Brainlab - EEG reader for files still being recorded (control)"));
+    //brainlabControlLabel->setFont(b);
+    //brainlabControlEdit = new QLineEdit(un_options.brainlabControl);
 
     QLabel *harmonieReaderlabel = new QLabel(tr("Harmonie - EEG reader"));
     harmonieReaderlabel->setFont(b);
     harmonieReaderEdit = new QLineEdit(un_options.harmonieReader);
+
+    QLabel *NicoletReaderlabel = new QLabel(tr("NicoletOne - EEG reader"));
+    NicoletReaderlabel->setFont(b);
+    nicoletReaderEdit = new QLineEdit(un_options.nicoletReader);
 
     QLabel *dicomReaderLabel = new QLabel(tr("DICOM reader"));
     dicomReaderLabel->setFont(b);
@@ -170,9 +174,13 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     AddBrainlabReaderButton->setText(tr("Add Brainlab reader"));
     AddBrainlabReaderButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
 
-    AddBrainlabControlButton = new QPushButton;
-    AddBrainlabControlButton->setText(tr("Add Brainlab control"));
-    AddBrainlabControlButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+    //AddBrainlabControlButton = new QPushButton;
+    //AddBrainlabControlButton->setText(tr("Add Brainlab control"));
+    //AddBrainlabControlButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+
+    AddNicoletReaderButton = new QPushButton;
+    AddNicoletReaderButton->setText(tr("Add Nicolet reader"));
+    AddNicoletReaderButton->setIcon(mainwindow->style()->standardIcon(QStyle::SP_FileDialogNewFolder));
 
     AddHarmonieReaderButton = new QPushButton;
     AddHarmonieReaderButton->setText(tr("Add Harmonie reader"));
@@ -191,9 +199,13 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     hlayout_reader->addWidget(brainlabReaderEdit);
     hlayout_reader->addWidget(AddBrainlabReaderButton);
 
-    QHBoxLayout *hlayout_control = new QHBoxLayout;
-    hlayout_control->addWidget(brainlabControlEdit);
-    hlayout_control->addWidget(AddBrainlabControlButton);
+    //QHBoxLayout *hlayout_control = new QHBoxLayout;
+    //hlayout_control->addWidget(brainlabControlEdit);
+    //hlayout_control->addWidget(AddBrainlabControlButton);
+
+    QHBoxLayout *hlayout_nicolet = new QHBoxLayout;
+    hlayout_nicolet->addWidget(nicoletReaderEdit);
+    hlayout_nicolet->addWidget(AddNicoletReaderButton);
 
     QHBoxLayout *hlayout_harmonie = new QHBoxLayout;
     hlayout_harmonie->addWidget(harmonieReaderEdit);
@@ -207,8 +219,10 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     vlayout2->addWidget(brainlabReaderLabel,0,Qt::AlignBottom);
     vlayout2->addLayout(hlayout_reader);
     vlayout2->addSpacing(40);
-    vlayout2->addWidget(brainlabControlLabel,0,Qt::AlignBottom);
-    vlayout2->addLayout(hlayout_control);
+    //vlayout2->addWidget(brainlabControlLabel,0,Qt::AlignBottom);
+    //vlayout2->addLayout(hlayout_control);
+    vlayout2->addWidget(NicoletReaderlabel,0,Qt::AlignBottom);
+    vlayout2->addLayout(hlayout_nicolet);
     vlayout2->addSpacing(40);
     vlayout2->addWidget(harmonieReaderlabel,0,Qt::AlignBottom);
     vlayout2->addLayout(hlayout_harmonie);
@@ -340,7 +354,7 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     buttonsLayout->addWidget(cancelButton);
 
     tabholder->addTab(tab1, "&Refresh settings");
-    tabholder->addTab(tab2, "E&xternal Program");
+    tabholder->addTab(tab2, "EE&G Readers");
     tabholder->addTab(tab3, "&EDF export");
     tabholder->addTab(tab4, "Other");
 
@@ -367,7 +381,8 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
     connect(loadStaticOnRefresh, SIGNAL(toggled(bool)), this, SLOT(enableLoadStaticOnRefresh(bool)));
     // EXTERNAL PROGRAMS
     connect(AddBrainlabReaderButton, SIGNAL(clicked()), this,SLOT(add_brainlab_reader()));
-    connect(AddBrainlabControlButton, SIGNAL(clicked()), this,SLOT(add_brainlab_control()));
+    //connect(AddBrainlabControlButton, SIGNAL(clicked()), this,SLOT(add_brainlab_control()));
+    connect(AddNicoletReaderButton, SIGNAL(clicked()), this,SLOT(add_nicolet_reader()));
     connect(AddHarmonieReaderButton, SIGNAL(clicked()), this,SLOT(add_harmonie_reader()));
     connect(AddDicomReaderButton, SIGNAL(clicked()), this,SLOT(add_dicom_reader()));
     connect(allowDicomCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableDicom(bool)));
@@ -438,9 +453,13 @@ void OptionsDialog::add_brainlab_reader(){
     add_program("brainlabReader");
 }
 
-void OptionsDialog::add_brainlab_control(){
-    add_program("brainlabControl");
+void OptionsDialog::add_nicolet_reader(){
+    add_program("nicolet");
 }
+
+//void OptionsDialog::add_brainlab_control(){
+//    add_program("brainlabControl");
+//}
 
 void OptionsDialog::add_harmonie_reader(){
     add_program("harmonie");
@@ -462,8 +481,12 @@ void OptionsDialog::add_program(QString program){
         brainlabReaderEdit->setText(temp);
     }
 
-    if(program == "brainlabControl"){
-        brainlabControlEdit->setText(temp);
+    //if(program == "brainlabControl"){
+    //    brainlabControlEdit->setText(temp);
+    //}
+
+    if(program == "nicolet"){
+        nicoletReaderEdit->setText(temp);
     }
 
     if(program == "harmonie"){
@@ -543,12 +566,13 @@ void OptionsDialog::saveAndClose(){
         un_options.refreshingPeriod = 1;
     }
 
-    //    // EXTERNAL PROGRAMS
+    //    EXTERNAL PROGRAMS
     un_options.brainlabReader = brainlabReaderEdit->text();
-    un_options.brainlabControl = brainlabControlEdit->text();
+    //un_options.brainlabControl = brainlabControlEdit->text();
     un_options.harmonieReader = harmonieReaderEdit->text();
     un_options.dicomReaderPath = dicomReaderEdit->text();
-    //    //EDF EXPORT
+    un_options.nicoletReader = nicoletReaderEdit->text();
+    //    EDF EXPORT
     un_options.exportProgram = exportEdit->text();
     un_options.exportPath =  exportPathEdit->text();
 

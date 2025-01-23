@@ -41,6 +41,7 @@
 
 #include "read_signal_file.h"
 #include "read_harmonie_file.h"
+#include "read_nicolet_file.h"
 #include "qpatient.h"
 #include "folderlist.h"
 #include "externalprogramlist.h"
@@ -142,6 +143,7 @@ public slots:
     void chooseBrainLabControl();
     void chooseExportProgram();
     void chooseHarmonieReader();
+    void chooseNicoletReader();
     void chooseDicomReader();
     void chooseExternalProgram(QString instruction, QString file_type, QString & option_exe);
     void filter_text_changed(const QString & text);

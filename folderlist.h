@@ -50,7 +50,7 @@ private:
     QMessageBox *duplicate_msgBox;
 
     folderTab *harmonieTab,
-    *brainlabTab;
+    *brainlabTab,*nicoletTab;
 
     int row;
     bool currentMode;

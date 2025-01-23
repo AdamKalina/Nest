@@ -43,6 +43,11 @@ QRecord MainWindow::getQRecord(QFileInfo fileInfo, const QString recordingSystem
         qrecord = read_harmonie_file(fileInfo);
     }
 
+    if(recordingSystem == "Nicolet"){
+        read_nicolet_file nicolet_reader = read_nicolet_file();
+        qrecord = nicolet_reader.get_qrecord_nicolet(fileInfo);
+    }
+
     return qrecord;
 }
 
@@ -566,6 +571,21 @@ void MainWindow::double_click_record(QModelIndex index){
         myProcess->start();
         //QProcess::startDetached(this->nestOptions.harmonieReader,arguments);
     }
+
+    if(system == "Nicolet"){
+        if(nestOptions.nicoletReader.isEmpty()){
+            int ret = setProgram.exec();
+            if (ret == QMessageBox::Yes){
+                chooseNicoletReader();
+            }
+            else{
+                return;
+            }
+        }
+        myProcess->setProgram(this->nestOptions.nicoletReader);
+        myProcess->start();
+        //QProcess::startDetached(this->nestOptions.harmonieReader,arguments);
+    }
 }
 
 void MainWindow::openBrainLabControl(QString path){
@@ -861,14 +881,23 @@ void MainWindow::chooseHarmonieReader(){
     }else{
         nestOptions.harmonieReader = temp;
     }
+};
 
+void MainWindow::chooseNicoletReader(){
+    QString temp = QFileDialog::getOpenFileName(0, tr("Choose Nicolet Browser"), "", tr("Nicolet Browser(*.exe)"));
+
+    if(temp.isEmpty()){
+        return;
+    }else{
+        nestOptions.nicoletReader = temp;
+    }
 };
 
 void MainWindow::refreshDynamic(){
 
     checkFolders(nestOptions.Brainlab_dirs.dynamic_dirs,true, "Brainlab");
     //    checkFolders(nestOptions.Harmonie_dirs.dynamic_dirs,true, "Harmonie");
-    //    checkFolders(nestOptions.Nicone_dirs.dynamic_dirs,true, "nicolet");
+    checkFolders(nestOptions.Nicolet_dirs.dynamic_dirs,true, "Nicolet");
     updateLastRefreshTime();
     updatePatientTreeModel();
 }
@@ -1074,8 +1103,8 @@ MainWindow::MainWindow(QWidget *parent)
     // ======== File menu ========
     filemenu = new QMenu(this);
     filemenu->setTitle(tr("&Data"));
-    filemenu->addAction(tr("Add Static Folder"), this, SLOT(AddStaticFolderDialog()));
-    filemenu->addAction(tr("Add Dynamic Folder"), this, SLOT(AddDynamicFolderDialog()));
+    //filemenu->addAction(tr("Add Static Folder"), this, SLOT(AddStaticFolderDialog()));
+    //filemenu->addAction(tr("Add Dynamic Folder"), this, SLOT(AddDynamicFolderDialog()));
     filemenu->addAction(tr("Refresh Static"), this, SLOT(refreshStatic()));
     filemenu->addAction(refreshDynamicAction);
     filemenu->addAction(tr("Connect to storage"), this, SLOT(connect2storage()));
@@ -1083,8 +1112,8 @@ MainWindow::MainWindow(QWidget *parent)
     // ======== Settings ========
     setmenu = new QMenu(this);
     setmenu->setTitle(tr("&Settings"));
-    setmenu->addAction(tr("Add Reader"), this, SLOT(chooseBrainLabReader()));
-    setmenu->addAction(tr("Add Control"), this, SLOT(chooseBrainLabControl()));
+    //setmenu->addAction(tr("Add Reader"), this, SLOT(chooseBrainLabReader()));
+    //setmenu->addAction(tr("Add Control"), this, SLOT(chooseBrainLabControl()));
     setmenu->addAction(tr("Folders"), this, SLOT(editFolderList()));
     setmenu->addAction(tr("Options"), this, SLOT(editTabOptions()));
 
@@ -1220,6 +1249,7 @@ void MainWindow::writeSettings()
     QSettings settings("settings.ini",QSettings::IniFormat);
     settings.setValue("brainlab_reader", nestOptions.brainlabReader);
     settings.setValue("brainlab_control", nestOptions.brainlabControl);
+    settings.setValue("nicolet_reader", nestOptions.nicoletReader);
     settings.setValue("harmonie_reader", nestOptions.harmonieReader);
     settings.setValue("dicom_reader", nestOptions.dicomReaderPath);
     settings.setValue("enable_dicom_reader",nestOptions.dicomReaderEnable);
@@ -1273,6 +1303,7 @@ void MainWindow::readSettings()
     QSettings settings("settings.ini",QSettings::IniFormat);
     nestOptions.brainlabReader = settings.value("brainlab_reader").toString();
     nestOptions.brainlabControl = settings.value("brainlab_control").toString();
+    nestOptions.nicoletReader = settings.value("nicolet_reader").toString();
     nestOptions.harmonieReader = settings.value("harmonie_reader").toString();
     nestOptions.dicomReaderPath = settings.value("dicom_reader").toString();
     nestOptions.dicomReaderEnable = settings.value("enable_dicom_reader").toBool();

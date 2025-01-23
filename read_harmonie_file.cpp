@@ -226,7 +226,7 @@ std::vector<int> read_harmonie_channels_info(std::ifstream &file){ // TO DO - ma
 
     std::cout << "sfs size: " << sfs.size() << std::endl;
 
-    // from PJs MATLAB script - r_INF*_NUM is the number channes/items to read, r_INF* is the vector of values
+    // from PJs MATLAB script - r_INF*_NUM is the number channels/items to read, r_INF* is the vector of values
     // INF8 = channel labels, not sure about the others, maybe channel types (different numbers in ECG)
     // see Browser --> Channels --> Edit --> Properties
     //       r_INF1_NUM=fread(FIDSOURCE,1,'int16');
