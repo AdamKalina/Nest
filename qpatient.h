@@ -19,10 +19,10 @@ public:
     QString name;
     QDateTime record_start;
     int record_duration_s;
-    int sex;
+    int sex = 2; // 0 = female, 1 = male, 2 = unknown
     QString class_code;
     QString protocol;
-    QString doctor;
+    QString doctor; // called doctor in the original brainlab files, contains notes from NicoletOne and Harmonie
     QString file_name;
     QString file_path;
     QString recording_system;

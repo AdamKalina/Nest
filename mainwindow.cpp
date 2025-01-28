@@ -947,12 +947,11 @@ void MainWindow::show_about_dialog()
     QMessageBox messagewindow;
     messagewindow.setIcon(QMessageBox::NoIcon);
     messagewindow.setText("About this program");
-    QString aboutQString = QString("EEGle Nest is a BrainLab record database using <a href='https://github.com/Frederik-D-Weber/sigtoedf'>convertSIGtoEDF</a> from Frederik-D-Weber to read BrainLab EEG files header.\n"
-    "\n"
-    "Built using Qt Creator 4.14.1 and Qt %1 (%2)"
-    "\n"
-    "\n"
-    "by Adam Kalina, Department of Neurology, Second Faculty of Medicine, Charles University and Motol University Hospital, 2021, during COVID-19").arg(QT_VERSION_STR, compiler);
+    QString aboutQString = QString("EEGle Nest is originally a BrainLab record database using <a href='https://github.com/Frederik-D-Weber/sigtoedf'>convertSIGtoEDF</a> from Frederik-D-Weber to read BrainLab EEG files header.\n"
+    "<br>"
+    "Support for Stellate Harmonie and Natus NicoletOne files was added later.<br><br>"
+    "Built using Qt Creator 4.14.1 and Qt %1 (%2)<br><br>"
+    "Developed by Adam Kalina, Department of Neurology, Second Faculty of Medicine, Charles University and Motol University Hospital, 2021, during COVID-19").arg(QT_VERSION_STR, compiler);
     messagewindow.setInformativeText(aboutQString);
     messagewindow.setStyleSheet("QLabel{min-width: 700px;}");
     messagewindow.exec();
@@ -993,7 +992,7 @@ void MainWindow::filter_text_changed(const QString & text){
     proxyModel->setFilterFixedString(text);
 
     //QPoint point = QPoint(geometry().left() + filter->geometry().left(), geometry().top() + filter->geometry().bottom()+10);
-    // TO DO - make it delayed be couple of seconds
+    // TO DO - make it delayed by couple of seconds
     // TO DO - make it appear just when nothing is found?
     //QToolTip::showText(point,tr("Looking for something? Try hitting ENTER!"));
 }

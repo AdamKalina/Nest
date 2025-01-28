@@ -75,6 +75,7 @@ public:
         std::vector<QString> studyInfo;
         SegmentTimes segmentTimes;
         double duration;
+        int check_flag = 0;
     };
 
     std::vector<Tag> sections; // Tags

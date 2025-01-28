@@ -291,7 +291,7 @@ QRecord read_harmonie_file(QFileInfo fileInfo)
     //    }
 
     results = header_harmonie_read_patient_info(file);
-    std::cout << results.at(0) <<"|"<< results.at(1) <<"|"<< results.at(2) <<"|"<< results.at(3) << "|" << record_start.toString().toLocal8Bit().toStdString() <<"\n"<< std::endl;
+    //std::cout << results.at(0) <<"|"<< results.at(1) <<"|"<< results.at(2) <<"|"<< results.at(3) << "|" << record_start.toString().toLocal8Bit().toStdString() <<"\n"<< std::endl;
     //header_harmonie_read_annotations(file);
     std::vector<int> sfs = read_harmonie_channels_info(file);
 

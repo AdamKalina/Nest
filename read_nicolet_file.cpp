@@ -15,6 +15,7 @@ QRecord read_nicolet_file::get_qrecord_nicolet(QFileInfo fileInfo){
         return qrecord;
     }
 
+    std::cout << "===================================" << std::endl;
     std::cout << path << std::endl;
 
     std::ifstream file(path, std::ios::binary);
@@ -30,7 +31,36 @@ QRecord read_nicolet_file::get_qrecord_nicolet(QFileInfo fileInfo){
         return qrecord;
     }
 
+    if (fileInfo.size() == 0){
+        std::cout << "ERROR: Cannot open the file, 0 size..." << std::endl;
+        return qrecord;
+    }
+
     NiconeHeader niconeHeader = read_nicolet_header(file);
+
+    if(niconeHeader.check_flag == 0){
+        return qrecord;
+    }
+
+    // where the info is missing, fill "unknown" instead
+    while(niconeHeader.patientInfo.size() < 4){
+        niconeHeader.patientInfo.push_back("unknown");
+    }
+
+    while(niconeHeader.studyInfo.size() < 4){
+        niconeHeader.studyInfo.push_back("unknown");
+    }
+
+    qDebug() << "niconeHeader.patientInfo.size(): " << niconeHeader.patientInfo.size();
+    qDebug() << "niconeHeader.patientInfo.at(1): " << niconeHeader.patientInfo.at(1);
+    qDebug() << "niconeHeader.patientInfo.at(2): " << niconeHeader.patientInfo.at(2);
+    qDebug() << "niconeHeader.patientInfo.at(3): " << niconeHeader.patientInfo.at(3);
+    qDebug() << "niconeHeader.studyInfo.at(1): " << niconeHeader.studyInfo.at(1);
+    qDebug() << "niconeHeader.studyInfo.at(2): " << niconeHeader.studyInfo.at(2);
+    qDebug() << "niconeHeader.studyInfo.at(3): " << niconeHeader.studyInfo.at(3);
+    qDebug() << "niconeHeader.duration: " << niconeHeader.duration;
+
+    // "{0ADD99E5-ACCA-11cf-9B9A-0800099E03CD}" = unknown?
 
     // ===================================== Log ======================================================
 
@@ -58,22 +88,27 @@ QRecord read_nicolet_file::get_qrecord_nicolet(QFileInfo fileInfo){
     QStringList list1 = fileInfo.canonicalPath().split("/");
 
 
-    qrecord.id = niconeHeader.patientInfo.at(3);
+    //qrecord.id = niconeHeader.patientInfo.at(3);
+    qrecord.setID(niconeHeader.patientInfo.at(3).toStdString());
     //qrecord.setPath(fileInfo.filePath());
     qrecord.file_path = fileInfo.filePath();
     qrecord.file_name = list1.first() + list1.last(); // e.g. D:7241
-    qrecord.doctor = niconeHeader.studyInfo.at(3);
-    qrecord.name = niconeHeader.patientInfo.at(2) + " " + niconeHeader.patientInfo.at(1);
+    qrecord.doctor = niconeHeader.studyInfo.at(3); // study ID
+    qrecord.name = niconeHeader.patientInfo.at(2) + " " + niconeHeader.patientInfo.at(1); // Surname + Name
     qrecord.file_size = fileInfo.size();
     qrecord.record_start = niconeHeader.segmentTimes.segmentStartTimes.at(0);
     qrecord.recording_flag = 0; // TO DO - feasible in Nicolet?
     qrecord.video_flag = !videoList.isEmpty(); // bool to int
-    qrecord.sexFromID(niconeHeader.patientInfo.at(3).toStdString());
+
+    // because lot if files has non-numeric patient ID
+    QRegExp re("\\d*");  // a digit (\d), zero or more times (*)
+        if (re.exactMatch(qrecord.id)){
+            qrecord.sexFromID(qrecord.id.toStdString());
+        }
     qrecord.record_duration_s = (niconeHeader.duration);
     qrecord.check_flag = 1;
     qrecord.recording_system = "Nicolet";
     qrecord.class_code = "Nicolet";
-
     return qrecord;
 }
 
@@ -140,6 +175,7 @@ read_nicolet_file::NiconeHeader read_nicolet_file::read_nicolet_header(std::ifst
     unsigned long nrTags;
     unsigned long tag_index;
     std::string tag;
+    NiconeHeader niconeHeader;
 
     // Get init
     file.read(reinterpret_cast<char*>(misc1.data()), 5 * sizeof(unsigned long)); //#ok<NASGU>
@@ -196,10 +232,10 @@ read_nicolet_file::NiconeHeader read_nicolet_file::read_nicolet_header(std::ifst
             tag_struct.IDStr = guids[tag];
         }
         sections.push_back(tag_struct);
-        //        std::cout <<  "tag: " << tag_struct.tag << std::endl;
-        //        std::cout << "tag_index: " << tag_struct.index << std::endl;
-        //        std::cout << "IDStr: " << tag_struct.IDStr << std::endl;
-        //        std::cout << "-------------------------------" << std::endl;
+                //std::cout <<  "tag: " << tag_struct.tag << std::endl;
+                //std::cout << "tag_index: " << tag_struct.index << std::endl;
+                //std::cout << "IDStr: " << tag_struct.IDStr << std::endl;
+                //std::cout << "-------------------------------" << std::endl;
     }
 
     // QI index
@@ -220,9 +256,9 @@ read_nicolet_file::NiconeHeader read_nicolet_file::read_nicolet_header(std::ifst
 
     }
 
-    //std::cout << "nrEntries: "<< qi.nrEntries << " misc1: " << qi.misc1 << " indexIdx: " << qi.indexIdx << " misc3: "<< qi.misc3 << " LQi: " << qi.LQi << std::endl;
-    // for (const auto& i: qi.firstIdx)
-    //     std::cout << i << std::endl;
+//    std::cout << "nrEntries: "<< qi.nrEntries << " misc1: " << qi.misc1 << " indexIdx: " << qi.indexIdx << " misc3: "<< qi.misc3 << " LQi: " << qi.LQi << std::endl;
+//     for (const auto& i: qi.firstIdx)
+//        std::cout << i << std::endl;
 
 
     // ================================ Get Main Index ===============================================
@@ -238,6 +274,13 @@ read_nicolet_file::NiconeHeader read_nicolet_file::read_nicolet_header(std::ifst
         //std::cout << "curIdx: " << curIdx << std::endl;
         file.seekg(nextIndexPointer);
         file.read(reinterpret_cast<char *>(&nrIdx), sizeof(nrIdx));
+        //qDebug() << "nrIdx" << nrIdx;
+
+        // check for incomplete files
+        if(nrIdx <= 4){
+            niconeHeader.check_flag = 0;
+            return niconeHeader;
+        }
         //std::cout << "nrIdx: " << nrIdx << std::endl;
 
         // Read nrIdx*3 uint64 values from the file
@@ -269,9 +312,9 @@ read_nicolet_file::NiconeHeader read_nicolet_file::read_nicolet_header(std::ifst
         }
     }
 
-    // read the actual data
+    //qDebug() << indices.size();
 
-    NiconeHeader niconeHeader;
+    // read the actual data
 
     // ===================================== Get PatientGUID =====================================================
 
@@ -299,6 +342,7 @@ read_nicolet_file::NiconeHeader read_nicolet_file::read_nicolet_header(std::ifst
     //        std::cout << i << " sectionIdx: "<< indices.at(i).sectionIdx << " offset: " << indices.at(i).offset << " blockL: " << indices.at(i).blockL << " sectionL: "<< indices.at(i).sectionL << std::endl;
     //    }
 
+    niconeHeader.check_flag = 1;
     return niconeHeader;
 }
 
@@ -318,8 +362,6 @@ read_nicolet_file::SegmentTimes read_nicolet_file::readSegmentStartTimes(std::if
     int nrSegments = Idx.sectionL/152;
 
     //std::cout << file.tellg() << std::endl;
-
-    //obj.segments = struct();
 
     for(int i = 0; i < nrSegments; i++){
         file.read(reinterpret_cast<char *>(&dateOLE), sizeof(dateOLE)); // number of days since 30.12.1899 (I think since that is what empty fields in patient info equal to)
@@ -356,16 +398,17 @@ std::vector<QString> read_nicolet_file::readFileProperties(std::string sectionNa
     std::vector<unsigned char> guid_vec(16);
     std::vector<QString> output;
 
-    //    info = struct();
-
-    //    infoProps = { 'patientID', 'firstName','middleName','lastName',...
+      //    infoProps = { 'patientID', 'firstName','middleName','lastName',...
     //        'altID','mothersMaidenName','DOB','DOD','street','sexID','phone',...
     //        'notes','dominance','siteID','suffix','prefix','degree','apartment',...
     //        'city','state','country','language','height','weight','race','religion',...
     //        'maritalStatus'};
 
     Index Idx = getSectionIdx(sectionName);
+    //qDebug() << "Idx: " << Idx.offset;
     file.seekg(Idx.offset);
+
+    //qDebug() << "tady po idx";
 
     file.read(reinterpret_cast<char *>(guid_vec.data()), 16*sizeof(unsigned char));
     //    std::cout << "guid: " << std::endl;
@@ -375,6 +418,8 @@ std::vector<QString> read_nicolet_file::readFileProperties(std::string sectionNa
     file.read(reinterpret_cast<char *>(&nrValues), sizeof(nrValues));
     //       reserved = fread(h, 3, 'uint16'); %#ok<NASGU>
     file.read(reinterpret_cast<char *>(&nrBstr), sizeof(nrBstr));
+
+    //qDebug() << "tady po nacteni guids";
 
 
     //    std::cout << "lSection: " << lSection << std::endl;
@@ -399,15 +444,27 @@ std::vector<QString> read_nicolet_file::readFileProperties(std::string sectionNa
         default:
             value = 0;
         }
-        //info.(infoProps{id}) = value;
-
     }
 
+    //qDebug() << "tady po nacteni nrValues";
+
     std::vector<unsigned long long> strSetup(nrBstr*2);
+
+    //qDebug() << "co tady po nacteni strSetup";
+
+    //qDebug() << nrBstr;
+
+    // when the header is empty, return the struct empty
+    if(nrBstr == 0){
+        return output;
+    }
+
     file.read(reinterpret_cast<char*>(strSetup.data()), nrBstr*2*sizeof(unsigned long long));
 
     //    for (const auto& i: strSetup)
     //        std::cout << i << std::endl;
+
+    //qDebug() << "pred samotnym ctenim";
 
     for(unsigned long long i = 0; i < (nrBstr)*2; i ++){
         //std::cout << "loop no: " << i << std::endl;
@@ -418,17 +475,17 @@ std::vector<QString> read_nicolet_file::readFileProperties(std::string sectionNa
             value_str = readUint16toQString(strSetup.at(i+1)+1,file);
             output.push_back(value_str);
             qDebug() << "value_str: " << value_str;
+            // nahradit "{0ADD99E5-ACCA-11cf-9B9A-0800099E03CD}" za unknown?
             //std::cout << "------------------" << std::endl;
             //info.(infoProps{id}) = value_str;
         }
     }
-
     return output;
 }
 
 read_nicolet_file::Index read_nicolet_file::getSectionIdx(std::string sectionName){
 
-    std::cout << sectionName << std::endl;
+    qDebug() << QString::fromStdString(sectionName);
 
     unsigned long long sectionIdx;
     //unsigned long long offset;
@@ -439,7 +496,7 @@ read_nicolet_file::Index read_nicolet_file::getSectionIdx(std::string sectionNam
 
     if (it != sections.end())
     {
-        std::cout << "it: " << (*it).index << std::endl;
+        //std::cout << "it: " << (*it).index << std::endl;
         sectionIdx = (*it).index; // because the original is from MATLAB where indexing starts at 1
     }
 
@@ -449,10 +506,10 @@ read_nicolet_file::Index read_nicolet_file::getSectionIdx(std::string sectionNam
         return id.sectionIdx == sectionIdx;
     });
 
-    if (id != indices.end())
-    {
-        std::cout << "id: " << (*id).offset << std::endl;
-    }
+//    if (id != indices.end())
+//    {
+//        std::cout << "id: " << (*id).offset << std::endl;
+//    }
     return (*id);
 }
 

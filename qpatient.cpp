@@ -18,6 +18,7 @@ void QRecord::setPath(QString old_path){
     file_name = fi.baseName();
 }
 
+
 void QRecord::sexFromID(std::string id){
     if(id == "0"){
         return;
