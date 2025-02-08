@@ -38,37 +38,44 @@ QRecord read_nicolet_file::get_qrecord_nicolet(QFileInfo fileInfo){
 
     NiconeHeader niconeHeader = read_nicolet_header(file);
 
+    QFile log_file("nicolet_log.txt");
+
     if(niconeHeader.check_flag == 0){
+
+        if(log_file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+        {
+            QTextStream stream(&log_file);
+            stream << fileInfo.filePath() + " skipped" +"\n";
+            log_file.close();
+        }
+
         return qrecord;
     }
 
-    // where the info is missing, fill "unknown" instead
-    while(niconeHeader.patientInfo.size() < 4){
-        niconeHeader.patientInfo.push_back("unknown");
+    for(int i = 0; i < niconeHeader.patientInfo.size();i++){
+        if(niconeHeader.patientInfo.at(i) != "unknown"){
+            qDebug() << "niconeHeader.patientInfo.at(" + QString::number(i) + "): " + niconeHeader.patientInfo.at(i);
+        }
     }
 
-    while(niconeHeader.studyInfo.size() < 4){
-        niconeHeader.studyInfo.push_back("unknown");
+    for(int i = 0; i < niconeHeader.studyInfo.size();i++){
+        if(niconeHeader.studyInfo.at(i) != "unknown"){
+            qDebug() << "niconeHeader.studyInfo.at(" + QString::number(i) + "): " + niconeHeader.studyInfo.at(i);
+        }
+
     }
 
-    qDebug() << "niconeHeader.patientInfo.size(): " << niconeHeader.patientInfo.size();
-    qDebug() << "niconeHeader.patientInfo.at(1): " << niconeHeader.patientInfo.at(1);
-    qDebug() << "niconeHeader.patientInfo.at(2): " << niconeHeader.patientInfo.at(2);
-    qDebug() << "niconeHeader.patientInfo.at(3): " << niconeHeader.patientInfo.at(3);
-    qDebug() << "niconeHeader.studyInfo.at(1): " << niconeHeader.studyInfo.at(1);
-    qDebug() << "niconeHeader.studyInfo.at(2): " << niconeHeader.studyInfo.at(2);
-    qDebug() << "niconeHeader.studyInfo.at(3): " << niconeHeader.studyInfo.at(3);
     qDebug() << "niconeHeader.duration: " << niconeHeader.duration;
 
     // "{0ADD99E5-ACCA-11cf-9B9A-0800099E03CD}" = unknown?
 
     // ===================================== Log ======================================================
 
-    QFile log_file("nicolet_log.txt");
+
     if(log_file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
     {
         QTextStream stream(&log_file);
-        stream << niconeHeader.patientInfo.at(1) + "|" + niconeHeader.patientInfo.at(2) + "|" + niconeHeader.patientInfo.at(3) + "|" + niconeHeader.studyInfo.at(3) + "|" + QString::number(niconeHeader.duration) + "|" + niconeHeader.segmentTimes.segmentStartTimes.at(0).toString("dd.MM.yyyy hh:mm:ss") + "|" + QString::fromStdString(path) +"\n";
+        stream << niconeHeader.patientInfo.at(2) + "|" + niconeHeader.patientInfo.at(4) + "|" + niconeHeader.patientInfo.at(5) + "|" + niconeHeader.studyInfo.at(13) + "|" + QString::number(niconeHeader.duration) + "|" + niconeHeader.segmentTimes.segmentStartTimes.at(0).toString("dd.MM.yyyy hh:mm:ss") + "|" + QString::fromStdString(path) +"\n";
         log_file.close();
     }
 
@@ -77,10 +84,11 @@ QRecord read_nicolet_file::get_qrecord_nicolet(QFileInfo fileInfo){
     //QDir current_dir(fileInfo.canonicalPath());
     //qDebug() << current_dir.entryList(QDir::AllDirs|QDir::NoDotAndDotDot);
 
+    // check if there are video files for the EEG file
     QDirIterator it(fileInfo.canonicalPath(), QStringList() << "*.avi", QDir::Files, QDirIterator::Subdirectories);
     QStringList videoList;
     while (it.hasNext())
-           videoList.append(it.next());
+        videoList.append(it.next());
 
     //qDebug() << videoList;
     // export file info in qrecord
@@ -89,22 +97,22 @@ QRecord read_nicolet_file::get_qrecord_nicolet(QFileInfo fileInfo){
 
 
     //qrecord.id = niconeHeader.patientInfo.at(3);
-    qrecord.setID(niconeHeader.patientInfo.at(3).toStdString());
-    //qrecord.setPath(fileInfo.filePath());
+    qrecord.setID(niconeHeader.patientInfo.at(5).toStdString());
     qrecord.file_path = fileInfo.filePath();
     qrecord.file_name = list1.first() + list1.last(); // e.g. D:7241
-    qrecord.doctor = niconeHeader.studyInfo.at(3); // study ID
-    qrecord.name = niconeHeader.patientInfo.at(2) + " " + niconeHeader.patientInfo.at(1); // Surname + Name
+    qrecord.doctor = niconeHeader.studyInfo.at(13); // study ID
+    qrecord.name = niconeHeader.patientInfo.at(4) + " " + niconeHeader.patientInfo.at(2); // Surname + Name
+
     qrecord.file_size = fileInfo.size();
     qrecord.record_start = niconeHeader.segmentTimes.segmentStartTimes.at(0);
-    qrecord.recording_flag = 0; // TO DO - feasible in Nicolet?
+    qrecord.recording_flag = 0; // TO DO - feasible in Nicolet? When there is .e file in the folder, the recording is usually finished
     qrecord.video_flag = !videoList.isEmpty(); // bool to int
 
     // because lot if files has non-numeric patient ID
     QRegExp re("\\d*");  // a digit (\d), zero or more times (*)
-        if (re.exactMatch(qrecord.id)){
-            qrecord.sexFromID(qrecord.id.toStdString());
-        }
+    if (re.exactMatch(qrecord.id)){
+        qrecord.sexFromID(qrecord.id.toStdString());
+    }
     qrecord.record_duration_s = (niconeHeader.duration);
     qrecord.check_flag = 1;
     qrecord.recording_system = "Nicolet";
@@ -169,7 +177,7 @@ read_nicolet_file::NiconeHeader read_nicolet_file::read_nicolet_header(std::ifst
     dynamic_guids["A271CCCB515D4590B6A1DC170C8D6EE2"] = "TSGUID";
     dynamic_guids["D01B34A09DBD11D393D300500400C148"] = "AUDIOINFOGUID";
 
-    std::vector<unsigned long> misc1(5);
+    std::vector<unsigned long> misc1(5); // unsigned long = 4 bytes
     unsigned long unknown;
     unsigned long indexIdx;
     unsigned long nrTags;
@@ -182,7 +190,12 @@ read_nicolet_file::NiconeHeader read_nicolet_file::read_nicolet_header(std::ifst
     file.read(reinterpret_cast<char *>(&unknown), sizeof(unknown)); //#ok<NASGU>
     file.read(reinterpret_cast<char *>(&indexIdx), sizeof(indexIdx));
 
-    //std::cout << misc1.at(0) << " "<< misc1.at(1) << " "<< misc1.at(2) << " "<< misc1.at(3) << " "<< misc1.at(4) << " "<< unknown << " " << indexIdx << std::endl;
+    //qDebug() << misc1.at(0) << " "<< misc1.at(1) << " "<< misc1.at(2) << " "<< misc1.at(3) << " "<< misc1.at(4) << " " << unknown << " " << indexIdx;
+
+    if(misc1.at(0) != 477872911){ //hopefully this is the same at the beginning of each file
+        qDebug() << "not valid Nicolet EEG .e file";
+        return niconeHeader;
+    }
 
     // Get TAGS structure and Channel IDS
     file.seekg(172); // fseek(h, 172,'bof');
@@ -232,10 +245,10 @@ read_nicolet_file::NiconeHeader read_nicolet_file::read_nicolet_header(std::ifst
             tag_struct.IDStr = guids[tag];
         }
         sections.push_back(tag_struct);
-                //std::cout <<  "tag: " << tag_struct.tag << std::endl;
-                //std::cout << "tag_index: " << tag_struct.index << std::endl;
-                //std::cout << "IDStr: " << tag_struct.IDStr << std::endl;
-                //std::cout << "-------------------------------" << std::endl;
+        //std::cout <<  "tag: " << tag_struct.tag << std::endl;
+        //std::cout << "tag_index: " << tag_struct.index << std::endl;
+        //std::cout << "IDStr: " << tag_struct.IDStr << std::endl;
+        //std::cout << "-------------------------------" << std::endl;
     }
 
     // QI index
@@ -256,9 +269,9 @@ read_nicolet_file::NiconeHeader read_nicolet_file::read_nicolet_header(std::ifst
 
     }
 
-//    std::cout << "nrEntries: "<< qi.nrEntries << " misc1: " << qi.misc1 << " indexIdx: " << qi.indexIdx << " misc3: "<< qi.misc3 << " LQi: " << qi.LQi << std::endl;
-//     for (const auto& i: qi.firstIdx)
-//        std::cout << i << std::endl;
+    //    std::cout << "nrEntries: "<< qi.nrEntries << " misc1: " << qi.misc1 << " indexIdx: " << qi.indexIdx << " misc3: "<< qi.misc3 << " LQi: " << qi.LQi << std::endl;
+    //     for (const auto& i: qi.firstIdx)
+    //        std::cout << i << std::endl;
 
 
     // ================================ Get Main Index ===============================================
@@ -372,7 +385,7 @@ read_nicolet_file::SegmentTimes read_nicolet_file::readSegmentStartTimes(std::if
             record_start = record_start.addSecs(-3600); // not sure why this is not automatic
         }
 
-        qDebug() << record_start.toString("dd.MM.yyyy hh:mm:ss");
+        //qDebug() << record_start.toString("dd.MM.yyyy hh:mm:ss");
         file.seekg(8,std::ios_base::cur); //fseek(h, 8 , 'cof'); //16
         file.read(reinterpret_cast<char *>(&duration), sizeof(duration));;//24
         //std::wcout << "duration: " << duration << std::endl;
@@ -387,7 +400,7 @@ read_nicolet_file::SegmentTimes read_nicolet_file::readSegmentStartTimes(std::if
 }
 
 
-std::vector<QString> read_nicolet_file::readFileProperties(std::string sectionName, std::ifstream &file){
+QVector<QString> read_nicolet_file::readFileProperties(std::string sectionName, std::ifstream &file){
     unsigned long long lSection;
     unsigned long long nrValues;
     unsigned long long nrBstr;
@@ -396,13 +409,7 @@ std::vector<QString> read_nicolet_file::readFileProperties(std::string sectionNa
     double unix_time;
     QString value_str;
     std::vector<unsigned char> guid_vec(16);
-    std::vector<QString> output;
-
-      //    infoProps = { 'patientID', 'firstName','middleName','lastName',...
-    //        'altID','mothersMaidenName','DOB','DOD','street','sexID','phone',...
-    //        'notes','dominance','siteID','suffix','prefix','degree','apartment',...
-    //        'city','state','country','language','height','weight','race','religion',...
-    //        'maritalStatus'};
+    QVector<QString> output(30, "unknown");
 
     Index Idx = getSectionIdx(sectionName);
     //qDebug() << "Idx: " << Idx.offset;
@@ -452,7 +459,7 @@ std::vector<QString> read_nicolet_file::readFileProperties(std::string sectionNa
 
     //qDebug() << "co tady po nacteni strSetup";
 
-    //qDebug() << nrBstr;
+    qDebug() << "nrBstr: " + QString::number(nrBstr);
 
     // when the header is empty, return the struct empty
     if(nrBstr == 0){
@@ -466,15 +473,31 @@ std::vector<QString> read_nicolet_file::readFileProperties(std::string sectionNa
 
     //qDebug() << "pred samotnym ctenim";
 
+    //    infoProps = { 'patientID', 'firstName','middleName','lastName',...
+    //        'altID','mothersMaidenName','DOB','DOD','street','sexID','phone',...
+    //        'notes','dominance','siteID','suffix','prefix','degree','apartment',...
+    //        'city','state','country','language','height','weight','race','religion',...
+    //        'maritalStatus'};
+
+    // id 1 = guid
+    // id 2 = name
+    // id 3 = middle name
+    // id 4 = surname
+    // id 5 = id
+    // id 10 = guid
+    // id 12 = note
+    // id 13 = U
+    // id 14 = guid
+
     for(unsigned long long i = 0; i < (nrBstr)*2; i ++){
         //std::cout << "loop no: " << i << std::endl;
         if ( i % 2 == 0 ){
             id = strSetup.at(i);
-            //std::cout << "strSetup.at(i): " << strSetup.at(i) << std::endl;
-            //std::cout << "strSetup.at(i+1): " << strSetup.at(i+1) << std::endl;
+            //qDebug() << "strSetup.at(i): " << strSetup.at(i);
+            //qDebug() << "strSetup.at(i+1): " << strSetup.at(i+1);
             value_str = readUint16toQString(strSetup.at(i+1)+1,file);
-            output.push_back(value_str);
-            qDebug() << "value_str: " << value_str;
+            output[id] = value_str;
+            //qDebug() << id << " value_str: " << value_str;
             // nahradit "{0ADD99E5-ACCA-11cf-9B9A-0800099E03CD}" za unknown?
             //std::cout << "------------------" << std::endl;
             //info.(infoProps{id}) = value_str;
@@ -506,10 +529,10 @@ read_nicolet_file::Index read_nicolet_file::getSectionIdx(std::string sectionNam
         return id.sectionIdx == sectionIdx;
     });
 
-//    if (id != indices.end())
-//    {
-//        std::cout << "id: " << (*id).offset << std::endl;
-//    }
+    //    if (id != indices.end())
+    //    {
+    //        std::cout << "id: " << (*id).offset << std::endl;
+    //    }
     return (*id);
 }
 
@@ -585,4 +608,14 @@ QString read_nicolet_file::readUint16toQString(int size, std::ifstream &file){
     //    chars.erase(std::find(chars.begin(), chars.end(), '\0'), chars.end());
     //    return chars;
     return res;
+}
+
+bool read_nicolet_file::isGuid(QString guid){
+    //QRegExp re("\{\\w{8}-\\w{4}-\\w{4}-\\wB38C{4}-\\w{12}}");  // a digit (\d), zero or more times (*)
+    QRegExp re("^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$");
+    if (re.exactMatch(guid)){
+        return true;
+    }else{
+        return false;
+    }
 }

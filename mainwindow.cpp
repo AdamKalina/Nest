@@ -896,7 +896,7 @@ void MainWindow::chooseNicoletReader(){
 void MainWindow::refreshDynamic(){
 
     checkFolders(nestOptions.Brainlab_dirs.dynamic_dirs,true, "Brainlab");
-    //    checkFolders(nestOptions.Harmonie_dirs.dynamic_dirs,true, "Harmonie");
+    checkFolders(nestOptions.Harmonie_dirs.dynamic_dirs,true, "Harmonie");
     checkFolders(nestOptions.Nicolet_dirs.dynamic_dirs,true, "Nicolet");
     updateLastRefreshTime();
     updatePatientTreeModel();
@@ -916,8 +916,8 @@ void MainWindow::refreshStatic(){
     }
     else{
         checkFolders(nestOptions.Brainlab_dirs.static_dirs, false, "Brainlab");
-        //    checkFolders(nestOptions.Harmonie_dirs.dynamic_dirs,false, "Harmonie");
-        //    checkFolders(nestOptions.Nicone_dirs.dynamic_dirs,false, "nicolet");
+        checkFolders(nestOptions.Harmonie_dirs.dynamic_dirs,false, "Harmonie");
+        checkFolders(nestOptions.Nicolet_dirs.dynamic_dirs,false, "Nicolet");
         updatePatientTreeModel();
     }
 }

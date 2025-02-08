@@ -71,8 +71,8 @@ public:
     };
 
     struct NiconeHeader{
-        std::vector<QString> patientInfo;
-        std::vector<QString> studyInfo;
+        QVector<QString> patientInfo;
+        QVector<QString> studyInfo;
         SegmentTimes segmentTimes;
         double duration;
         int check_flag = 0;
@@ -89,8 +89,9 @@ public:
     std::string formatGuid(const std::string& guidStr);
     QString readUint16toQString(int size,std::ifstream &file);
     Index getSectionIdx(std::string sectionName);
-    std::vector<QString> readFileProperties(std::string sectionName,std::ifstream &file);
+    QVector<QString> readFileProperties(std::string sectionName,std::ifstream &file);
     SegmentTimes readSegmentStartTimes(std::ifstream &file);
+    bool isGuid(QString guid);
 };
 
 #endif // READ_NICOLET_FILE_H
