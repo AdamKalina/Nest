@@ -26,6 +26,7 @@ public:
     QString file_name;
     QString file_path;
     QString recording_system;
+    QString guidStudyID; // Nicolet Files only
     int recording_flag;
     int video_flag;
     //int num_pages; // replace with file_duration
@@ -66,6 +67,7 @@ class n_options{
 public:
     // general
     int months2load = 24;
+    int patients2load = 100;
     bool boldParent = false;
 
     // refreshing settings

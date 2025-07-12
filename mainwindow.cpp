@@ -6,17 +6,8 @@
 void MainWindow::loadDataFromDb(){
 
     if(db.isOpen()){
-        // get IDs of patients that had at least one recording in last x months
-
-        // FOR TESTING - maybe use the last x months from before last record...
-
-
-        if (nestOptions.months2load == 0){
-            // check that always at least 2 months of data are loaded
-            nestOptions.months2load = 2;
-        }
-
-        QVector<QString> qpatientIds = db.getPatientsIdsbyMonthsAgo(nestOptions.months2load);
+        // get IDs of X last patients ordered by date of last EEG
+        QVector<QString> qpatientIds = db.getLastXPatientsId(nestOptions.patients2load);
 
         QVectorIterator<QString> i(qpatientIds);
         while (i.hasNext()){
@@ -492,6 +483,10 @@ void MainWindow::ShowContextMenu(const QPoint & pos){
             connect(&deleteAction, SIGNAL(triggered()), this, SLOT(deleteRecord()));
             contextMenu.addAction(&deleteAction);
 
+            QAction clipboardAction(tr("Copy path to clipboard"), this);
+            connect(&clipboardAction, SIGNAL(triggered()), this, SLOT(copyPathToClipboard()));
+            contextMenu.addAction(&clipboardAction);
+
             // when I tried to add actions to menu on "if", it stopped working, so I build it and then I delete what is not needed
             if(!nestOptions.recordDeleteAllow){
                 contextMenu.removeAction(&deleteAction);
@@ -507,7 +502,7 @@ void MainWindow::ShowContextMenu(const QPoint & pos){
 }
 
 void MainWindow::double_click_record(QModelIndex index){
-    // forking for recorded and still recording files only makes sense in BrainLab environment
+    // forking for "recorded" and "still recording" files only makes sense in BrainLab environment
     // on Win 10 it should be removed
 
     QString path = index.sibling(index.row(),4).data().toString();
@@ -515,6 +510,16 @@ void MainWindow::double_click_record(QModelIndex index){
     QVariant recording_flag = index.sibling(index.row(),5).data();
 
     // TO DO - check if the path exists
+    bool fileExists = QFileInfo::exists(path);
+
+    if(!fileExists){
+        QMessageBox fileDoesNotExist;
+        fileDoesNotExist.setIcon(QMessageBox::Warning);
+        fileDoesNotExist.setText(tr("Path to the file does not exist.\nCheck if the file exists and if all the necessary drives are connected."));
+        fileDoesNotExist.setStandardButtons(QMessageBox::Ok);
+        fileDoesNotExist.exec();
+        return;
+    }
 
     // TO DO - make a constructor for this messagebox somewhere else?
     QMessageBox setProgram;
@@ -588,6 +593,7 @@ void MainWindow::double_click_record(QModelIndex index){
     }
 }
 
+// deprecated
 void MainWindow::openBrainLabControl(QString path){
     QFileInfo fi(path);
     //qDebug() << fi.fileName();
@@ -619,6 +625,7 @@ void MainWindow::openBrainLabControl(QString path){
 void MainWindow::exportToEDF(){
     //using this: https://stackoverflow.com/questions/28646914/qaction-with-custom-parameter
     // TO DO: is there a canon way?, maybe https://forum.qt.io/topic/101448/argument-in-connect/4
+    // TO DO: in other slots I simply read the index under the mouse
     QAction *act = qobject_cast<QAction *>(sender());
     QVariant v = act->data();
     qDebug() << v.toString();
@@ -724,6 +731,13 @@ void MainWindow::openXvision(){
 
     QProcess::startDetached(this->nestOptions.dicomReaderPath,arguments);
 
+};
+
+void MainWindow::copyPathToClipboard(){
+    QModelIndex index = treeView->selectionModel()->currentIndex();
+    QString file_name = index.sibling(index.row(),4).data().toString();
+    QClipboard* clipboard = QApplication::clipboard();
+    clipboard->setText(file_name, QClipboard::Clipboard);
 };
 
 void MainWindow::double_click_patient(QModelIndex index){
@@ -1269,6 +1283,7 @@ void MainWindow::writeSettings()
     settings.setValue("enable_delete_records",nestOptions.recordDeleteAllow);
     settings.setValue("enable_export_debug_mode",nestOptions.exportEnableDebug);
     settings.setValue("months_to_load",nestOptions.months2load);
+    settings.setValue("patients_to_load",nestOptions.patients2load);
 
     //// Signal folders ////
     std::vector<std::string> systems = {"Brainlab", "Harmonie", "Nicolet"};
@@ -1323,6 +1338,7 @@ void MainWindow::readSettings()
     nestOptions.recordDeleteAllow = settings.value("enable_delete_records").toBool();
     nestOptions.exportEnableDebug = settings.value("enable_export_debug_mode").toBool();
     nestOptions.months2load = settings.value("months_to_load").toInt();
+    nestOptions.patients2load = settings.value("patients_to_load").toInt();
 
 
     //// Signal folders ////

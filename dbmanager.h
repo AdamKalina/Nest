@@ -134,6 +134,14 @@ public:
     QVector<QString> getPatientsIdsbyMonthsAgo(int months);
 
     /**
+     * @brief Get ids of last X patients from db
+     * @param no_of_patients - number of patients with EEG ordered by date of last EEG
+     * @return Qvector<QString> of patients ids
+     */
+    QVector<QString> getLastXPatientsId(int no_of_patients);
+
+
+    /**
      * @brief Get patients ids from db where name/class_code/doctor LIKE query, wrapper function for getPatientsIdByTextNoteFromCol
      * @param query - QString inserted by user into filter line
      * @return Qvector<QString> of patients ids

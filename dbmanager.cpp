@@ -336,6 +336,26 @@ QVector<QString> DbManager::getPatientsIdsbyMonthsAgo(int months){
     return qpatientIds;
 }
 
+QVector<QString> DbManager::getLastXPatientsId(int no_of_patients){
+    //qDebug() << "DbManager::getLastXPatientsId";
+    QVector<QString> qpatientIds;
+    QSqlQuery selectQuery;
+    selectQuery.prepare("SELECT id FROM patients ORDER BY last_record DESC LIMIT (:lim)");
+    selectQuery.bindValue(":lim",no_of_patients);
+
+    if(selectQuery.exec()){
+        while(selectQuery.next()){
+            qpatientIds.append(selectQuery.value("id").toString());
+            //qDebug() << selectQuery.value("id").toString();
+        }
+
+    }else{
+        qDebug() << "problem with selecting last X patients by date of last EEG" << selectQuery.lastError();
+    }
+
+    return qpatientIds;
+}
+
 QVector<QString> DbManager::getPatientsIdbyTextNote(QString query){
     //qDebug() << "DbManager::getPatientsIdbyTextNote";
     QVector<QString> qpatientIds;

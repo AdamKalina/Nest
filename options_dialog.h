@@ -56,7 +56,7 @@ private:
     *enableDebugModeCheckBox;
     QDial *hourDial;
 
-    QSpinBox *months2loadSpinBox;
+    QSpinBox *months2loadSpinBox, *patients2loadSpinBox;
 
     QLineEdit *brainlabReaderEdit,
     *brainlabControlEdit,

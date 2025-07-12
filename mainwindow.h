@@ -9,6 +9,7 @@
 #include <QColor>
 #include <QScrollArea>
 #include <QVBoxLayout>
+#include <QApplication>
 
 #include <QTimer>
 #include <QElapsedTimer>
@@ -38,6 +39,7 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QToolTip>
+#include <QClipboard>
 
 #include "read_signal_file.h"
 #include "read_harmonie_file.h"
@@ -167,6 +169,7 @@ public slots:
     void exportToEDF();
     void deleteRecord();
     void openXvision();
+    void copyPathToClipboard();
 
 private:
     QMenuBar *menubar;
