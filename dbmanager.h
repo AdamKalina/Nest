@@ -140,6 +140,12 @@ public:
      */
     QVector<QString> getLastXPatientsId(int no_of_patients);
 
+    /**
+     * @brief Get ids of next X patients from db on top of those already loaded
+     * @param no_of_patients_loaded - number of patients already loaded order by date of last EEG
+     * @return Qvector<QString> of patients ids
+     */
+    QVector<QString> getNextXPatientsId(int no_of_patients_loaded, int no_of_patients_to_load);
 
     /**
      * @brief Get patients ids from db where name/class_code/doctor LIKE query, wrapper function for getPatientsIdByTextNoteFromCol

@@ -47,7 +47,7 @@ private:
     *tab6,
     *tab7;
 
-    QLabel *dialLabel, *timeLabel, *exportLabel, *exportPathLabel;
+    QLabel *dialLabel, *timeLabel, *exportLabel, *exportPathLabel, *patients2loadAddSpinBoxInfo;
     QCheckBox *usePeriodic,
     *useWorkingHours,
     *anonymizeCheckBox,
@@ -56,7 +56,7 @@ private:
     *enableDebugModeCheckBox;
     QDial *hourDial;
 
-    QSpinBox *months2loadSpinBox, *patients2loadSpinBox;
+    QSpinBox *months2loadSpinBox, *patients2loadStartSpinBox, *patients2loadAddSpinBox;
 
     QLineEdit *brainlabReaderEdit,
     *brainlabControlEdit,

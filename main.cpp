@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     w.setUpWorkingHoursQTimer();
     splash.showMessage("Looking for new data", Qt::AlignHCenter | Qt::AlignBottom);
     w.refreshDynamic();
-    w.programStart = false;
+    w.program_is_starting = false;
 
     splash.showMessage("Loading data from database", Qt::AlignHCenter | Qt::AlignBottom);
     w.loadDataFromDb();

@@ -7,7 +7,7 @@ void MainWindow::loadDataFromDb(){
 
     if(db.isOpen()){
         // get IDs of X last patients ordered by date of last EEG
-        QVector<QString> qpatientIds = db.getLastXPatientsId(nestOptions.patients2load);
+        QVector<QString> qpatientIds = db.getLastXPatientsId(nestOptions.patients2load_startup);
 
         QVectorIterator<QString> i(qpatientIds);
         while (i.hasNext()){
@@ -16,8 +16,36 @@ void MainWindow::loadDataFromDb(){
             IdMap.insert(qpatient.id,1);
         }
         dbLoaded = true;
+        no_of_patients_loaded = nestOptions.patients2load_startup;
     }
 }
+
+void MainWindow::loadMorePatients(){ // debug this, it load the first X patients twice
+    if(db.isOpen()){
+        // get IDs of X last patients ordered by date of last EEG
+        QVector<QString> qpatientIds = db.getNextXPatientsId(no_of_patients_loaded,nestOptions.patients2load_add);
+        //qDebug() << qpatientIds;
+        // now iterate over the IDs and load only those not already in the treeview
+        QVectorIterator<QString> i(qpatientIds);
+        while (i.hasNext()){
+            QString qpatientID = i.next();
+            QMap<QString, bool>::iterator qit = IdMap.find(qpatientID);
+            if (qit != IdMap.end()) {
+                // if the ID of QPatient is already loaded, do nothing
+                qDebug() << "This patient is already loaded!";
+            }
+            else{
+                QPatient qpatient = db.selectPatientbyIdWithRecords(qpatientID);
+                QpatientQueue.enqueue(qpatient); // add patient to buffer
+                IdMap.insert(qpatient.id,1); // register patient to IDmap
+            }
+        }
+        no_of_patients_loaded += nestOptions.patients2load_add;
+        treeView->viewport()->update(); //refresh the model
+    }
+}
+
+
 
 QRecord MainWindow::getQRecord(QFileInfo fileInfo, const QString recordingSystem){
     //    qDebug() << "MainWindow::getQRecord";
@@ -122,7 +150,7 @@ QRecord MainWindow::prepareQRecord(QFileInfo fileInfo, bool dynamic, const QStri
             return qrecord;
         }
 
-        if(programStart){
+        if(program_is_starting){
             //qDebug() << "program is starting - not adding to queue!";
             return qrecord;
         }
@@ -314,6 +342,7 @@ void MainWindow::buildTreeView(){
 
     //qDebug() << "creating source model";
     sourceModel = createPatientTreeModel(); // create sourceModel
+    //sourceModel = new TreeModel(this);
 
     proxyModel = new LeafFilterProxyModel(this); // use this custom FilterProxyModel
     proxyModel->setSourceModel(sourceModel);
@@ -433,6 +462,15 @@ void MainWindow::updateParentTime(QModelIndex parentInd){
     QDateTime QnewTime = QrecordQueue.head().record_start;
     if(QnewTime > QtempTime.toDateTime()){
         sourceModel->setData(parentInd.sibling(parentInd.row(),2),QnewTime,Qt::DisplayRole);
+    }
+}
+
+void MainWindow::fetchMorePatients(){
+    qDebug() << "got the signal!";
+    qDebug() << "main Window is visible: " << this->isVisible();
+    if (this->isVisible()){ // otherwise it would call the first X patients twice
+        loadMorePatients();
+        updatePatientTreeModel();
     }
 }
 
@@ -698,6 +736,7 @@ void MainWindow::deleteRecord(){
     }
 }
 
+// deprecated
 void MainWindow::openXvision(){
     QAction *act = qobject_cast<QAction *>(sender());
     QVariant v = act->data();
@@ -1283,7 +1322,8 @@ void MainWindow::writeSettings()
     settings.setValue("enable_delete_records",nestOptions.recordDeleteAllow);
     settings.setValue("enable_export_debug_mode",nestOptions.exportEnableDebug);
     settings.setValue("months_to_load",nestOptions.months2load);
-    settings.setValue("patients_to_load",nestOptions.patients2load);
+    settings.setValue("patients_to_load_start",nestOptions.patients2load_startup);
+    settings.setValue("patients_to_load_add",nestOptions.patients2load_add);
 
     //// Signal folders ////
     std::vector<std::string> systems = {"Brainlab", "Harmonie", "Nicolet"};
@@ -1338,7 +1378,8 @@ void MainWindow::readSettings()
     nestOptions.recordDeleteAllow = settings.value("enable_delete_records").toBool();
     nestOptions.exportEnableDebug = settings.value("enable_export_debug_mode").toBool();
     nestOptions.months2load = settings.value("months_to_load").toInt();
-    nestOptions.patients2load = settings.value("patients_to_load").toInt();
+    nestOptions.patients2load_startup = settings.value("patients_to_load_start").toInt();
+    nestOptions.patients2load_add = settings.value("patients_to_load_add").toInt();
 
 
     //// Signal folders ////

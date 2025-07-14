@@ -2,9 +2,11 @@
 
 // with courtesy of Andre - https://forum.qt.io/topic/7606/qsortfilterproxymodel-filteracceptsrow-filter-parent-node-and-child-node/4
 
-LeafFilterProxyModel::LeafFilterProxyModel(QObject *parent) :
-    QSortFilterProxyModel(parent)
+LeafFilterProxyModel::LeafFilterProxyModel(QObject *w_parent) :
+    QSortFilterProxyModel(w_parent)
 {
+    //connect(this, SIGNAL(callParentSignal()), SLOT(emitFetchMore())); // local signal
+    connect(this, SIGNAL(callParentFetchSignal()), this->parent(), SLOT(fetchMorePatients()));  // signal the parent
 }
 
 bool LeafFilterProxyModel::filterAcceptsRow(int source_row, const QModelIndex &source_parent) const
@@ -56,5 +58,19 @@ bool LeafFilterProxyModel::hasAcceptedChildren(int source_row, const QModelIndex
     }
 
     return false;
+}
 
+bool LeafFilterProxyModel::canFetchMore(const QModelIndex &parent) const{
+    return true;
+}
+
+void LeafFilterProxyModel::fetchMore(const QModelIndex &parent){
+    //mainwindow->loadMorePatients();
+    //mainwindow->updatePatientTreeModel();
+    //emitFetchMore();
+    emit callParentFetchSignal();
+}
+
+void LeafFilterProxyModel::emitFetchMore(){
+    qDebug() << "got the local signal!";
 }

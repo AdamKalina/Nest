@@ -67,7 +67,8 @@ class n_options{
 public:
     // general
     int months2load = 24;
-    int patients2load = 100;
+    int patients2load_startup = 100;
+    int patients2load_add = 10;
     bool boldParent = false;
 
     // refreshing settings

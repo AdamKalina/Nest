@@ -329,18 +329,29 @@ OptionsDialog::OptionsDialog(QWidget *w_parent)
 
     QLabel *patients2loadSpinBoxInfo = new QLabel(tr("Number of (latest) patients with EEG to load into Nest during initial startup. Default is 100."));
     patients2loadSpinBoxInfo->setFont(ff);
-    patients2loadSpinBox = new QSpinBox;
-    patients2loadSpinBox->setRange(10,300);
-    patients2loadSpinBox->setSingleStep(10);
-    patients2loadSpinBox->setMaximumWidth(90);
-    patients2loadSpinBox->setValue(mainwindow->nestOptions.patients2load);
+    patients2loadStartSpinBox = new QSpinBox;
+    patients2loadStartSpinBox->setRange(10,300);
+    patients2loadStartSpinBox->setSingleStep(10);
+    patients2loadStartSpinBox->setMaximumWidth(90);
+    patients2loadStartSpinBox->setValue(mainwindow->nestOptions.patients2load_startup);
+
+    QLabel *patients2loadAddSpinBoxInfo = new QLabel(tr("Number of additional patients added when scrolling. Default is 10."));
+    patients2loadAddSpinBoxInfo->setFont(ff);
+    patients2loadAddSpinBox = new QSpinBox;
+    patients2loadAddSpinBox->setRange(1,100);
+    patients2loadAddSpinBox->setSingleStep(10);
+    patients2loadAddSpinBox->setMaximumWidth(90);
+    patients2loadAddSpinBox->setValue(mainwindow->nestOptions.patients2load_add);
 
     QVBoxLayout *vlayout4 = new QVBoxLayout;
     vlayout4->addWidget(allowDeleteRecordCheckBox);
     vlayout4->addWidget(deleteRecordInfo);
     vlayout4->addSpacing(40);
     vlayout4->addWidget(patients2loadSpinBoxInfo);
-    vlayout4->addWidget(patients2loadSpinBox);
+    vlayout4->addWidget(patients2loadStartSpinBox);
+    vlayout4->addSpacing(40);
+    vlayout4->addWidget(patients2loadAddSpinBoxInfo);
+    vlayout4->addWidget(patients2loadAddSpinBox);
     //vlayout4->addWidget(months2loadSpinBoxInfoRestart);
     vlayout4->addStretch();
     tab4->setLayout(vlayout4);
@@ -586,7 +597,8 @@ void OptionsDialog::saveAndClose(){
 
     // MONTHS to load
     //qDebug() << months2loadSpinBox->value();
-    un_options.patients2load = patients2loadSpinBox->value();
+    un_options.patients2load_startup = patients2loadStartSpinBox->value();
+    un_options.patients2load_add = patients2loadAddSpinBox->value();
 
 
     //qDebug() << "Save and Close";

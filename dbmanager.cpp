@@ -356,6 +356,29 @@ QVector<QString> DbManager::getLastXPatientsId(int no_of_patients){
     return qpatientIds;
 }
 
+QVector<QString> DbManager::getNextXPatientsId(int nop_loaded, int nop2load){
+    //qDebug() << "DbManager::getNextXPatientsId";
+    QVector<QString> qpatientIds;
+    QSqlQuery selectQuery;
+    selectQuery.prepare("SELECT id FROM patients ORDER BY last_record DESC LIMIT (:lim) OFFSET (:off)");
+    selectQuery.bindValue(":lim",nop2load);
+    selectQuery.bindValue(":off",nop_loaded);
+    //qDebug() << "limit is " << nop2load << ", offset is " << nop_loaded;
+
+
+    if(selectQuery.exec()){
+        while(selectQuery.next()){
+            qpatientIds.append(selectQuery.value("id").toString());
+            //qDebug() << selectQuery.value("id").toString();
+        }
+
+    }else{
+        qDebug() << "problem with selecting next X patients by date of last EEG" << selectQuery.lastError();
+    }
+
+    return qpatientIds;
+}
+
 QVector<QString> DbManager::getPatientsIdbyTextNote(QString query){
     //qDebug() << "DbManager::getPatientsIdbyTextNote";
     QVector<QString> qpatientIds;

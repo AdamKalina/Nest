@@ -41,17 +41,18 @@
 #include <QToolTip>
 #include <QClipboard>
 
+#include "leaffilterproxymodel.h"
 #include "read_signal_file.h"
 #include "read_harmonie_file.h"
 #include "read_nicolet_file.h"
 #include "qpatient.h"
 #include "folderlist.h"
 #include "externalprogramlist.h"
-#include "leaffilterproxymodel.h"
 #include "refreshsettings.h"
 #include "options_dialog.h"
 #include "customdelegate.h"
 #include "dbmanager.h"
+#include "treemodel.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -68,8 +69,9 @@ public:
     // std variables
     bool sourceModelLoaded = false;
     bool dbLoaded = false;
-    bool programStart = true;
+    bool program_is_starting = true;
     long no_files_loaded = 0;
+    int no_of_patients_loaded = 0; // number of patients already loaded into the view
 
     // Qt variables
     QMap<QString, QPatient> patientMap;
@@ -91,11 +93,13 @@ public:
     QIcon dvicon;
     DbManager db;
     n_options nestOptions;
+    LeafFilterProxyModel *proxyModel;
 
     // functions
     void readSettings();
     void writeSettings();
     void loadDataFromDb();
+    void loadMorePatients();
     void checkFolders(const QStringList dirs, bool dynamic, const QString recordingSystem);
     void checkDataOnHDD(QString path2load, bool dynamic, const QString recordingSystem);
     void readDataOnHDD(QString path2load, bool dynamic, const QString recordingSystem);
@@ -136,7 +140,6 @@ public:
     void closeEvent(QCloseEvent *event);
     void fullTextSearch(QString query);
 
-
 public slots:
     void double_click_tree(QModelIndex index);
     void AddDynamicFolderDialog();
@@ -170,6 +173,7 @@ public slots:
     void deleteRecord();
     void openXvision();
     void copyPathToClipboard();
+    void fetchMorePatients();
 
 private:
     QMenuBar *menubar;
@@ -177,8 +181,9 @@ private:
     QBrush *ligh_grey_brush;
     QTreeView *treeView;
     QStandardItemModel *model;
-    LeafFilterProxyModel *proxyModel;
     QAbstractItemModel *sourceModel;
+
+    //Treemodel *sourceModel;
     QLineEdit *filter;
     QWidget *centralWidget;
     QVBoxLayout *layout;

@@ -54,6 +54,7 @@ set(PROJECT_SOURCES
         read_harmonie_file.cpp
         read_nicolet_file.cpp
         leaffilterproxymodel.cpp
+        treemodel.cpp
         qpatient.cpp
         folderlist.cpp
         options_dialog.cpp
