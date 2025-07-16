@@ -16,14 +16,15 @@ void MainWindow::loadDataFromDb(){
             IdMap.insert(qpatient.id,1);
         }
         dbLoaded = true;
-        no_of_patients_loaded = nestOptions.patients2load_startup;
+        noOfPatientsLoaded = nestOptions.patients2load_startup;
     }
 }
 
-void MainWindow::loadMorePatients(){ // debug this, it load the first X patients twice
+void MainWindow::loadMorePatients(){
+    int newLoadedPatients = 0;
     if(db.isOpen()){
         // get IDs of X last patients ordered by date of last EEG
-        QVector<QString> qpatientIds = db.getNextXPatientsId(no_of_patients_loaded,nestOptions.patients2load_add);
+        QVector<QString> qpatientIds = db.getNextXPatientsId(noOfPatientsLoaded,nestOptions.patients2load_add);
         //qDebug() << qpatientIds;
         // now iterate over the IDs and load only those not already in the treeview
         QVectorIterator<QString> i(qpatientIds);
@@ -38,10 +39,15 @@ void MainWindow::loadMorePatients(){ // debug this, it load the first X patients
                 QPatient qpatient = db.selectPatientbyIdWithRecords(qpatientID);
                 QpatientQueue.enqueue(qpatient); // add patient to buffer
                 IdMap.insert(qpatient.id,1); // register patient to IDmap
+                newLoadedPatients++;
+                noOfPatientsLoaded += 1; // increment no of loaded patients
             }
         }
-        no_of_patients_loaded += nestOptions.patients2load_add;
-        treeView->viewport()->update(); //refresh the model
+        qDebug() << "no_of_patients_loaded" << noOfPatientsLoaded << ", of that " << newLoadedPatients << " new.";
+        if(newLoadedPatients != 0){ //when new patients were loaded
+            updatePatientTreeModel();
+            //treeView->viewport()->update(); //refresh the model - no need to call it here
+        }
     }
 }
 
@@ -386,6 +392,8 @@ void MainWindow::buildTreeView(){
 
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(double_click_tree(QModelIndex)));
     connect(treeView, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(ShowContextMenu(const QPoint &)));
+    //connect(treeView->verticalScrollBar(), &QScrollBar::valueChanged, this, SLOT(verticalScrollingTree(int)));
+    connect(treeView->verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(verticalScrollingTree(int)));
 
     layout->addWidget(treeView);
 };
@@ -465,12 +473,25 @@ void MainWindow::updateParentTime(QModelIndex parentInd){
     }
 }
 
-void MainWindow::fetchMorePatients(){
-    qDebug() << "got the signal!";
+void MainWindow::fetchMorePatients(){ // delete this?
+    qDebug() << "Got the signal to fetch more patients in time!" << QDateTime::currentDateTime();
     qDebug() << "main Window is visible: " << this->isVisible();
-    if (this->isVisible()){ // otherwise it would call the first X patients twice
+    if (this->isVisible()){ // otherwise it would call the first X patients
+        qDebug() << "no_of_patients_loaded" << noOfPatientsLoaded;
         loadMorePatients();
         updatePatientTreeModel();
+    }
+}
+
+// ======================== SLOTS ========================
+
+
+void MainWindow::verticalScrollingTree(int value){
+    //qDebug() << "value " << value;
+    //qDebug() << "max " << treeView->verticalScrollBar()->maximum();
+    if(value == treeView->verticalScrollBar()->maximum()){
+        //fetchMorePatients();
+        loadMorePatients();
     }
 }
 
@@ -796,7 +817,6 @@ void MainWindow::double_click_patient(QModelIndex index){
     }
 }
 
-// ======== SLOTS ========
 
 void MainWindow::AddStaticFolderDialog(){
     AddFolderDialog(false);

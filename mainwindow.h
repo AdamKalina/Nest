@@ -30,6 +30,7 @@
 #include <QRegExp>
 #include <QHeaderView>
 #include <QTreeView>
+#include <QScrollBar>
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
 #include <QDataStream>
@@ -71,7 +72,7 @@ public:
     bool dbLoaded = false;
     bool program_is_starting = true;
     long no_files_loaded = 0;
-    int no_of_patients_loaded = 0; // number of patients already loaded into the view
+    int noOfPatientsLoaded = 0; // number of patients already loaded into the view
 
     // Qt variables
     QMap<QString, QPatient> patientMap;
@@ -173,6 +174,7 @@ public slots:
     void deleteRecord();
     void openXvision();
     void copyPathToClipboard();
+    void verticalScrollingTree(int);
     void fetchMorePatients();
 
 private:

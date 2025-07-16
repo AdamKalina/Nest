@@ -6,7 +6,7 @@ LeafFilterProxyModel::LeafFilterProxyModel(QObject *w_parent) :
     QSortFilterProxyModel(w_parent)
 {
     //connect(this, SIGNAL(callParentSignal()), SLOT(emitFetchMore())); // local signal
-    connect(this, SIGNAL(callParentFetchSignal()), this->parent(), SLOT(fetchMorePatients()));  // signal the parent
+    connect(this, SIGNAL(callParentFetchSignal()), this->parent(), SLOT(fetchMorePatients()), Qt::UniqueConnection);  // signal the parent
 }
 
 bool LeafFilterProxyModel::filterAcceptsRow(int source_row, const QModelIndex &source_parent) const
@@ -61,14 +61,22 @@ bool LeafFilterProxyModel::hasAcceptedChildren(int source_row, const QModelIndex
 }
 
 bool LeafFilterProxyModel::canFetchMore(const QModelIndex &parent) const{
-    return true;
+    //qDebug() << "canFetchMore is called on parent " << parent.row();
+    //qDebug() << parent.isValid();
+    if (parent.row() == -1){
+        //return !parent.isValid(); // return true only when not expanding existing parent
+        return false;
+    }
+    return false;
 }
 
 void LeafFilterProxyModel::fetchMore(const QModelIndex &parent){
     //mainwindow->loadMorePatients();
     //mainwindow->updatePatientTreeModel();
     //emitFetchMore();
+    //beginInsertRows(parent,parent.row(),parent.row()+2);
     emit callParentFetchSignal();
+    //endInsertRows();
 }
 
 void LeafFilterProxyModel::emitFetchMore(){
