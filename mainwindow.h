@@ -150,7 +150,6 @@ public slots:
     void chooseExportProgram();
     void chooseHarmonieReader();
     void chooseNicoletReader();
-    void chooseDicomReader();
     void chooseExternalProgram(QString instruction, QString file_type, QString & option_exe);
     void filter_text_changed(const QString & text);
     void filter_return_pressed();
@@ -172,7 +171,6 @@ public slots:
     void ShowContextMenu(const QPoint &);
     void exportToEDF();
     void deleteRecord();
-    void openXvision();
     void copyPathToClipboard();
     void verticalScrollingTree(int);
     void fetchMorePatients();

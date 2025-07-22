@@ -74,9 +74,7 @@ void LeafFilterProxyModel::fetchMore(const QModelIndex &parent){
     //mainwindow->loadMorePatients();
     //mainwindow->updatePatientTreeModel();
     //emitFetchMore();
-    //beginInsertRows(parent,parent.row(),parent.row()+2);
     emit callParentFetchSignal();
-    //endInsertRows();
 }
 
 void LeafFilterProxyModel::emitFetchMore(){

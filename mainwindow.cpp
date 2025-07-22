@@ -34,6 +34,7 @@ void MainWindow::loadMorePatients(){
             if (qit != IdMap.end()) {
                 // if the ID of QPatient is already loaded, do nothing
                 qDebug() << "This patient is already loaded!";
+                noOfPatientsLoaded += 1; // increase this too because otherwise the fetching would not work if some older patients were loaded via filterline
             }
             else{
                 QPatient qpatient = db.selectPatientbyIdWithRecords(qpatientID);
@@ -43,7 +44,7 @@ void MainWindow::loadMorePatients(){
                 noOfPatientsLoaded += 1; // increment no of loaded patients
             }
         }
-        qDebug() << "no_of_patients_loaded" << noOfPatientsLoaded << ", of that " << newLoadedPatients << " new.";
+        qDebug() << "no_of_patients_loaded" << noOfPatientsLoaded << "- of that " << newLoadedPatients << " new.";
         if(newLoadedPatients != 0){ //when new patients were loaded
             updatePatientTreeModel();
             //treeView->viewport()->update(); //refresh the model - no need to call it here
@@ -378,6 +379,7 @@ void MainWindow::buildTreeView(){
     treeView->setItemDelegate(new CustomDelegate); // set custom delegate
     treeView->expand(proxyModel->index(0,0)); // expands the patient with the newest record
     treeView->setContextMenuPolicy(Qt::CustomContextMenu); // allow context menu
+    treeView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
     //treeView->header()->setMinimumSectionSize(50);
     //treeView->header()->resizeSection(0 /*column index*/, 25 /*width*/);
@@ -487,8 +489,8 @@ void MainWindow::fetchMorePatients(){ // delete this?
 
 
 void MainWindow::verticalScrollingTree(int value){
-    //qDebug() << "value " << value;
-    //qDebug() << "max " << treeView->verticalScrollBar()->maximum();
+    qDebug() << "value " << value;
+    qDebug() << "max " << treeView->verticalScrollBar()->maximum();
     if(value == treeView->verticalScrollBar()->maximum()){
         //fetchMorePatients();
         loadMorePatients();
@@ -517,17 +519,7 @@ void MainWindow::ShowContextMenu(const QPoint & pos){
     // TO DO - lepší možnost rozeznávat parenta od children?
 
     if(!path.isValid()){ // !path.isValid() = is parent
-        if(nestOptions.dicomReaderEnable){
-            QVariant parent_id = index.sibling(index.row(),0).data();
-            qDebug() << index;
-            qDebug() << parent_id;
-            QMenu contextMenu(tr("Context menu"), this);
-            QAction dicomAction(tr("Open in DICOM Viewer"), this);
-            dicomAction.setData(parent_id);
-            connect(&dicomAction, SIGNAL(triggered()), this, SLOT(openXvision()));
-            contextMenu.addAction(&dicomAction);
-            contextMenu.exec(treeView->mapToGlobal(pos));
-        }
+        // nothing here since xVision was discontinued
     }
     else{
         if(nestOptions.recordDeleteAllow || nestOptions.exportAllow){
@@ -757,42 +749,6 @@ void MainWindow::deleteRecord(){
     }
 }
 
-// deprecated
-void MainWindow::openXvision(){
-    QAction *act = qobject_cast<QAction *>(sender());
-    QVariant v = act->data();
-    qDebug() << v.toString();
-
-    // check if dicom Viewer is set
-    QMessageBox setProgram;
-    setProgram.setIcon(QMessageBox::Question);
-    setProgram.setText(tr("DICOM viewer is not set"));
-    setProgram.setInformativeText(tr("Do you want to set it now?"));
-    setProgram.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-    setProgram.setDefaultButton(QMessageBox::Yes);
-
-    if(nestOptions.dicomReaderPath.isEmpty()){
-        int ret = setProgram.exec();
-        if (ret == QMessageBox::Yes){
-            chooseDicomReader();
-        }
-        else{
-            return;
-        }
-    }
-    //QProcess *dicomProcess = new QProcess(nullptr);
-    QStringList arguments;
-    QString str = "/patientid=" +  v.toString(); // /patientid=8903030004
-    qDebug() << str;
-    arguments << str;
-    //dicomProcess->setArguments(arguments);
-    //dicomProcess->setProgram(this->nestOptions.dicomReaderPath);
-    //dicomProcess->start();
-
-    QProcess::startDetached(this->nestOptions.dicomReaderPath,arguments);
-
-};
-
 void MainWindow::copyPathToClipboard(){
     QModelIndex index = treeView->selectionModel()->currentIndex();
     QString file_name = index.sibling(index.row(),4).data().toString();
@@ -933,17 +889,6 @@ void MainWindow::chooseExportProgram(){
     }else{
         nestOptions.exportProgram = temp;
     }
-};
-
-void MainWindow::chooseDicomReader(){
-    QString temp = QFileDialog::getOpenFileName(0, tr("Choose DICOM Viewer"), "", tr("xVision(*.exe)"));
-
-    if(temp.isEmpty()){
-        return;
-    }else{
-        nestOptions.dicomReaderPath = temp;
-    }
-
 };
 
 void MainWindow::chooseHarmonieReader(){
@@ -1323,8 +1268,6 @@ void MainWindow::writeSettings()
     settings.setValue("brainlab_control", nestOptions.brainlabControl);
     settings.setValue("nicolet_reader", nestOptions.nicoletReader);
     settings.setValue("harmonie_reader", nestOptions.harmonieReader);
-    settings.setValue("dicom_reader", nestOptions.dicomReaderPath);
-    settings.setValue("enable_dicom_reader",nestOptions.dicomReaderEnable);
     settings.setValue("defaultDataFolder","D:/Dropbox/Scripts/Cpp/");
     settings.setValue("defaultReaderFolder","D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/");
     settings.setValue("refreshing_period",nestOptions.refreshingPeriod);
@@ -1344,6 +1287,8 @@ void MainWindow::writeSettings()
     settings.setValue("months_to_load",nestOptions.months2load);
     settings.setValue("patients_to_load_start",nestOptions.patients2load_startup);
     settings.setValue("patients_to_load_add",nestOptions.patients2load_add);
+    settings.setValue("read_NicoletOne_db",nestOptions.readNicOneDb);
+    settings.setValue("NicoletOne_db_path",nestOptions.NicOneDbPath);
 
     //// Signal folders ////
     std::vector<std::string> systems = {"Brainlab", "Harmonie", "Nicolet"};
@@ -1379,8 +1324,6 @@ void MainWindow::readSettings()
     nestOptions.brainlabControl = settings.value("brainlab_control").toString();
     nestOptions.nicoletReader = settings.value("nicolet_reader").toString();
     nestOptions.harmonieReader = settings.value("harmonie_reader").toString();
-    nestOptions.dicomReaderPath = settings.value("dicom_reader").toString();
-    nestOptions.dicomReaderEnable = settings.value("enable_dicom_reader").toBool();
     nestOptions.defaultDataFolder = settings.value("defaultDataFolder").toString();
     nestOptions.defaultReaderFolder = settings.value("defaultReaderFolder").toString();
     nestOptions.refreshingPeriod = settings.value("refreshing_period").toInt();
@@ -1400,6 +1343,8 @@ void MainWindow::readSettings()
     nestOptions.months2load = settings.value("months_to_load").toInt();
     nestOptions.patients2load_startup = settings.value("patients_to_load_start").toInt();
     nestOptions.patients2load_add = settings.value("patients_to_load_add").toInt();
+    nestOptions.readNicOneDb = settings.value("read_NicoletOne_db").toBool();
+    nestOptions.NicOneDbPath = settings.value("NicoletOne_db_path").toString();
 
 
     //// Signal folders ////

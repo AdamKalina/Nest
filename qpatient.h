@@ -102,10 +102,8 @@ public:
 
     // user editing of db
     bool recordDeleteAllow = false;
-
-    // path to xVision - purely Motol function
-    QString dicomReaderPath;
-    bool dicomReaderEnable;
+    bool readNicOneDb = true;
+    QString NicOneDbPath;
 };
 
 #endif // QPATIENT_H

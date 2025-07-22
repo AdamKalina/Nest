@@ -52,20 +52,21 @@ QRecord read_nicolet_file::get_qrecord_nicolet(QFileInfo fileInfo){
         return qrecord;
     }
 
-    for(int i = 0; i < niconeHeader.patientInfo.size();i++){
-        if(niconeHeader.patientInfo.at(i) != "unknown"){
-            qDebug() << "niconeHeader.patientInfo.at(" + QString::number(i) + "): " + niconeHeader.patientInfo.at(i);
-        }
-    }
+    // uncomment for debugging
+//    for(int i = 0; i < niconeHeader.patientInfo.size();i++){
+//        if(niconeHeader.patientInfo.at(i) != "unknown"){
+//            qDebug() << "niconeHeader.patientInfo.at(" + QString::number(i) + "): " + niconeHeader.patientInfo.at(i);
+//        }
+//    }
 
-    for(int i = 0; i < niconeHeader.studyInfo.size();i++){
-        if(niconeHeader.studyInfo.at(i) != "unknown"){
-            qDebug() << "niconeHeader.studyInfo.at(" + QString::number(i) + "): " + niconeHeader.studyInfo.at(i);
-        }
+//    for(int i = 0; i < niconeHeader.studyInfo.size();i++){
+//        if(niconeHeader.studyInfo.at(i) != "unknown"){
+//            qDebug() << "niconeHeader.studyInfo.at(" + QString::number(i) + "): " + niconeHeader.studyInfo.at(i);
+//        }
 
-    }
+//    }
 
-    qDebug() << "niconeHeader.duration: " << niconeHeader.duration;
+//    qDebug() << "niconeHeader.duration: " << niconeHeader.duration;
 
     // "{0ADD99E5-ACCA-11cf-9B9A-0800099E03CD}" = unknown?
 
@@ -459,7 +460,7 @@ QVector<QString> read_nicolet_file::readFileProperties(std::string sectionName, 
 
     //qDebug() << "co tady po nacteni strSetup";
 
-    qDebug() << "nrBstr: " + QString::number(nrBstr);
+    //qDebug() << "nrBstr: " + QString::number(nrBstr);
 
     // when the header is empty, return the struct empty
     if(nrBstr == 0){
@@ -508,7 +509,7 @@ QVector<QString> read_nicolet_file::readFileProperties(std::string sectionName, 
 
 read_nicolet_file::Index read_nicolet_file::getSectionIdx(std::string sectionName){
 
-    qDebug() << QString::fromStdString(sectionName);
+    //qDebug() << QString::fromStdString(sectionName);
 
     unsigned long long sectionIdx;
     //unsigned long long offset;
