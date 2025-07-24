@@ -290,7 +290,7 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
     }
 }
 
-void addQPatient2model(QAbstractItemModel *model, QPatient Qpatient, bool boldParent){
+void addQPatient2model(QAbstractItemModel *model, QPatient Qpatient){
     //qDebug() << "addQPatient2model";
 
     // define patient
@@ -301,15 +301,6 @@ void addQPatient2model(QAbstractItemModel *model, QPatient Qpatient, bool boldPa
     model->setData(model->index(0, 2), Qpatient.last_record,Qt::DisplayRole);
     model->setData(model->index(0, 3), Qpatient.no, Qt::DisplayRole);
     model->setData(model->index(0, 3), Qt::AlignCenter, Qt::TextAlignmentRole);
-
-    //TO DO: do this in delegate
-    if(boldParent){
-        QFont boldFont;
-        boldFont.setBold(true);
-        for(int i = 0; i <= 4; i++ ){
-            model->setData(model->index(0,i), boldFont,Qt::FontRole);
-        }
-    }
 
     const QModelIndex parent = model->index(0,0); // get the item in the first row and first column
 
@@ -339,7 +330,7 @@ QAbstractItemModel* MainWindow::createPatientTreeModel(){
 
     while (!QpatientQueue.isEmpty()){
         // adds the patient to the model
-        addQPatient2model(model, QpatientQueue.dequeue(), nestOptions.boldParent);
+        addQPatient2model(model, QpatientQueue.dequeue());
     }
 
     return model;
@@ -406,7 +397,7 @@ void MainWindow::updatePatientTreeModel(){
     // add new Qpatients from stack
     while (!QpatientQueue.isEmpty()){
         // adds patients (that were not in the model already) from the stack to the model
-        addQPatient2model(sourceModel, QpatientQueue.dequeue(), nestOptions.boldParent);
+        addQPatient2model(sourceModel, QpatientQueue.dequeue());
     }
 
     while (!QrecordQueue.isEmpty()){
@@ -560,7 +551,6 @@ void MainWindow::double_click_record(QModelIndex index){
     QString system = index.sibling(index.row(),6).data().toString();
     QVariant recording_flag = index.sibling(index.row(),5).data();
 
-    // TO DO - check if the path exists
     bool fileExists = QFileInfo::exists(path);
 
     if(!fileExists){
@@ -657,7 +647,7 @@ void MainWindow::openBrainLabControl(QString path){
         int ind = nestOptions.Brainlab_dirs.dynamic_dirs.indexOf(fi.path());
         if (ind != -1){
             // if there is batch file mapped to it - use it
-            QString batchFile = batchFiles.at(ind);
+            QString batchFile = nestOptions.batchFiles.at(ind);
             qDebug() << batchFile;
             runBatchFile(batchFile);
         }
@@ -1009,10 +999,19 @@ void MainWindow::filter_text_changed(const QString & text){
     //qDebug() << text;
     proxyModel->setFilterFixedString(text);
 
-    //QPoint point = QPoint(geometry().left() + filter->geometry().left(), geometry().top() + filter->geometry().bottom()+10);
-    // TO DO - make it delayed by couple of seconds
-    // TO DO - make it appear just when nothing is found?
-    //QToolTip::showText(point,tr("Looking for something? Try hitting ENTER!"));
+    if (text != ""){
+        filterLineHintTimer = new QTimer(this);
+        filterLineHintTimer->setSingleShot(true);
+        filterLineHintTimer->start(2000);
+        connect(filterLineHintTimer, SIGNAL(timeout()), this, SLOT(showFilterLineHint()));
+    }
+}
+
+void MainWindow::showFilterLineHint()
+{
+    //qDebug() << "MainWindow::showFilterLineHint()";
+    QPoint point = QPoint(geometry().left() + filter->geometry().left(), geometry().top() + filter->geometry().bottom()+10);
+    QToolTip::showText(point,tr("Looking for something? Try hitting ENTER!", nullptr, 1000));
 }
 
 void MainWindow::filter_return_pressed(){
@@ -1260,138 +1259,16 @@ void MainWindow::closeEvent (QCloseEvent *event)
 
 // ======== Write and Read Settings ========
 
-void MainWindow::writeSettings()
+void MainWindow::readNestSettings()
 {
-    //QSettings settings("PuffinSoft", "EEGle Nest");
-    QSettings settings("settings.ini",QSettings::IniFormat);
-    settings.setValue("brainlab_reader", nestOptions.brainlabReader);
-    settings.setValue("brainlab_control", nestOptions.brainlabControl);
-    settings.setValue("nicolet_reader", nestOptions.nicoletReader);
-    settings.setValue("harmonie_reader", nestOptions.harmonieReader);
-    settings.setValue("defaultDataFolder","D:/Dropbox/Scripts/Cpp/");
-    settings.setValue("defaultReaderFolder","D:/Dropbox/Scripts/Cpp/EEGLE/build-EEGle-Desktop_Qt_5_15_2_MinGW_64_bit-Release/");
-    settings.setValue("refreshing_period",nestOptions.refreshingPeriod);
-    settings.setValue("periodic_refreshing_enabled", nestOptions.periodicRefreshingEnabled);
-    settings.setValue("load_static_on_refresh_enabled",nestOptions.refreshLoadStatic);
-    settings.setValue("periodic_refreshing_in_working_hours_only",nestOptions.refreshWorkingHoursOnly);
-    settings.setValue("periodic_refresh_mode",nestOptions.periodicRefreshMode);
-    settings.setValue("bold_parent",nestOptions.boldParent);
-    settings.setValue("allow_export", nestOptions.exportAllow);
-    settings.setValue("anonymize_export",nestOptions.exportAnonymize);
-    settings.setValue("export_program",nestOptions.exportProgram);
-    settings.setValue("export_path",nestOptions.exportPath);
-    settings.setValue("shorten_export",nestOptions.exportShortenLabels);
-    settings.setValue("export_system_events",nestOptions.exportSystemEvents);
-    settings.setValue("enable_delete_records",nestOptions.recordDeleteAllow);
-    settings.setValue("enable_export_debug_mode",nestOptions.exportEnableDebug);
-    settings.setValue("months_to_load",nestOptions.months2load);
-    settings.setValue("patients_to_load_start",nestOptions.patients2load_startup);
-    settings.setValue("patients_to_load_add",nestOptions.patients2load_add);
-    settings.setValue("read_NicoletOne_db",nestOptions.readNicOneDb);
-    settings.setValue("NicoletOne_db_path",nestOptions.NicOneDbPath);
-
-    //// Signal folders ////
-    std::vector<std::string> systems = {"Brainlab", "Harmonie", "Nicolet"};
-    std::vector<signal_dirs*> dirs = {&nestOptions.Brainlab_dirs,&nestOptions.Harmonie_dirs,&nestOptions.Nicolet_dirs};
-
-    for(unsigned int s = 0; s < systems.size(); s++){
-        settings.beginGroup(QString::fromStdString(systems[s]));
-
-        dirs[s]->static_dirs.sort(); // sort the folder alphabetically
-        settings.beginWriteArray("static_dirs");
-        for (int i = 0; i < dirs[s]->static_dirs.size(); ++i) {
-            settings.setArrayIndex(i);
-            settings.setValue("path", dirs[s]->static_dirs.at(i));
-        }
-        settings.endArray();
-
-        dirs[s]->dynamic_dirs.sort();
-        settings.beginWriteArray("dynamic_dirs");
-        for (int i = 0; i < dirs[s]->dynamic_dirs.size(); ++i) {
-            settings.setArrayIndex(i);
-            settings.setValue("path", dirs[s]->dynamic_dirs.at(i));
-        }
-        settings.endArray();
-
-        settings.endGroup();
-    }
+    nest_options nestSettingsReader;
+    nestOptions = nestSettingsReader.readSettings();
 }
 
-void MainWindow::readSettings()
+void MainWindow::writeNestSettings()
 {
-    QSettings settings("settings.ini",QSettings::IniFormat);
-    nestOptions.brainlabReader = settings.value("brainlab_reader").toString();
-    nestOptions.brainlabControl = settings.value("brainlab_control").toString();
-    nestOptions.nicoletReader = settings.value("nicolet_reader").toString();
-    nestOptions.harmonieReader = settings.value("harmonie_reader").toString();
-    nestOptions.defaultDataFolder = settings.value("defaultDataFolder").toString();
-    nestOptions.defaultReaderFolder = settings.value("defaultReaderFolder").toString();
-    nestOptions.refreshingPeriod = settings.value("refreshing_period").toInt();
-    nestOptions.periodicRefreshingEnabled = settings.value("periodic_refreshing_enabled").toBool();
-    nestOptions.refreshLoadStatic = settings.value("load_static_on_refresh_enabled").toBool();
-    nestOptions.refreshWorkingHoursOnly = settings.value("periodic_refreshing_in_working_hours_only").toBool();
-    nestOptions.periodicRefreshMode = settings.value("periodic_refresh_mode").toInt();
-    nestOptions.boldParent = settings.value("bold_parent").toBool();
-    nestOptions.exportAnonymize = settings.value("anonymize_export").toBool();
-    nestOptions.exportProgram = settings.value("export_program").toString();
-    nestOptions.exportPath = settings.value("export_path").toString();
-    nestOptions.exportAllow = settings.value("allow_export").toBool();
-    nestOptions.exportShortenLabels = settings.value("shorten_export").toBool();
-    nestOptions.exportSystemEvents = settings.value("export_system_events").toBool();
-    nestOptions.recordDeleteAllow = settings.value("enable_delete_records").toBool();
-    nestOptions.exportEnableDebug = settings.value("enable_export_debug_mode").toBool();
-    nestOptions.months2load = settings.value("months_to_load").toInt();
-    nestOptions.patients2load_startup = settings.value("patients_to_load_start").toInt();
-    nestOptions.patients2load_add = settings.value("patients_to_load_add").toInt();
-    nestOptions.readNicOneDb = settings.value("read_NicoletOne_db").toBool();
-    nestOptions.NicOneDbPath = settings.value("NicoletOne_db_path").toString();
-
-
-    //// Signal folders ////
-    std::vector<std::string> systems = {"Brainlab", "Harmonie", "Nicolet"};
-    std::vector<signal_dirs*> dirs = {&nestOptions.Brainlab_dirs,&nestOptions.Harmonie_dirs,&nestOptions.Nicolet_dirs};
-
-    for(unsigned int s = 0; s < systems.size(); s++){
-        settings.beginGroup(QString::fromStdString(systems[s]));
-
-        // load array of static folders
-        int size = settings.beginReadArray("static_dirs");
-        for (int i = 0; i < size; ++i) {
-            settings.setArrayIndex(i);
-            QString new_stat_dir = settings.value("path").toString();
-            dirs[s]->static_dirs.append(new_stat_dir);
-        }
-        settings.endArray();
-
-        // load array of dynamic folders
-        size = settings.beginReadArray("dynamic_dirs");
-        for (int i = 0; i < size; ++i) {
-            settings.setArrayIndex(i);
-            QString new_dyn_dir = settings.value("path").toString();
-            dirs[s]->dynamic_dirs.append(new_dyn_dir);
-        }
-        settings.endArray();
-
-        settings.endGroup();
-    }
-
-    // load array of used drives (not used right now)
-    int size = settings.beginReadArray("used_drives");
-    for (int i = 0; i < size; ++i) {
-        settings.setArrayIndex(i);
-        QString usedDrive = settings.value("path").toString();
-        usedDrives.append(usedDrive);
-    }
-    settings.endArray();
-
-    // load array of batch files - paired with used drives
-    size = settings.beginReadArray("batch_files");
-    for (int i = 0; i < size; ++i) {
-        settings.setArrayIndex(i);
-        QString batchFile = settings.value("path").toString();
-        batchFiles.append(batchFile);
-    }
-    settings.endArray();
+    nest_options nestSettingsWriter;
+    nestSettingsWriter.writeSettings(nestOptions);
 }
 
 // ======== CONNECT DB ========
@@ -1414,5 +1291,6 @@ void MainWindow::connectDb(){
 
 MainWindow::~MainWindow()
 {
-    writeSettings(); //save setting in .ini file
+    //writeSettings(); deprecated
+    writeNestSettings(); //save setting in .ini file
 }

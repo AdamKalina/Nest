@@ -58,6 +58,7 @@ set(PROJECT_SOURCES
         qpatient.cpp
         folderlist.cpp
         options_dialog.cpp
+        nest_options.cpp
         customdelegate.cpp
         dbmanager.cpp
         resources.qrc

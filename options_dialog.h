@@ -8,10 +8,11 @@
 #include <QButtonGroup>
 #include <QSpinBox>
 #include "mainwindow.h"
+#include "nest_options.h"
 
 class MainWindow;
 
-class n_options;
+class nest_options;
 
 class OptionsDialog : public QObject
 {
@@ -22,7 +23,7 @@ public:
 
     MainWindow *mainwindow;
 
-    n_options un_options;
+    nest_options_struct un_options;
 
 private:
 

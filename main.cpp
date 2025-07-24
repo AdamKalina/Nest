@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     QFont sansFont("Century Gothic", 10);
     p.setFont(sansFont);
     p.setPen(Qt::black);
-    p.drawText(20, 60, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, "version 0.81");
+    p.drawText(20, 60, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, "version 0.82");
     p.drawText(20, 300, 300, 30, Qt::AlignLeft | Qt::TextSingleLine, QString("build %1").arg(__DATE__));
 
     QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);
@@ -69,7 +69,8 @@ int main(int argc, char *argv[])
     // ======== APPLICATION CYCLE ========
 
     splash.showMessage("Reading settings", Qt::AlignHCenter | Qt::AlignBottom);
-    w.readSettings();
+    //w.readSettings();
+    w.readNestSettings();
 
     splash.showMessage("Connecting to database", Qt::AlignHCenter | Qt::AlignBottom);
     w.connectDb();

@@ -2,6 +2,7 @@
 #define FOLDERLIST_H
 
 #include "mainwindow.h"
+# include "nest_options.h"
 
 class MainWindow;
 class folderTab;

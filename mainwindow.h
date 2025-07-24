@@ -16,7 +16,6 @@
 #include <QProcess>
 #include <QDirIterator>
 #include <QFile>
-#include <QSettings>
 #include <QLabel>
 #include <QMenuBar>
 #include <QFileDialog>
@@ -54,6 +53,7 @@
 #include "customdelegate.h"
 #include "dbmanager.h"
 #include "treemodel.h"
+#include "nest_options.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -88,17 +88,19 @@ public:
     QString QMapFile;
     QString path2db = "records.db";
     QString brainLabDrive = "S:\\";
-    QStringList usedDrives;
-    QStringList batchFiles;
+    //QStringList usedDrives;
+    //QStringList batchFiles;
     QDateTime lastRefreshTime;
     QIcon dvicon;
     DbManager db;
-    n_options nestOptions;
+    nest_options_struct nestOptions;
     LeafFilterProxyModel *proxyModel;
 
     // functions
-    void readSettings();
-    void writeSettings();
+//    void readSettings();
+//    void writeSettings();
+    void readNestSettings();
+    void writeNestSettings();
     void loadDataFromDb();
     void loadMorePatients();
     void checkFolders(const QStringList dirs, bool dynamic, const QString recordingSystem);
@@ -174,6 +176,7 @@ public slots:
     void copyPathToClipboard();
     void verticalScrollingTree(int);
     void fetchMorePatients();
+    void showFilterLineHint();
 
 private:
     QMenuBar *menubar;
@@ -188,8 +191,7 @@ private:
     QWidget *centralWidget;
     QVBoxLayout *layout;
     QShortcut *refreshKey, *helpKey;
-    QTimer *timer;
-    QTimer *whTimer;
+    QTimer *timer, *whTimer,  *filterLineHintTimer;
     QAction *showPathAction, *refreshDynamicAction, *colapseAllAction;
     QFileSystemWatcher * watcher, * recordingFileWatcher;
 
