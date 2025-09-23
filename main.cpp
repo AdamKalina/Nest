@@ -82,6 +82,7 @@ int main(int argc, char *argv[])
     splash.showMessage("Looking for new data", Qt::AlignHCenter | Qt::AlignBottom);
     w.refreshDynamic();
     w.program_is_starting = false;
+    w.reportViewerWindow = NULL;
 
     splash.showMessage("Loading data from database", Qt::AlignHCenter | Qt::AlignBottom);
     w.loadDataFromDb();

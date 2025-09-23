@@ -8,12 +8,13 @@ bool DbManager::setPath(const QString& path){
 
     m_db = QSqlDatabase::addDatabase("QSQLITE");
     m_db.setDatabaseName(path);
+    qDebug() << "SQL " << m_db.connectionName();
 
     if (!m_db.open())
     {
-        qDebug() << "Error: connection with database failed";
+        qDebug() << "Error: connection with Nest database failed";
     }else{
-        qDebug() << "Database: connection ok";
+        qDebug() << "Nest Database: connection ok";
     }
     return true;
 }
@@ -51,16 +52,19 @@ bool DbManager::insertNewRecord(QRecord qrecord){
 
     // insert into TABLE records
     QSqlQuery query;
-    query.prepare("INSERT INTO records (file_name, id, name, record_start, record_duration_s, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, recording_system)"
-    "VALUES (:file_name, :id, :name , :record_start, :record_duration_s, :sex, :class_code, :protocol, :doctor, :file_path, :recording_flag, :video_flag, :recording_system)");
+    query.prepare("INSERT INTO records (file_name, file_id, id, name, record_start, record_duration_s, sex, brainlab_class_code, brainlab_doctor, nicolet_record_id_file, nicolet_record_id_db, comment, file_path, recording_flag, video_flag, recording_system)"
+    "VALUES (:file_name, :file_id, :id, :name , :record_start, :record_duration_s, :sex, :brainlab_class_code, :brainlab_doctor, :nicolet_record_id_file, :nicolet_record_id_db,:comment, :file_path, :recording_flag, :video_flag, :recording_system)");
     query.bindValue(":file_name", qrecord.file_name);
+    query.bindValue(":file_id", qrecord.file_id);
     query.bindValue(":id", qrecord.id);
     query.bindValue(":name", qrecord.name);
     query.bindValue(":record_start", qrecord.record_start.toTime_t());
     query.bindValue(":sex", qrecord.sex);
-    query.bindValue(":class_code", qrecord.class_code);
-    query.bindValue(":protocol",qrecord.protocol);
-    query.bindValue(":doctor", qrecord.doctor);
+    query.bindValue(":brainlab_class_code", qrecord.brainlab_class_code);
+    query.bindValue(":brainlab_doctor", qrecord.brainlab_doctor);
+    query.bindValue(":comment", qrecord.comment);
+    query.bindValue(":nicolet_record_id_file", qrecord.nicolet_record_id_file);
+    query.bindValue(":nicolet_record_id_db", qrecord.nicolet_record_id_db);
     query.bindValue(":file_path",qrecord.file_path);
     query.bindValue(":recording_flag",qrecord.recording_flag);
     query.bindValue(":video_flag",qrecord.video_flag);
@@ -82,18 +86,21 @@ bool DbManager::updateRecord(QRecord qrecord){
 
     // UPDATE TABLE records
     QSqlQuery query;
-    query.prepare("UPDATE records SET id=:id, name=:name, record_start=:record_start, class_code=:class_code, protocol=:protocol, doctor=:doctor, file_path=:file_path, recording_flag=:recording_flag, video_flag=:video_flag, record_duration_s=:record_duration_s WHERE file_name =:file_name");
+    query.prepare("UPDATE records SET id=:id, name=:name, record_start=:record_start, brainlab_class_code=:brainlab_class_code, brainlab_doctor=:brainlab_doctor, nicolet_record_id_file=:nicolet_record_id_file, nicolet_record_id_db=:nicolet_record_id_db, comment=:comment, file_path=:file_path, recording_flag=:recording_flag, video_flag=:video_flag, record_duration_s=:record_duration_s, file_id=:file_id WHERE file_name =:file_name");
     query.bindValue(":id",qrecord.id);
     query.bindValue(":name",qrecord.name);
     query.bindValue(":record_start", qrecord.record_start.toTime_t());
     query.bindValue(":record_duration_s",qrecord.record_duration_s);
-    query.bindValue(":class_code", qrecord.class_code);
-    query.bindValue(":protocol",qrecord.protocol);
-    query.bindValue(":doctor", qrecord.doctor);
+    query.bindValue(":brainlab_class_code", qrecord.brainlab_class_code);
+    query.bindValue(":brainlab_doctor", qrecord.brainlab_doctor);
+    query.bindValue(":comment", qrecord.comment);
+    query.bindValue(":nicolet_record_id_file", qrecord.nicolet_record_id_file);
+    query.bindValue(":nicolet_record_id_db", qrecord.nicolet_record_id_db);
     query.bindValue(":file_path",qrecord.file_path);
     query.bindValue(":recording_flag",qrecord.recording_flag);
     query.bindValue(":video_flag",qrecord.video_flag);
     query.bindValue(":file_name",qrecord.file_name);
+    query.bindValue(":file_id",qrecord.file_id);
 
     if (!query.exec()){
         qDebug() << "Couldn't UPDATE the table 'records' " << query.lastError();
@@ -138,7 +145,7 @@ bool DbManager::createTablePatients(){
     bool success = true;
 
     QSqlQuery query;
-    query.prepare("CREATE TABLE IF NOT EXISTS patients(id TEXT PRIMARY KEY, name TEXT, sex INTEGER, last_record INTEGER);");
+    query.prepare("CREATE TABLE IF NOT EXISTS patients(id TEXT PRIMARY KEY, name TEXT, name_ascii TEXT, sex INTEGER, last_record INTEGER);");
 
     if (!query.exec()){
         qDebug() << "Couldn't create the table 'patients': one might already exist. " << query.lastError();
@@ -167,11 +174,55 @@ bool DbManager::createTableRecords(){
     bool success = true;
 
     QSqlQuery query;
-    query.prepare("CREATE TABLE IF NOT EXISTS records(file_name TEXT PRIMARY KEY, id TEXT, name TEXT, record_start INTEGER, record_duration_s INTEGER, sex INTEGER,"
-    "class_code TEXT, protocol TEXT, doctor TEXT, file_path TEXT, recording_flag INTEGER, video_flag INTEGER, recording_system TEXT);");
+    query.prepare("CREATE TABLE IF NOT EXISTS records(file_name TEXT PRIMARY KEY, file_id TEXT, id TEXT, name TEXT, record_start INTEGER, record_duration_s INTEGER, sex INTEGER,"
+    "brainlab_class_code TEXT, brainlab_doctor TEXT, nicolet_record_id_file TEXT, nicolet_record_id_db TEXT, comment TEXT, file_path TEXT, recording_flag INTEGER, video_flag INTEGER, recording_system TEXT, report_flag INTEGER);");
 
     if (!query.exec()){
         qDebug() << "Couldn't create the table 'records': one might already exist.";
+        success = false;
+    }
+
+    return success;
+}
+
+bool DbManager::createTableReports(){
+    bool success = true;
+
+    QSqlQuery query;
+
+    query.prepare("CREATE TABLE reports ("
+            "file_id                   TEXT PRIMARY KEY,"
+            "file_path                     TEXT"
+            //"id                          INTEGER PRIMARY KEY,"
+            //"eeg_nr                      TEXT NOT NULL,"
+            "datum                       TEXT,"
+            "rodne_cislo                 TEXT,"
+            "jmeno                       TEXT,"
+            "odesilajici_lekar_original  TEXT,"
+            "sending_department          TEXT,"
+            "sending_doctor              TEXT,"
+            "lateralita                  TEXT,"
+            "duvod_vysetreni             TEXT,"
+            "uroven_vedomi               TEXT,"
+            "laborant                    TEXT,"
+            "popis                       TEXT,"
+            "fotostimulace               TEXT,"
+            "tf                          TEXT,"
+            "zaver_klasifikace           TEXT,"
+            "klinicka_interpretace       TEXT,"
+            "statisticky_kod_text        TEXT,"
+            "stat_code_a                 TEXT,"
+            "stat_code_b                 TEXT,"
+            "stat_code_c                 TEXT,"
+            "stat_code_d                 TEXT,"
+            "stat_code_e                 TEXT,"
+            "stat_code_f                 TEXT,"
+            "stat_code_g                 TEXT,"
+            "diagnostic_category         TEXT"
+            ");");
+
+    if (!query.exec()){
+        qDebug() << "Couldn't create the table 'reports': one might already exist.";
         success = false;
     }
 
@@ -285,7 +336,7 @@ bool DbManager::recordExists(const QString& file_name) const{
     return exists;
 }
 
-// TO DO - generic version of this function
+// deprecated
 QVector<QString> DbManager::getPatientsIds(){
     //qDebug() << "DbManager::getPatientsIds()";
 
@@ -311,6 +362,7 @@ QVector<QString> DbManager::getPatientsIds(){
     return qpatientIds;
 }
 
+// depracated
 QVector<QString> DbManager::getPatientsIdsbyMonthsAgo(int months){
     //qDebug() << "DbManager::getPatientsIdsbyMonthsAgo";
 
@@ -383,7 +435,7 @@ QVector<QString> DbManager::getPatientsIdbyTextNote(QString query){
     //qDebug() << "DbManager::getPatientsIdbyTextNote";
     QVector<QString> qpatientIds;
     QStringList cols;
-    cols << "name" << "class_code" << "doctor" << "file_name";
+    cols << "name" << "comment" << "file_name";
     //qDebug() << cols;
 
     //now run "like" sql query in given cols
@@ -438,7 +490,7 @@ bool DbManager::selectPatient(){
         qDebug() << "===" << qpatient.id << "===" << qpatient.name << "===" << qpatient.last_record;
 
         QSqlQuery selectRecordQuery;
-        selectRecordQuery.prepare("SELECT file_name, id, name, record_start, record_duration_s, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, FROM records WHERE id = (:id)");
+        selectRecordQuery.prepare("SELECT file_name, id, name, record_start, record_duration_s, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, report_flag FROM records WHERE id = (:id)");
         selectRecordQuery.bindValue(":id",qpatient.id);
         selectRecordQuery.exec();
 
@@ -467,7 +519,7 @@ QPatient DbManager::selectPatientbyIdWithRecords(QString id){
     QPatient qpatient;
 
     QSqlQuery selectRecordQuery;
-    selectRecordQuery.prepare("SELECT file_name, id, name, record_start, record_duration_s, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag, recording_system FROM records WHERE id = (:id)");
+    selectRecordQuery.prepare("SELECT file_name, file_id, id, name, record_start, record_duration_s, sex, brainlab_class_code, brainlab_doctor, comment, file_path, recording_flag, video_flag, report_flag, recording_system FROM records WHERE id = (:id)");
     selectRecordQuery.bindValue(":id",id);
     selectRecordQuery.exec();
 
@@ -499,7 +551,7 @@ QPatient DbManager::selectPatientbyNameWithRecords(QString name){
     QPatient qpatient;
 
     QSqlQuery selectRecordQuery;
-    selectRecordQuery.prepare("SELECT file_name, id, name, record_start, record_duration_s, sex, class_code, protocol, doctor, file_path, recording_flag, video_flag FROM records WHERE name = (:name)");
+    selectRecordQuery.prepare("SELECT file_name, file_id, id, name, record_start, record_duration_s, sex, brainlab_class_code, brainlab_doctor, comment, file_path, recording_flag, video_flag, report_flag FROM records WHERE name = (:name)");
     selectRecordQuery.bindValue(":name",name);
     selectRecordQuery.exec();
 
@@ -524,6 +576,36 @@ QPatient DbManager::selectPatientbyNameWithRecords(QString name){
     }
 
     return qpatient;
+}
+
+QSqlRecord DbManager::getReportByFilePath(QString file_path)
+{
+    QSqlQuery selectReportQuery;
+    QSqlRecord rec;
+    selectReportQuery.prepare("SELECT * FROM reports WHERE file_path = (:file_path)");
+    selectReportQuery.bindValue(":file_path",file_path);
+
+    if(selectReportQuery.exec()){
+        while(selectReportQuery.next()){
+            rec = selectReportQuery.record();
+        }
+    }
+    return rec;
+}
+
+QSqlRecord DbManager::getReportByFileId(QString file_id)
+{
+    QSqlQuery selectReportQuery;
+    QSqlRecord rec;
+    selectReportQuery.prepare("SELECT * FROM reports WHERE file_id = (:file_id)");
+    selectReportQuery.bindValue(":file_id",file_id);
+
+    if(selectReportQuery.exec()){
+        while(selectReportQuery.next()){
+            rec = selectReportQuery.record();
+        }
+    }
+    return rec;
 }
 
 // not my function

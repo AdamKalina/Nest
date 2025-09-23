@@ -20,20 +20,25 @@ public:
     QDateTime record_start;
     int record_duration_s;
     int sex = 2; // 0 = female, 1 = male, 2 = unknown
-    QString class_code;
-    QString protocol;
-    QString doctor; // called doctor in the original brainlab files, contains notes from NicoletOne and Harmonie
+    QString brainlab_class_code;
+    //QString protocol; // never used
+    QString brainlab_doctor; // called doctor in the original brainlab files
+    QString nicolet_record_id_file; // original record_id not read from the bile
+    QString nicolet_record_id_db; // record_id note read from the nicolet db
     QString file_name;
     QString file_path;
+    QString file_id;
     QString recording_system;
-    QString guidStudyID; // Nicolet Files only
+    QString comment;
     int recording_flag;
     int video_flag;
+    int report_flag;
     //int num_pages; // replace with file_duration
     void setID(std::string);
     void setPath(QString);
     void sexFromID(std::string id);
     void set_values_from_db(QSqlRecord);
+    void set_comment();
 };
 
 class QPatient{

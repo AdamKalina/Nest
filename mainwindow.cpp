@@ -69,11 +69,27 @@ QRecord MainWindow::getQRecord(QFileInfo fileInfo, const QString recordingSystem
         qrecord = read_harmonie_file(fileInfo);
     }
 
+    // get the info from the file
     if(recordingSystem == "Nicolet"){
         read_nicolet_file nicolet_reader = read_nicolet_file();
         qrecord = nicolet_reader.get_qrecord_nicolet(fileInfo);
-    }
 
+        // now read the info from db
+        if(nestOptions.readNicOneDb){
+            if (nic_db.isOpen()){
+                qDebug() << "Nicolet Database is open!";
+                qDebug() << "qrecord.guidStudyID: " << qrecord.file_id;
+                qrecord.nicolet_record_id_db = nic_db.getStrStudyNo(qrecord.file_id);
+                qDebug() << "nic_db.getStrStudyNo(qrecord.guidStudyID): " << qrecord.nicolet_record_id_db;
+                qrecord.set_comment();
+            }else{
+                qDebug() << "Nicolet database is not open!";
+            }
+
+        }
+
+
+    }
     return qrecord;
 }
 
@@ -238,15 +254,15 @@ void MainWindow::writeWatcherLog(QString log){
 // TO DO - make this part of separate class?
 
 void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QRecord Qrecord, bool newRecord){
-    //qDebug() << "addQRecord2model";
-    //qDebug() << "parent: " << parent.data();
-    //qDebug() << "Qrecord name: " <<Qrecord.name;
-    //qDebug() << "Qrecord id: " << Qrecord.id;
+    //    qDebug() << "addQRecord2model";
+    //    qDebug() << "parent: " << parent.data();
+    //    qDebug() << "Qrecord name: " <<Qrecord.name;
+    //    qDebug() << "Qrecord id: " << Qrecord.id;
+    //    qDebug() << "Qrecord comment: " << Qrecord.comment;
     //qDebug() << "Qrecord id: " << Qrecord.check_flag << " " << Qrecord.class_code << " " << Qrecord.doctor << " " << Qrecord.file_name << " " << Qrecord.file_path << " " << Qrecord.file_size << " " << Qrecord.id <<
     //            Qrecord.name << " " << Qrecord.record_duration_s << " " << Qrecord.protocol << " " << Qrecord.record_start << " " << Qrecord.recording_flag << " " << Qrecord.video_flag;
     // add int ncol for the old way of coloring red
 
-    QString Qinfo;
     QTime n(0, 0, 0);
     n = n.addSecs(Qrecord.record_duration_s);
 
@@ -256,17 +272,10 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
         //qDebug() << "inserted row successfull";
     }
 
-
-    if(Qrecord.doctor != "." && Qrecord.doctor != ""){
-        Qinfo = Qrecord.class_code + "\n" + Qrecord.doctor;
-    }else{
-        Qinfo = Qrecord.class_code;
-    }
-
     // TO DO - nice way how to display recording system in model
     model->setData(model->index(ind, 0, parent), Qrecord.file_name, Qt::DisplayRole);
     //qDebug() << "set data file name";
-    model->setData(model->index(ind, 1, parent), Qinfo, Qt::DisplayRole); //class_code
+    model->setData(model->index(ind, 1, parent), Qrecord.comment, Qt::DisplayRole);
     //qDebug() << "set data qinfo";
     model->setData(model->index(ind, 2, parent), Qrecord.record_start,Qt::DisplayRole);
     //qDebug() << "set data record start";
@@ -278,6 +287,9 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
     //qDebug() << "set data recording flag";
     model->setData(model->index(ind, 6, parent), Qrecord.recording_system, Qt::DisplayRole);
     //qDebug() << "set data doctor";
+    model->setData(model->index(ind, 7, parent), Qrecord.file_id, Qt::DisplayRole);
+    //qDebug() << "set data file_id " << Qrecord.file_id;
+    model->setData(model->index(ind, 8, parent), Qrecord.report_flag, Qt::DisplayRole);
     //qDebug() << "all data set";
 
     // if file has video - show DVicon
@@ -287,6 +299,15 @@ void addQRecord2model(QAbstractItemModel *model, int ind, QModelIndex parent, QR
     }
     else{ // if file has no video or the video was deleted - hide DVicon
         model->setData(model->index(ind,0, parent), NULL, Qt::DecorationRole);
+    }
+
+    // if file has report - show icon
+    if (Qrecord.report_flag){
+        model->setData(model->index(ind, 1, parent), QIcon(":/images/report_icon.png"), Qt::DecorationRole);
+        //qDebug() << "added DV icon";
+    }
+    else{ // if file has no report - remove the icon
+        model->setData(model->index(ind,1, parent), NULL, Qt::DecorationRole);
     }
 }
 
@@ -306,7 +327,7 @@ void addQPatient2model(QAbstractItemModel *model, QPatient Qpatient){
 
     // iterate through records
     int ind = 0;
-    int ncol = 7;
+    int ncol = 9;
     model->insertColumns(0, ncol, parent); // adds a child to the previous item
 
     QMap<QString, QRecord>::iterator to = Qpatient.Qrecords_map.begin();
@@ -318,7 +339,7 @@ void addQPatient2model(QAbstractItemModel *model, QPatient Qpatient){
 
 QAbstractItemModel* MainWindow::createPatientTreeModel(){
 
-    QStandardItemModel *model = new QStandardItemModel(0, 7, this);
+    QStandardItemModel *model = new QStandardItemModel(0, 8, this);
 
     model->setHeaderData(0, Qt::Horizontal, QString::fromLocal8Bit("Rodné èíslo"));
     model->setHeaderData(1, Qt::Horizontal, QString::fromLocal8Bit("Jméno"));
@@ -327,6 +348,8 @@ QAbstractItemModel* MainWindow::createPatientTreeModel(){
     model->setHeaderData(4, Qt::Horizontal, QString::fromLocal8Bit("Cesta"));
     model->setHeaderData(5, Qt::Horizontal, QString::fromLocal8Bit("Recorded"));
     model->setHeaderData(6, Qt::Horizontal, QString::fromLocal8Bit("System"));
+    model->setHeaderData(7, Qt::Horizontal, QString::fromLocal8Bit("file_id"));
+    model->setHeaderData(8, Qt::Horizontal, QString::fromLocal8Bit("report_flag"));
 
     while (!QpatientQueue.isEmpty()){
         // adds the patient to the model
@@ -357,6 +380,8 @@ void MainWindow::buildTreeView(){
     treeView->setColumnHidden(4,true); // hide path to EEG file
     treeView->setColumnHidden(5,true); // hide "being recorded"
     treeView->setColumnHidden(6,true); // hide "system"
+    treeView->setColumnHidden(7,true); // hide "file_id"
+    //treeView->setColumnHidden(8,true); // hide "report_flag"
     treeView->setSortingEnabled(true); // enable sorting
     treeView->sortByColumn(2,Qt::DescendingOrder); //newest files first
     treeView->header()->setSectionsMovable(0); // disable moving columns by dragging
@@ -385,7 +410,6 @@ void MainWindow::buildTreeView(){
 
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(double_click_tree(QModelIndex)));
     connect(treeView, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(ShowContextMenu(const QPoint &)));
-    //connect(treeView->verticalScrollBar(), &QScrollBar::valueChanged, this, SLOT(verticalScrollingTree(int)));
     connect(treeView->verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(verticalScrollingTree(int)));
 
     layout->addWidget(treeView);
@@ -502,9 +526,23 @@ void MainWindow::double_click_tree(QModelIndex index){
 
 void MainWindow::ShowContextMenu(const QPoint & pos){
 
+    bool hasReport = false;
+
     QModelIndex index = treeView->indexAt(pos);
     QVariant path = index.sibling(index.row(),4).data();
-    qDebug() << path;
+    //qDebug() << path;
+
+    hasReport = index.sibling(index.row(),8).data().toBool();
+
+    // deprecated - extra column with the report_flag was added
+    // QVariant comment = index.sibling(index.row(),1).data(Qt::DecorationRole);
+    //    qDebug() << comment.typeName();
+    //    if(comment.isValid()){
+    //        if(!strcmp(comment.typeName(),"QIcon")){ // if icon is set in the comment column - record has report
+    //            hasReport = true;
+    //        }
+    //    }
+    //    qDebug() << "hasReport" << hasReport;
 
     // TO DO - vytvoøit možnost smazat celého pacienta
     // TO DO - lepší možnost rozeznávat parenta od children?
@@ -515,6 +553,16 @@ void MainWindow::ShowContextMenu(const QPoint & pos){
     else{
         if(nestOptions.recordDeleteAllow || nestOptions.exportAllow){
             QMenu contextMenu(tr("Context menu"), this);
+
+            QAction showReportAction(tr("Show report"), this);
+            //deleteAction.setData(path);
+            connect(&showReportAction, SIGNAL(triggered()), this, SLOT(showReport()));
+            contextMenu.addAction(&showReportAction);
+
+            QAction clipboardAction(tr("Copy path to clipboard"), this);
+            connect(&clipboardAction, SIGNAL(triggered()), this, SLOT(copyPathToClipboard()));
+            contextMenu.addAction(&clipboardAction);
+
             QAction exportAction(tr("Export to EDF"), this);
             exportAction.setData(path);
             connect(&exportAction, SIGNAL(triggered()), this, SLOT(exportToEDF()));
@@ -525,11 +573,12 @@ void MainWindow::ShowContextMenu(const QPoint & pos){
             connect(&deleteAction, SIGNAL(triggered()), this, SLOT(deleteRecord()));
             contextMenu.addAction(&deleteAction);
 
-            QAction clipboardAction(tr("Copy path to clipboard"), this);
-            connect(&clipboardAction, SIGNAL(triggered()), this, SLOT(copyPathToClipboard()));
-            contextMenu.addAction(&clipboardAction);
-
             // when I tried to add actions to menu on "if", it stopped working, so I build it and then I delete what is not needed
+
+            if(!hasReport){
+                contextMenu.removeAction(&showReportAction);
+            }
+
             if(!nestOptions.recordDeleteAllow){
                 contextMenu.removeAction(&deleteAction);
             }
@@ -615,7 +664,6 @@ void MainWindow::double_click_record(QModelIndex index){
         }
         myProcess->setProgram(this->nestOptions.harmonieReader);
         myProcess->start();
-        //QProcess::startDetached(this->nestOptions.harmonieReader,arguments);
     }
 
     if(system == "Nicolet"){
@@ -630,7 +678,6 @@ void MainWindow::double_click_record(QModelIndex index){
         }
         myProcess->setProgram(this->nestOptions.nicoletReader);
         myProcess->start();
-        //QProcess::startDetached(this->nestOptions.harmonieReader,arguments);
     }
 }
 
@@ -739,6 +786,32 @@ void MainWindow::deleteRecord(){
     }
 }
 
+void MainWindow::showReport(){
+    QModelIndex index = treeView->selectionModel()->currentIndex();
+    QString file_id = index.sibling(index.row(),7).data().toString();
+    qDebug() << file_id;
+    QSqlRecord report = db.getReportByFileId(file_id);
+
+    QStringList reportVector;
+
+    for (int i = 0; i < report.count(); i++){
+        qDebug() << report.value(i);
+        qDebug() << report.fieldName(i);
+        reportVector << report.value(i).toString();
+    }
+
+    reportVector << index.sibling(index.row(),2).data().toDate().toString("dd.MM.yyyy"); //add the date of recording
+
+    if (!reportViewerWindow){
+        reportViewerWindow = new reportViewer(this); // Creates a dialog instance if it does not already exist
+        reportViewerWindow->setWindowFlags(Qt::Window); // set it as window, otherwise it would be displayed as part of the mainwindow
+        reportViewerWindow->move(200,200); // offset of the new window, otherwise it would open open centered relative to the main window
+    }
+
+    reportViewerWindow->setText(reportVector);
+    if (!reportViewerWindow->isVisible()) reportViewerWindow->show(); // Only shows the dialog if it is not already shown.
+}
+
 void MainWindow::copyPathToClipboard(){
     QModelIndex index = treeView->selectionModel()->currentIndex();
     QString file_name = index.sibling(index.row(),4).data().toString();
@@ -757,7 +830,7 @@ void MainWindow::double_click_patient(QModelIndex index){
     }
 
     if(treeView->isExpanded(parent)){
-        treeView->setExpanded(parent,false);
+        treeView->setExpanded(parent, false);
     }else{
         treeView->setExpanded(parent, true);
     }
@@ -1279,18 +1352,23 @@ void MainWindow::connectDb(){
     db.setPath(path2db);
 
     if (db.isOpen()){
-        qDebug() << "Database is open!";
+        qDebug() << "Nest database is open!";
         db.createTablePatients();   // Creates a table if it doesn't exist. Otherwise, it will use existing table.
         db.createTableRecords();
+        db.createTableReports();
         db.createIndexPatients();
     }else{
-        qDebug() << "Database is not open!";
+        qDebug() << "Nest database is not open!";
+    }
+
+    if(nestOptions.readNicOneDb){
+        nic_db.connect(nestOptions.NicOneDbPath);
     }
 
 }
 
 MainWindow::~MainWindow()
 {
-    //writeSettings(); deprecated
     writeNestSettings(); //save setting in .ini file
+    //qDebug() << "reportViewerWindow->close() " << reportViewerWindow->close();
 }

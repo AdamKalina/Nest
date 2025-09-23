@@ -16,6 +16,7 @@ void QRecord::setPath(QString old_path){
     // extract file name
     QFileInfo fi(file_path);
     file_name = fi.baseName();
+    file_id = file_name; // for Harmonie and Brainlab file_name (for display) and file_id are the same
 }
 
 
@@ -44,13 +45,33 @@ void QRecord::set_values_from_db(QSqlRecord rec){
     record_start = TimeT2QDateTime(rec.value("record_start").toInt());
     record_duration_s = rec.value("record_duration_s").toInt();
     sex = rec.value("sex").toInt();
-    class_code = rec.value("class_code").toString();
-    protocol = rec.value("protocol").toString();
-    doctor = rec.value("doctor").toString();
+    brainlab_class_code = rec.value("class_code").toString();
+    //protocol = rec.value("protocol").toString();
+    brainlab_doctor = rec.value("doctor").toString();
+    comment = rec.value("comment").toString();
     file_path = rec.value("file_path").toString();
     recording_flag = rec.value("recording_flag").toInt();
     video_flag = rec.value("video_flag").toInt();
+    report_flag = rec.value("report_flag").toInt();
     recording_system = rec.value("recording_system").toString();
+    file_id = rec.value("file_id").toString();
+}
+
+void QRecord::set_comment(){
+    if (recording_system == "Brainlab"){
+        if(brainlab_doctor != "." && brainlab_doctor != ""){
+            comment = brainlab_class_code + " | " + brainlab_doctor;
+        }else{
+            comment = brainlab_class_code;
+        }
+    }
+    if (recording_system == "Nicolet"){
+        if(nicolet_record_id_db != ""){
+            comment = nicolet_record_id_file + " | " + nicolet_record_id_db;
+        }else{
+            comment = nicolet_record_id_file;
+        }
+    }
 }
 
 // TO DO - make Time_t --> QDateTime conversion part of QRecord constructor ?
@@ -102,8 +123,8 @@ QDataStream & operator<<(QDataStream & out, const QPatient & Qpatient)
 
 QDataStream & operator<<(QDataStream & out, const QRecord & Qrecord)
 {
-    out << Qrecord.check_flag << Qrecord.class_code << Qrecord.file_name << Qrecord.file_path;
-    out << (quint32)Qrecord.file_size << Qrecord.id << Qrecord.name << Qrecord.protocol << Qrecord.record_start;
+    out << Qrecord.check_flag << Qrecord.brainlab_class_code << Qrecord.file_name << Qrecord.file_path;
+    out << (quint32)Qrecord.file_size << Qrecord.id << Qrecord.name  << Qrecord.record_start; // << Qrecord.protocol
     out << Qrecord.recording_flag << Qrecord.sex << Qrecord.video_flag << Qrecord.record_duration_s;
 
     return out;
@@ -125,8 +146,8 @@ QDataStream & operator>>(QDataStream & in, QPatient & Qpatient)
 
 QDataStream & operator>>(QDataStream & in, QRecord & Qrecord)
 {
-    in >> Qrecord.check_flag >> Qrecord.class_code >> Qrecord.file_name >> Qrecord.file_path;
-    in >> (qint32&)Qrecord.file_size >> Qrecord.id >> Qrecord.name >> Qrecord.protocol >> Qrecord.record_start;
+    in >> Qrecord.check_flag >> Qrecord.brainlab_class_code >> Qrecord.file_name >> Qrecord.file_path;
+    in >> (qint32&)Qrecord.file_size >> Qrecord.id >> Qrecord.name >> Qrecord.record_start; // >> Qrecord.protocol
     in >> Qrecord.recording_flag >> Qrecord.sex >> Qrecord.video_flag >> Qrecord.record_duration_s;
 
     return in;

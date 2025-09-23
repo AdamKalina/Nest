@@ -17,8 +17,8 @@ set(CMAKE_CXX_STANDARD_LIBRARIES "-static-libgcc -static-libstdc++ ${CMAKE_CXX_S
 set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/icon.rc")
 
 if(MINGW)
-     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
-     message(STATUS "MinGW")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
+    message(STATUS "MinGW")
 endif()
 
 
@@ -47,38 +47,40 @@ else()
 endif()
 
 set(PROJECT_SOURCES
-        main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        read_signal_file.cpp
-        read_harmonie_file.cpp
-        read_nicolet_file.cpp
-        leaffilterproxymodel.cpp
-        treemodel.cpp
-        qpatient.cpp
-        folderlist.cpp
-        options_dialog.cpp
-        nest_options.cpp
-        customdelegate.cpp
-        dbmanager.cpp
-        resources.qrc
-)
+    main.cpp
+    mainwindow.cpp
+    mainwindow.h
+    read_signal_file.cpp
+    read_harmonie_file.cpp
+    read_nicolet_file.cpp
+    read_nicolet_db.cpp
+    leaffilterproxymodel.cpp
+    treemodel.cpp
+    qpatient.cpp
+    folderlist.cpp
+    options_dialog.cpp
+    nest_options.cpp
+    customdelegate.cpp
+    dbmanager.cpp
+    reportviewer.cpp
+    resources.qrc
+    )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(Nest
         ${PROJECT_SOURCES}
-    )
+        )
 else()
     if(ANDROID)
         add_library(Nest SHARED
             ${PROJECT_SOURCES}
-        )
+            )
     else()
         add_executable(Nest
             WIN32 #comment here for console application
             ${APP_ICON_RESOURCE_WINDOWS}
             ${PROJECT_SOURCES}
-        )
+            )
     endif()
 endif()
 

@@ -327,7 +327,6 @@ QRecord read_harmonie_file(QFileInfo fileInfo)
     qrecord.record_duration_s = (SigFileSize/((64*float(sfs.size()) +4)*2)) * (64/float(sfs[0])); // every block = 64*no_channels + 4 [samples], 1 sample = 16 bits = 2 bytes, 1 block = 64/sf [s]
     qrecord.check_flag = 1;
     qrecord.recording_system = "Harmonie";
-    qrecord.class_code = "Harmonie";
 
     return qrecord;
 }

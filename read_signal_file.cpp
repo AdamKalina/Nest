@@ -275,9 +275,9 @@ QRecord read_signal_file(QFileInfo fileInfo){
     qrecord.setID(signal.measurement.id);
     qrecord.setPath(fileInfo.filePath());
     qrecord.name = QString::fromLocal8Bit(signal.measurement.name);
-    qrecord.class_code = QString::fromLocal8Bit(signal.measurement.class_code);
-    qrecord.doctor = QString::fromLocal8Bit(signal.measurement.doctor);
-    qrecord.protocol = QString::fromLocal8Bit(signal.measurement.protocol);
+    qrecord.brainlab_class_code = QString::fromLocal8Bit(signal.measurement.class_code);
+    qrecord.brainlab_doctor = QString::fromLocal8Bit(signal.measurement.doctor);
+    //qrecord.protocol = QString::fromLocal8Bit(signal.measurement.protocol);
     qrecord.file_size = file_size;
     qrecord.record_start = decode_date_time(signal.measurement.start_date, signal.measurement.start_hour);
     qrecord.sex = signal.measurement.sex;
@@ -288,6 +288,7 @@ QRecord read_signal_file(QFileInfo fileInfo){
 
     qrecord.check_flag = 1;
     qrecord.recording_system = "Brainlab";
+    qrecord.set_comment();
 
     // checking for video file
     // there are also events in the EEG file (Start video recording/Stop video recording) that gets deleted when you remove video, but this seems faster

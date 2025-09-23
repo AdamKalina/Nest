@@ -53,6 +53,12 @@ public:
     bool createTableRecords();
 
     /**
+     * @brief Creates a new 'reports' table if it doesn't already exist
+     * @return true - 'reports' table created successfully, false - table not created
+     */
+    bool createTableReports();
+
+    /**
      * @brief Add person data to db patients
      * @param qrecord - qrecord with patients data
      * @return true - person added successfully, false - person not added
@@ -180,9 +186,26 @@ public:
     QPatient selectPatientbyNameWithRecords(QString name);
 
     /**
+     * @brief Select report from "reports" using file_path
+     * @param file_path - QString with path to file
+     * @return record structure
+     */
+
+    QSqlRecord getReportByFilePath(QString file_path);
+
+    /**
+     * @brief Select report from "reports" using file_id
+     * @param file_path - QString with file id
+     * @return record structure
+     */
+
+    QSqlRecord getReportByFileId(QString file_id);
+
+    /**
      * @brief Remove all persons from db
      * @return true - all persons removed successfully, false - not removed
      */
+
     bool removeAllPersons();
 
 private:

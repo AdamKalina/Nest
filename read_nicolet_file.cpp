@@ -38,47 +38,53 @@ QRecord read_nicolet_file::get_qrecord_nicolet(QFileInfo fileInfo){
 
     NiconeHeader niconeHeader = read_nicolet_header(file);
 
+    bool logNicolet = false;
+
     QFile log_file("nicolet_log.txt");
 
     if(niconeHeader.check_flag == 0){
 
-        if(log_file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
-        {
-            QTextStream stream(&log_file);
-            stream << fileInfo.filePath() + " skipped" +"\n";
-            log_file.close();
+        if(logNicolet){
+            if(log_file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+            {
+                QTextStream stream(&log_file);
+                stream << fileInfo.filePath() + " skipped" +"\n";
+                log_file.close();
+            }
         }
-
         return qrecord;
     }
 
     // uncomment for debugging
-//    for(int i = 0; i < niconeHeader.patientInfo.size();i++){
-//        if(niconeHeader.patientInfo.at(i) != "unknown"){
-//            qDebug() << "niconeHeader.patientInfo.at(" + QString::number(i) + "): " + niconeHeader.patientInfo.at(i);
-//        }
-//    }
+    //    for(int i = 0; i < niconeHeader.patientInfo.size();i++){
+    //        if(niconeHeader.patientInfo.at(i) != "unknown"){
+    //            qDebug() << "niconeHeader.patientInfo.at(" + QString::number(i) + "): " + niconeHeader.patientInfo.at(i);
+    //        }
+    //    }
 
-//    for(int i = 0; i < niconeHeader.studyInfo.size();i++){
-//        if(niconeHeader.studyInfo.at(i) != "unknown"){
-//            qDebug() << "niconeHeader.studyInfo.at(" + QString::number(i) + "): " + niconeHeader.studyInfo.at(i);
-//        }
+    //    for(int i = 0; i < niconeHeader.studyInfo.size();i++){
+    //        if(niconeHeader.studyInfo.at(i) != "unknown"){
+    //            qDebug() << "niconeHeader.studyInfo.at(" + QString::number(i) + "): " + niconeHeader.studyInfo.at(i);
+    //        }
 
-//    }
+    //    }
 
-//    qDebug() << "niconeHeader.duration: " << niconeHeader.duration;
+    //    qDebug() << "niconeHeader.duration: " << niconeHeader.duration;
 
     // "{0ADD99E5-ACCA-11cf-9B9A-0800099E03CD}" = unknown?
 
     // ===================================== Log ======================================================
 
-
-    if(log_file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
-    {
-        QTextStream stream(&log_file);
-        stream << niconeHeader.patientInfo.at(2) + "|" + niconeHeader.patientInfo.at(4) + "|" + niconeHeader.patientInfo.at(5) + "|" + niconeHeader.studyInfo.at(13) + "|" + QString::number(niconeHeader.duration) + "|" + niconeHeader.segmentTimes.segmentStartTimes.at(0).toString("dd.MM.yyyy hh:mm:ss") + "|" + QString::fromStdString(path) +"\n";
-        log_file.close();
+    if(logNicolet){
+        if(log_file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+        {
+            QTextStream stream(&log_file);
+            stream << niconeHeader.patientInfo.at(2) + "|" + niconeHeader.patientInfo.at(4) + "|" + niconeHeader.patientInfo.at(5) + "|" + niconeHeader.studyInfo.at(13) + "|" + QString::number(niconeHeader.duration) + "|" + niconeHeader.segmentTimes.segmentStartTimes.at(0).toString("dd.MM.yyyy hh:mm:ss") + "|" + QString::fromStdString(path) +"\n";
+            log_file.close();
+        }
     }
+
+
 
     // ===================================== QRecord ======================================================
 
@@ -101,15 +107,24 @@ QRecord read_nicolet_file::get_qrecord_nicolet(QFileInfo fileInfo){
     qrecord.setID(niconeHeader.patientInfo.at(5).toStdString());
     qrecord.file_path = fileInfo.filePath();
     qrecord.file_name = list1.first() + list1.last(); // e.g. D:7241
-    qrecord.doctor = niconeHeader.studyInfo.at(13); // study ID
+
+    if(niconeHeader.studyInfo.at(1) == "unknown"){
+        qrecord.file_id = qrecord.file_name;
+    }
+    else{
+        qrecord.file_id = niconeHeader.studyInfo.at(1);
+    }
+
+    qrecord.nicolet_record_id_file = niconeHeader.studyInfo.at(13); // study ID
     qrecord.name = niconeHeader.patientInfo.at(4) + " " + niconeHeader.patientInfo.at(2); // Surname + Name
+
 
     qrecord.file_size = fileInfo.size();
     qrecord.record_start = niconeHeader.segmentTimes.segmentStartTimes.at(0);
     qrecord.recording_flag = 0; // TO DO - feasible in Nicolet? When there is .e file in the folder, the recording is usually finished
     qrecord.video_flag = !videoList.isEmpty(); // bool to int
 
-    // because lot if files has non-numeric patient ID
+    // because lot of files has non-numeric patient ID
     QRegExp re("\\d*");  // a digit (\d), zero or more times (*)
     if (re.exactMatch(qrecord.id)){
         qrecord.sexFromID(qrecord.id.toStdString());
@@ -117,7 +132,7 @@ QRecord read_nicolet_file::get_qrecord_nicolet(QFileInfo fileInfo){
     qrecord.record_duration_s = (niconeHeader.duration);
     qrecord.check_flag = 1;
     qrecord.recording_system = "Nicolet";
-    qrecord.class_code = "Nicolet";
+    qrecord.set_comment();
     return qrecord;
 }
 
@@ -474,21 +489,30 @@ QVector<QString> read_nicolet_file::readFileProperties(std::string sectionName, 
 
     //qDebug() << "pred samotnym ctenim";
 
+
+    // patient ID
     //    infoProps = { 'patientID', 'firstName','middleName','lastName',...
     //        'altID','mothersMaidenName','DOB','DOD','street','sexID','phone',...
     //        'notes','dominance','siteID','suffix','prefix','degree','apartment',...
     //        'city','state','country','language','height','weight','race','religion',...
     //        'maritalStatus'};
 
-    // id 1 = guid
+    // id 1 = patient guid, v dtb jako patientGuidID
     // id 2 = name
     // id 3 = middle name
     // id 4 = surname
     // id 5 = id
-    // id 10 = guid
+    // id 10 = guid - sex
     // id 12 = note
-    // id 13 = U
-    // id 14 = guid
+    // id 13 = U, dominance?
+    // id 14 = guid, site ID?
+
+    // study ID
+    // id 1 = guidStudyID
+    // id 2 = guidStudyTypeID
+    // id 3 = studyType string (z tblStudyTpe)
+    // id 13 = strStudyNo (v tblStudy)
+
 
     for(unsigned long long i = 0; i < (nrBstr)*2; i ++){
         //std::cout << "loop no: " << i << std::endl;
@@ -498,7 +522,7 @@ QVector<QString> read_nicolet_file::readFileProperties(std::string sectionName, 
             //qDebug() << "strSetup.at(i+1): " << strSetup.at(i+1);
             value_str = readUint16toQString(strSetup.at(i+1)+1,file);
             output[id] = value_str;
-            //qDebug() << id << " value_str: " << value_str;
+            //qDebug() << id << " value_str: " << value_str; // print read values, uncomment for debugging
             // nahradit "{0ADD99E5-ACCA-11cf-9B9A-0800099E03CD}" za unknown?
             //std::cout << "------------------" << std::endl;
             //info.(infoProps{id}) = value_str;

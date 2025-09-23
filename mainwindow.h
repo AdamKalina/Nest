@@ -54,6 +54,8 @@
 #include "dbmanager.h"
 #include "treemodel.h"
 #include "nest_options.h"
+#include "read_nicolet_db.h"
+#include "reportviewer.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -93,8 +95,10 @@ public:
     QDateTime lastRefreshTime;
     QIcon dvicon;
     DbManager db;
+    read_nicolet_db nic_db;
     nest_options_struct nestOptions;
     LeafFilterProxyModel *proxyModel;
+    reportViewer *reportViewerWindow;
 
     // functions
 //    void readSettings();
@@ -173,6 +177,7 @@ public slots:
     void ShowContextMenu(const QPoint &);
     void exportToEDF();
     void deleteRecord();
+    void showReport();
     void copyPathToClipboard();
     void verticalScrollingTree(int);
     void fetchMorePatients();
