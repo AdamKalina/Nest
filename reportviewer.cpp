@@ -31,9 +31,9 @@ void reportViewer::setText(QStringList report){
     "<b>Úroveò vìdomí:</b> %2<br><br>"
     "<b>Popis</b>: %3<br><br>"
     "<b>Závìr:</b> %4<br><br>"
-    "<b>Klinická interpretace:</b> %5").arg(report.at(8),report.at(9),report.at(11),report.at(14),report.at(15));
+    "<b>Klinická interpretace:</b> %5").arg(report.at(9),report.at(10),report.at(12),report.at(15),report.at(16));
 
-    this->setWindowTitle("EEG report - " + report.at(3) + " " + report.at(2) + " - " +  report.last());
+    this->setWindowTitle("EEG report - " + report.at(4) + " " + report.at(3) + " - " +  report.last());
 
     reportView->setText(reportQString);
     //reportView->adjustSize();

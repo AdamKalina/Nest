@@ -145,7 +145,13 @@ bool DbManager::createTablePatients(){
     bool success = true;
 
     QSqlQuery query;
-    query.prepare("CREATE TABLE IF NOT EXISTS patients(id TEXT PRIMARY KEY, name TEXT, name_ascii TEXT, sex INTEGER, last_record INTEGER);");
+    query.prepare("CREATE TABLE IF NOT EXISTS patients("
+        "id             TEXT PRIMARY KEY,"
+        "name           TEXT,"
+        "name_ascii     TEXT,"
+        "sex            INTEGER,"
+        "last_record    INTEGER"
+        ");");
 
     if (!query.exec()){
         qDebug() << "Couldn't create the table 'patients': one might already exist. " << query.lastError();
@@ -174,8 +180,24 @@ bool DbManager::createTableRecords(){
     bool success = true;
 
     QSqlQuery query;
-    query.prepare("CREATE TABLE IF NOT EXISTS records(file_name TEXT PRIMARY KEY, file_id TEXT, id TEXT, name TEXT, record_start INTEGER, record_duration_s INTEGER, sex INTEGER,"
-    "brainlab_class_code TEXT, brainlab_doctor TEXT, nicolet_record_id_file TEXT, nicolet_record_id_db TEXT, comment TEXT, file_path TEXT, recording_flag INTEGER, video_flag INTEGER, recording_system TEXT, report_flag INTEGER);");
+    query.prepare("CREATE TABLE IF NOT EXISTS records("
+        "file_name                  TEXT PRIMARY KEY,"
+        "file_id                    TEXT,"
+        "id                         TEXT,"
+        "name TEXT, record_start    INTEGER,"
+        "record_duration_s          INTEGER,"
+        "sex                        INTEGER,"
+        "brainlab_class_code        TEXT,"
+        "brainlab_doctor            TEXT,"
+        "nicolet_record_id_file     TEXT,"
+        "nicolet_record_id_db       TEXT,"
+        "comment                    TEXT,"
+        "file_path                  TEXT,"
+        "recording_flag             INTEGER,"
+        "video_flag                 INTEGER,"
+        "recording_system           TEXT,"
+        "report_flag                INTEGER DEFAULT 0"
+        ");");
 
     if (!query.exec()){
         qDebug() << "Couldn't create the table 'records': one might already exist.";
@@ -190,11 +212,11 @@ bool DbManager::createTableReports(){
 
     QSqlQuery query;
 
-    query.prepare("CREATE TABLE reports ("
+    query.prepare("CREATE TABLE IF NOT EXISTS reports ("
             "file_id                   TEXT PRIMARY KEY,"
-            "file_path                     TEXT"
+            "file_path                     TEXT,"
             //"id                          INTEGER PRIMARY KEY,"
-            //"eeg_nr                      TEXT NOT NULL,"
+                  //"eeg_nr                      TEXT NOT NULL,"
             "datum                       TEXT,"
             "rodne_cislo                 TEXT,"
             "jmeno                       TEXT,"
