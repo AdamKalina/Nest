@@ -5,12 +5,13 @@
 #include <QTextEdit>
 #include <QVBoxLayout>
 #include <QDebug>
+#include "qpatient.h"
 
 class reportViewer : public QWidget {
     Q_OBJECT
 public:
     reportViewer(QWidget *parent=nullptr);
-    void setText(QStringList report);
+    void setText(QReport qreport);
 
 private:
     QTextEdit *reportView;

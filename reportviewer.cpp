@@ -20,21 +20,50 @@ reportViewer::reportViewer(QWidget *w_parent)
 
     // Optionally set window properties
     this->setWindowTitle("EEG report");
-    this->setFixedWidth(1500);
+    this->setMinimumWidth(1000);
     this->setMinimumHeight(600);
 }
 
-void reportViewer::setText(QStringList report){
-    qDebug() << report.at(9);
+void reportViewer::setText(QReport qreport){
 
-    QString reportQString = QString::fromLocal8Bit("<b>Indikace:</b> %1<br><br>"
-    "<b>Úroveò vìdomí:</b> %2<br><br>"
-    "<b>Popis</b>: %3<br><br>"
-    "<b>Závìr:</b> %4<br><br>"
-    "<b>Klinická interpretace:</b> %5").arg(report.at(9),report.at(10),report.at(12),report.at(15),report.at(16));
+    QString reportString;
 
-    this->setWindowTitle("EEG report - " + report.at(4) + " " + report.at(3) + " - " +  report.last());
+    if(qreport.odesilajici_lekar_original != ""){
+        reportString.append(QString::fromLocal8Bit("<b>Odesílající lékaø:</b> %1<br><br>").arg(qreport.odesilajici_lekar_original));
+    }
+    if(qreport.laborant != ""){
+        reportString.append(QString::fromLocal8Bit("<b>Laborant:</b> %1<br><br>").arg(qreport.laborant));
+    }
+    if(qreport.lateralita != ""){
+        reportString.append(QString::fromLocal8Bit("<b>Lateralita:</b> %1<br><br>").arg(qreport.lateralita));
+    }
+    if(qreport.duvod_vysetreni != ""){
+        reportString.append(QString::fromLocal8Bit("<b>Indikace:</b> %1<br><br>").arg(qreport.duvod_vysetreni));
+    }
+    if(qreport.uroven_vedomi != ""){
+        reportString.append(QString::fromLocal8Bit("<b>Úroveò vìdomí:</b> %1<br><br>").arg(qreport.uroven_vedomi));
+    }
+    if(qreport.popis != ""){
+        reportString.append(QString::fromLocal8Bit("<b>Popis:</b> %1<br><br>").arg(qreport.popis));
+    }
+    if(qreport.fotostimulace != ""){
+        reportString.append(QString::fromLocal8Bit("<b>Fotostimulace:</b> %1<br><br>").arg(qreport.fotostimulace));
+    }
+    if(qreport.tf != ""){
+        reportString.append(QString::fromLocal8Bit("<b>TF:</b> %1<br><br>").arg(qreport.tf));
+    }
+    if(qreport.zaver_klasifikace != ""){
+        reportString.append(QString::fromLocal8Bit("<b>Závìr:</b> %1<br><br>").arg(qreport.zaver_klasifikace));
+    }
+    if(qreport.klinicka_interpretace != ""){
+        reportString.append(QString::fromLocal8Bit("<b>Klinická interpretace:</b> %1<br><br>").arg(qreport.klinicka_interpretace));
+    }
+    if(qreport.statisticky_kod_text != ""){
+        reportString.append(QString::fromLocal8Bit("<b>Statistický kód:</b> %1<br><br>").arg(qreport.statisticky_kod_text));
+    }
 
-    reportView->setText(reportQString);
+    this->setWindowTitle("EEG report - " + qreport.jmeno + " " + qreport.rodne_cislo + " - " +  qreport.datum);
+
+    reportView->setText(reportString);
     //reportView->adjustSize();
 }

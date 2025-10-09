@@ -217,7 +217,7 @@ bool DbManager::createTableReports(){
             "file_path                     TEXT,"
             //"id                          INTEGER PRIMARY KEY,"
                   //"eeg_nr                      TEXT NOT NULL,"
-            "datum                       TEXT,"
+                  "datum                       TEXT,"
             "rodne_cislo                 TEXT,"
             "jmeno                       TEXT,"
             "odesilajici_lekar_original  TEXT,"
@@ -354,6 +354,26 @@ bool DbManager::recordExists(const QString& file_name) const{
     }else{
         qDebug() << "record exists failed: " << checkQuery.lastError();
     }
+
+    return exists;
+}
+
+bool DbManager::reportExists(const QString& file_id) const{
+    bool exists = false;
+
+    QSqlQuery checkQuery;
+    checkQuery.prepare("SELECT file_id FROM reports WHERE file_id = (:file_id)");
+    checkQuery.bindValue(":file_id", file_id);
+
+    if (checkQuery.exec()){
+        if (checkQuery.next()){
+            exists = true;
+        }
+    }else{
+        qDebug() << "report exists failed: " << checkQuery.lastError();
+    }
+
+    //checkQuery.finish();
 
     return exists;
 }
@@ -600,8 +620,7 @@ QPatient DbManager::selectPatientbyNameWithRecords(QString name){
     return qpatient;
 }
 
-QSqlRecord DbManager::getReportByFilePath(QString file_path)
-{
+QSqlRecord DbManager::getReportByFilePath(QString file_path){
     QSqlQuery selectReportQuery;
     QSqlRecord rec;
     selectReportQuery.prepare("SELECT * FROM reports WHERE file_path = (:file_path)");
@@ -615,26 +634,23 @@ QSqlRecord DbManager::getReportByFilePath(QString file_path)
     return rec;
 }
 
-QSqlRecord DbManager::getReportByFileId(QString file_id)
-{
+QReport DbManager::getReportByFileId(QString file_id){
     QSqlQuery selectReportQuery;
-    QSqlRecord rec;
-    selectReportQuery.prepare("SELECT * FROM reports WHERE file_id = (:file_id)");
-    selectReportQuery.bindValue(":file_id",file_id);
+    QReport qreport;
+    selectReportQuery.prepare("SELECT file_id,file_path, datum, rodne_cislo, jmeno, odesilajici_lekar_original, lateralita, duvod_vysetreni, uroven_vedomi, laborant, popis, fotostimulace, tf, zaver_klasifikace, klinicka_interpretace, statisticky_kod_text FROM reports WHERE file_id = (:file_id)");
+    selectReportQuery.bindValue(":file_id", file_id);
 
     if(selectReportQuery.exec()){
         while(selectReportQuery.next()){
-            rec = selectReportQuery.record();
+            qreport.set_values_from_db(selectReportQuery.record());
         }
     }
-    return rec;
+    return qreport;
 }
 
 // not my function
-bool DbManager::removeAllPersons()
-{
+bool DbManager::removeAllPersons(){
     bool success = false;
-
     QSqlQuery removeQuery;
     removeQuery.prepare("DELETE FROM patients");
 

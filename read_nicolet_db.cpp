@@ -151,7 +151,9 @@ QString read_nicolet_db::getStrStudyNo(const QString &guid){
     model.setTable("tblStudy");
     model.setFilter(QString("guidStudyID = '%1'").arg(idd.replace("'", "''")));
     model.select();
-    return model.record(0).value("strStudyNo").toString(); // I expect just one result
+    QString studyID = model.record(0).value("strStudyNo").toString(); // I expect just one result
+    model.clear();
+    return studyID;
 }
 
 bool read_nicolet_db::getStudyById(const QString& id){

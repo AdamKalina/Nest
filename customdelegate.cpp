@@ -30,7 +30,7 @@ void CustomDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option
             painter->drawText(option.rect, Qt::AlignLeft|Qt::AlignVCenter, displayText(index.data(),QLocale::system()));
             //painter->restore();
             // otherwise use base QStyledItemDelegate
-        } else { // nothing was changes, use normal style
+        } else { // nothing was changed, use normal style
             QStyledItemDelegate::paint(painter, option, index);
         }
     }

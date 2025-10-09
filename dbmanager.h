@@ -115,11 +115,18 @@ public:
     bool patientExists(const QString& name) const;
 
     /**
-     * @brief Check if record of name "file_name" exists in db
+     * @brief Check if record of name "file_id" exists in db
      * @param file_name - name of record to check.
      * @return true - record exists, false - record does not exist
      */
     bool recordExists(const QString& file_name) const;
+
+    /**
+     * @brief Check if report of file with file_id  "file_id" exists in db
+     * @param file_id - file_id of record to check.
+     * @return true - report exists, false - report does not exist
+     */
+    bool reportExists(const QString& file_id) const;
 
     /**
      * @brief Print names of all persons in db
@@ -199,7 +206,7 @@ public:
      * @return record structure
      */
 
-    QSqlRecord getReportByFileId(QString file_id);
+    QReport getReportByFileId(QString file_id);
 
     /**
      * @brief Remove all persons from db

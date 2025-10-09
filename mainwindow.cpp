@@ -88,6 +88,8 @@ QRecord MainWindow::getQRecord(QFileInfo fileInfo, const QString recordingSystem
 
         }
 
+        qrecord.report_flag = int(db.reportExists(qrecord.file_id));
+
 
     }
     return qrecord;
@@ -790,17 +792,9 @@ void MainWindow::showReport(){
     QModelIndex index = treeView->selectionModel()->currentIndex();
     QString file_id = index.sibling(index.row(),7).data().toString();
     qDebug() << file_id;
-    QSqlRecord report = db.getReportByFileId(file_id);
+    QReport qreport = db.getReportByFileId(file_id);
 
-    QStringList reportVector;
-
-    for (int i = 0; i < report.count(); i++){
-        qDebug() << report.value(i);
-        qDebug() << report.fieldName(i);
-        reportVector << report.value(i).toString();
-    }
-
-    reportVector << index.sibling(index.row(),2).data().toDate().toString("dd.MM.yyyy"); //add the date of recording
+    qreport.datum = index.sibling(index.row(),2).data().toDate().toString("dd.MM.yyyy"); //add the date of recording
 
     if (!reportViewerWindow){
         reportViewerWindow = new reportViewer(this); // Creates a dialog instance if it does not already exist
@@ -808,7 +802,7 @@ void MainWindow::showReport(){
         reportViewerWindow->move(200,200); // offset of the new window, otherwise it would open open centered relative to the main window
     }
 
-    reportViewerWindow->setText(reportVector);
+    reportViewerWindow->setText(qreport);
     if (!reportViewerWindow->isVisible()) reportViewerWindow->show(); // Only shows the dialog if it is not already shown.
 }
 

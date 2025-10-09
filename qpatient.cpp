@@ -152,3 +152,22 @@ QDataStream & operator>>(QDataStream & in, QRecord & Qrecord)
 
     return in;
 }
+
+void QReport::set_values_from_db(QSqlRecord rec){
+        file_id = rec.value("file_id").toString();
+        file_path = rec.value("file_path").toString();
+        datum = rec.value("datum").toString();
+        rodne_cislo = rec.value("rodne_cislo").toString();
+        jmeno = rec.value("jmeno").toString();
+        odesilajici_lekar_original = rec.value("odesilajici_lekar_original").toString();
+        lateralita = rec.value("lateralita").toString();
+        duvod_vysetreni = rec.value("duvod_vysetreni").toString();
+        uroven_vedomi = rec.value("uroven_vedomi").toString();
+        laborant = rec.value("laborant").toString();
+        popis = rec.value("popis").toString();
+        fotostimulace = rec.value("fotostimulace").toString();
+        tf = rec.value("tf").toString();
+        zaver_klasifikace = rec.value("zaver_klasifikace").toString();
+        klinicka_interpretace = rec.value("klinicka_interpretace").toString();
+        statisticky_kod_text = rec.value("statisticky_kod_text").toString();
+}

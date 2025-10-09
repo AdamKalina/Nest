@@ -54,6 +54,29 @@ public:
     void set_values_from_db(QSqlRecord);
 };
 
+class QReport{
+public:
+    QString file_id;
+    QString file_path;
+    QString datum;
+    QString rodne_cislo;
+    QString jmeno;
+    QString odesilajici_lekar_original;
+    QString lateralita;
+    QString duvod_vysetreni;
+    QString uroven_vedomi;
+    QString laborant;
+    QString popis;
+    QString fotostimulace;
+    QString tf;
+    QString zaver_klasifikace;
+    QString klinicka_interpretace;
+    QString statisticky_kod_text;
+
+    void set_values_from_db(QSqlRecord);
+
+};
+
 
 // not used anymore
 QDataStream & operator<<(QDataStream & out, const QPatient & Qpatient);
