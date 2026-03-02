@@ -62,7 +62,8 @@ QRecord MainWindow::getQRecord(QFileInfo fileInfo, const QString recordingSystem
     QRecord qrecord;
 
     if (recordingSystem == "Brainlab"){
-        qrecord = read_signal_file(fileInfo);
+        read_signal_file brainlabReader;
+        qrecord = brainlabReader.get_qrecord_brainlab(fileInfo);
     }
 
     if(recordingSystem == "Harmonie"){
@@ -71,8 +72,8 @@ QRecord MainWindow::getQRecord(QFileInfo fileInfo, const QString recordingSystem
 
     // get the info from the file
     if(recordingSystem == "Nicolet"){
-        read_nicolet_file nicolet_reader = read_nicolet_file();
-        qrecord = nicolet_reader.get_qrecord_nicolet(fileInfo);
+        read_nicolet_file nicoletReader = read_nicolet_file();
+        qrecord = nicoletReader.get_qrecord_nicolet(fileInfo);
 
         // now read the info from db
         if(nestOptions.readNicOneDb){

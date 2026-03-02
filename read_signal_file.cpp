@@ -2,24 +2,22 @@
 
 // function definitions
 
-QDateTime decode_date_time(long date, long time)
-{
+QDateTime decode_date_time(long date, long time){
     //date = days since BC - but with some constraints to account for year with 31*12 days (and 31 days in month)
-    int y = floor(date / (31 * 12));
-    int m = floor(date / 31);
+    //int y = floor(date / (31 * 12)); // floow is not needed since integer divion always performs a floor operation inherently
+    int y = date / (31 * 12);
+    int m = date / 31;
     int d = date % 31;
     m = m % 12;
 
     //qDebug() << y << " " << m << " " << d;
 
-    if (d == 0)
-    {
+    if (d == 0){
         d = 31;
         m--;
     }
 
-    if (m == 0)
-    {
+    if (m == 0){
         m = 12;
         y--;
     }
@@ -28,10 +26,10 @@ QDateTime decode_date_time(long date, long time)
 
     // time = ms since midnight
 
-    int h = floor(time / (60 * 60 * 1000));
-    int min = floor(time / (60 * 1000));
+    int h = time / (60 * 60 * 1000);
+    int min = time / (60 * 1000);
     min = min % 60;
-    int s = floor(time / 1000);
+    int s = time / 1000;
     s = s % 60;
     int ms = time % 1000;
     //qDebug() << h << " " << min << " " << s << " " << ms;
@@ -42,7 +40,7 @@ QDateTime decode_date_time(long date, long time)
     QDateTime startDateTime = QDateTime(startDate,startTime).toLocalTime();
 
     // this is kinda hack - old BrainLab does not account for time transition to daylight saving time, I need to correct it manually
-    // works fine on my computer
+    // works fine on my computer, but it actually didnt need this correction in Motol XP computers
     //if(startDateTime.isDaylightTime()){
     //qDebug() << "before " << startDateTime;
     //  startDateTime = startDateTime.addSecs(3600);
@@ -53,16 +51,10 @@ QDateTime decode_date_time(long date, long time)
 };
 
 template <typename T>
-std::vector<T> readChannel(T tch, std::fstream &file, int nch)
-{
-    std::vector<T> x;
-    for (int i = 0; i < nch; i++)
-    {
-        file.read(reinterpret_cast<char *>(&tch), sizeof(tch));
-        x.push_back(tch);
-        //cout << x[i] << " ";
-    }
-    //cout <<endl;
+std::vector<T> readChannel(std::fstream &file, int nch){
+    std::vector<T> x(nch); // Pre-allocate exactly 'nch' elements
+    // Read the whole block of data in one go directly into the vector's memory
+    file.read(reinterpret_cast<char *>(x.data()), nch * sizeof(T));
     return x;
 }
 
@@ -86,8 +78,7 @@ void whereAmI(std::fstream &file)
     }
 }
 
-SignalHeader read_signal_header(std::fstream &file)
-{
+read_signal_file::SignalHeader read_signal_file::read_signal_header(){
     SignalHeader stud;
     file.read(reinterpret_cast<char *>(&stud.program_id), sizeof(stud.program_id));
     //std::cout << "program id: " << stud.program_id << std::endl;
@@ -100,11 +91,9 @@ SignalHeader read_signal_header(std::fstream &file)
     return stud;
 }
 
-DataTable read_data_table(std::fstream &file)
-{
+read_signal_file::DataTable read_signal_file::read_data_table(){
     DataTable data_table;
-    long y = 0;
-    std::vector<long> dt = readChannel(y, file, 17);
+    std::vector<long> dt = readChannel<long>(file, 17);
     data_table.measurement_info = Block{dt[0], dt[1], 0};
 data_table.recorder_montage_info = Block{dt[2], dt[3],0};
 data_table.events_info = Block{dt[4], dt[5],0};
@@ -116,8 +105,7 @@ data_table.signal_info = Block{dt[14], dt[15], dt[16]};
 return data_table;
 }
 
-Measurement read_measurement(std::fstream &file, long offset)
-{
+read_signal_file::Measurement read_signal_file::read_measurement(long offset){
     Measurement measurement;
     file.seekg(offset);
     file.read(measurement.id, sizeof(measurement.id));
@@ -151,8 +139,7 @@ Measurement read_measurement(std::fstream &file, long offset)
     return measurement;
 }
 
-RecorderMontageInfo read_recorder_info(std::fstream &file, long offset)
-{
+read_signal_file::RecorderMontageInfo read_signal_file::read_recorder_info(long offset){
     RecorderMontageInfo recorder_info;
     file.seekg(offset);
     file.read(recorder_info.name, sizeof(recorder_info.name));
@@ -167,10 +154,9 @@ RecorderMontageInfo read_recorder_info(std::fstream &file, long offset)
     file.read(reinterpret_cast<char *>(&recorder_info.nLowFilters), sizeof(recorder_info.nLowFilters));
     file.read(reinterpret_cast<char *>(&recorder_info.nHighFilters), sizeof(recorder_info.nHighFilters));
 
-    float z = 0;
-    recorder_info.sensitivity = readChannel(z, file, 20);
-    recorder_info.lowFilter = readChannel(z, file, 20);
-    recorder_info.highFilter = readChannel(z, file, 20);
+    recorder_info.sensitivity = readChannel<float>(file, 20);
+    recorder_info.lowFilter = readChannel<float>(file, 20);
+    recorder_info.highFilter = readChannel<float>(file, 20);
 
     // <33s2bhH
     unsigned char b;
@@ -184,35 +170,34 @@ RecorderMontageInfo read_recorder_info(std::fstream &file, long offset)
 
     // channels
     int nch = 32;
-    short h = 0;
-    unsigned short H = 0;
     char uch[5];
     char st[9];
     char stth[13];
 
-    std::vector<unsigned short> sampling_rate = readChannel(H, file, nch);
+    std::vector<unsigned short> sampling_rate = readChannel<unsigned short>(file, nch);
     std::vector<std::string> signal_type = readChannelChar(st, file, nch);
     std::vector<std::string> signal_sub_type = readChannelChar(st, file, nch);
     std::vector<std::string> channel_desc = readChannelChar(stth, file, nch);
-    std::vector<unsigned short> sensitivity_index = readChannel(H, file, nch);
-    std::vector<unsigned short> low_filter_index = readChannel(H, file, nch);
-    std::vector<unsigned short> high_filter_index = readChannel(H, file, nch);
-    std::vector<unsigned short> delay = readChannel(H, file, nch);
+    std::vector<unsigned short> sensitivity_index = readChannel<unsigned short>(file, nch);
+    std::vector<unsigned short> low_filter_index = readChannel<unsigned short>(file, nch);
+    std::vector<unsigned short> high_filter_index = readChannel<unsigned short>(file, nch);
+    std::vector<unsigned short> delay = readChannel<unsigned short>(file, nch);
     std::vector<std::string> unit = readChannelChar(uch, file, nch);
-    std::vector<short> artefact_level = readChannel(h, file, nch);
-    std::vector<short> cal_type = readChannel(h, file, nch);
-    std::vector<float> cal_factor = readChannel(z, file, nch);
-    std::vector<float> cal_offset = readChannel(z, file, nch);
-    std::vector<unsigned short> save_buffer_size = readChannel(H, file, nch);
+    std::vector<short> artefact_level = readChannel<short>(file, nch);
+    std::vector<short> cal_type = readChannel<short>(file, nch);
+    std::vector<float> cal_factor = readChannel<float>(file, nch);
+    std::vector<float> cal_offset = readChannel<float>(file, nch);
+    std::vector<unsigned short> save_buffer_size = readChannel<unsigned short>(file, nch);
 
 
     for (int i = 0; i < nch; i++)
     {
         Channel channel;
         channel.sampling_rate = sampling_rate[i];
-        channel.signal_type = signal_type[i];
-        channel.signal_sub_type = signal_sub_type[i];
-        channel.channel_desc = channel_desc[i];
+        //std::cout << channel.sampling_rate << std::endl;
+        channel.signal_type = signal_type[i]; // "EEG"
+        channel.signal_sub_type = signal_sub_type[i]; // "---"
+        channel.channel_desc = channel_desc[i]; //"Fp1/G19"
         channel.sensitivity_index = sensitivity_index[i];
         channel.low_filter_index = low_filter_index[i];
         channel.high_filter_index = high_filter_index[i];
@@ -224,13 +209,19 @@ RecorderMontageInfo read_recorder_info(std::fstream &file, long offset)
         channel.artefact_level = artefact_level[i];
         channel.save_buffer_size = save_buffer_size[i];
         recorder_info.channels.push_back(channel);
+        //qDebug() << "factor: " << channel.cal_factor; //changes signs between 7/2008 and 9/2008 in VEEG files
+        ;
     }
-    //cout << "end of read_recorder_info: ";
-    //whereAmI(file);
+
+    //std::cout << "end of read_recorder_info: "; whereAmI(file);
+
+    // READ THE DISPLAY MONTAGE HERE - not needed, see the full code
     return recorder_info;
 }
 
-QRecord read_signal_file(QFileInfo fileInfo){
+QRecord read_signal_file::get_qrecord_brainlab(QFileInfo fileInfo){
+
+    const long BRAINLAB_PROGRAM_ID = 1096045395;
 
     // get file size
     const long long file_size = fileInfo.size();
@@ -240,34 +231,34 @@ QRecord read_signal_file(QFileInfo fileInfo){
     QRecord qrecord;
 
     // READ THE FILE
-    std::fstream file(fileInfo.filePath().toLocal8Bit(), std::ios::in | std::ios::out | std::ios::binary);
+    file.open(fileInfo.filePath().toLocal8Bit(), std::ios::in | std::ios::out | std::ios::binary);
+    //std::fstream file(fileInfo.filePath().toLocal8Bit(), std::ios::in | std::ios::out | std::ios::binary);
 
     //qDebug() << fileInfo.filePath();
 
-    if (file.fail())
-    {
+    if (file.fail()){
         qDebug() << "ERROR: Cannot open the file...";
         return qrecord;
     }
 
     // Signal header
-    signal.header = read_signal_header(file);
+    signal.header = read_signal_header();
 
     // check if it is BrainLab *.SIG file
-    if (signal.header.program_id != 1096045395){
+    if (signal.header.program_id != BRAINLAB_PROGRAM_ID){
         qDebug() << fileInfo.filePath() << " is not valid BrainLab file, skipping";
         return qrecord;
     }
 
     // Data table
-    signal.data_table = read_data_table(file);
+    signal.data_table = read_data_table();
 
     //whereAmI(file); // should be 80
     // Measurement
-    signal.measurement = read_measurement(file, signal.data_table.measurement_info.offset);
+    signal.measurement = read_measurement(signal.data_table.measurement_info.offset);
 
     //Recorder info
-    signal.recorder_info = read_recorder_info(file, signal.data_table.recorder_montage_info.offset);
+    signal.recorder_info = read_recorder_info(signal.data_table.recorder_montage_info.offset);
 
     file.close();
 
