@@ -95,7 +95,7 @@ public:
     QDateTime lastRefreshTime;
     QIcon dvicon;
     DbManager db;
-    read_nicolet_db nic_db;
+    //read_nicolet_db nic_db;
     nest_options_struct nestOptions;
     LeafFilterProxyModel *proxyModel;
     reportViewer *reportViewerWindow;

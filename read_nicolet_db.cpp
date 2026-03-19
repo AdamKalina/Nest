@@ -11,9 +11,8 @@ bool read_nicolet_db::connect(const QString& path){
     nicolet_db = QSqlDatabase::addDatabase("QODBC3","nicolet_db"); // the connection name is needed, otherwise it defaults to defaultConnection
     qDebug() << "QSqlDatabase::isDriverAvailable(QODBC3):" << QSqlDatabase::isDriverAvailable("QODBC3");
     qDebug() << "path to MDB file" << path;
-    //nicolet_db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb,*.accdb)};DSN='';DBQ=d:/Dropbox/Scripts/Cpp/NicOne db/Záloha z TAUG.MDB;");
-    //nicolet_db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};FIL={MS Access};DBQ=d:/Dropbox/Scripts/Cpp/TAUG.MDB");
-    nicolet_db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};FIL={MS Access};DBQ="+path+"");
+    //nicolet_db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};FIL={MS Access};DBQ="+path+"");
+    nicolet_db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};FIL={MS Access};ReadOnly=1;DBQ="+path+""); // Force Read-Only Access
     qDebug() << "QODBC3 connectionName" << nicolet_db.connectionName();
     bool success = nicolet_db.open(); // tady to hází C++ exception, kterému nerozumím - at 0x7663b552, code: 0xe06d7363
 
@@ -183,4 +182,8 @@ bool read_nicolet_db::getStudyById(const QString& id){
     //qDebug() << nicolet_db.drivers();
     qDebug() << nicolet_db.lastError();
     return success;
+}
+
+void read_nicolet_db::closeDb(){
+    nicolet_db.close();
 }

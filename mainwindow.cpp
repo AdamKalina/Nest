@@ -76,18 +76,20 @@ QRecord MainWindow::getQRecord(QFileInfo fileInfo, const QString recordingSystem
         qrecord = nicoletReader.get_qrecord_nicolet(fileInfo);
 
         // now read the info from db
-        if(nestOptions.readNicOneDb){
-            if (nic_db.isOpen()){
-                qDebug() << "Nicolet Database is open!";
-                qDebug() << "qrecord.guidStudyID: " << qrecord.file_id;
-                qrecord.nicolet_record_id_db = nic_db.getStrStudyNo(qrecord.file_id);
-                qDebug() << "nic_db.getStrStudyNo(qrecord.guidStudyID): " << qrecord.nicolet_record_id_db;
-                qrecord.set_comment();
-            }else{
-                qDebug() << "Nicolet database is not open!";
-            }
-
+        read_nicolet_db transient_nic_db;
+        if(transient_nic_db.connect(nestOptions.NicOneDbPath)) {
+            qDebug() << "Nicolet Database is open!";
+            qDebug() << "qrecord.guidStudyID: " << qrecord.file_id;
+            qrecord.nicolet_record_id_db = transient_nic_db.getStrStudyNo(qrecord.file_id);
+            transient_nic_db.closeDb(); // Explicitly release the file lock immediately
+            qDebug() << "nic_db.getStrStudyNo(qrecord.guidStudyID): " << qrecord.nicolet_record_id_db;
+            qrecord.set_comment();
         }
+        else{
+            qDebug() << "Nicolet database is not open!";
+        }
+
+
 
         qrecord.report_flag = int(db.reportExists(qrecord.file_id));
 
@@ -1355,11 +1357,6 @@ void MainWindow::connectDb(){
     }else{
         qDebug() << "Nest database is not open!";
     }
-
-    if(nestOptions.readNicOneDb){
-        nic_db.connect(nestOptions.NicOneDbPath);
-    }
-
 }
 
 MainWindow::~MainWindow()
