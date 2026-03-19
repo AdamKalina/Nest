@@ -250,8 +250,7 @@ std::vector<int> read_harmonie_channels_info(std::ifstream &file){ // TO DO - ma
     return sfs;
 }
 
-QRecord read_harmonie_file(QFileInfo fileInfo)
-{
+QRecord read_harmonie_file(QFileInfo fileInfo){
     std::string path = fileInfo.filePath().toLocal8Bit().toStdString();
 
     //std::cout << path << std::endl;

@@ -866,7 +866,7 @@ void MainWindow::connect2storage(){
     runBatchFile("connect.bat");
 };
 
-void MainWindow::checkStorage(){
+void MainWindow::checkStorage(){ // used only on startup
 
     QFile file("volumes.txt");
     if(file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
